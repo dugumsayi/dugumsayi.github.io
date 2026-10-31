@@ -124,7 +124,7 @@ button.grn{background:#2a9d4a}
 
 <div id="app" class="hide">
   <h2>Benim girişlerim (bugün)</h2>
-  <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
+  <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="satirSilBtn" type="button" class="alt sm">− Satır sil</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
   <div class="scroll"><table><thead><tr><th>MAKİNE</th><th>SAYI 1</th><th>SAYI 2</th><th>SAYI 3</th><th>SAYI 4</th><th>SAYI 5</th><th>SAYI 6</th><th>TOPLAM</th></tr></thead><tbody id="mine"></tbody></table></div>
 </div>
 
@@ -337,6 +337,27 @@ function siralaMine() {
   ks.forEach(k => body.append(myTr[k.r]));
 }
 $("satirBtn").onclick = () => tabloDoluKontrol(true);
+
+// Son eklenen satırı siler (en az N0 satır kalır). Boşluk kalmasın diye yalnızca en yüksek numaralı satır silinir.
+async function satirSil() {
+  if (satirEkleniyor || !me || secili !== bugun) return;
+  if (N <= N0) { msg("En az " + N0 + " satır kalmalı, daha fazla silinemez."); return; }
+  const r = N - 1, row = rows.find(x => x.user_id === myId() && x.satir === r);
+  if (satirDolu(r) && !confirm('"' + ((row && row.name) || "adsız") + '" satırı ve içindeki sayılar silinecek. Emin misiniz?')) return;
+  satirEkleniyor = true;
+  try {
+    clearTimeout(otoTimer[r]); kirli[r] = false;
+    const { error } = await sb.from("sayilar").delete().eq("user_id", myId()).eq("tarih", bugun).eq("satir", r);
+    if (error) { msg("Satır silinemedi: " + error.message + " — Supabase'de satir-sil.sql çalıştırılmalı (silme izni)."); }
+    else {
+      N--; myTr.pop().remove(); myInputs.pop(); myTot.pop();
+      rows = rows.filter(x => !(x.user_id === myId() && x.satir === r));
+      await load(); msg("Son satır silindi.");
+    }
+  } catch (e) { msg("Satır silinemedi: " + (e && e.message ? e.message : e)); }
+  satirEkleniyor = false;
+}
+$("satirSilBtn").onclick = satirSil;
 $("mine").addEventListener("focusout", e => { if (!$("mine").contains(e.relatedTarget)) setTimeout(siralaMine, 0); });
 
 function fillMine() {
