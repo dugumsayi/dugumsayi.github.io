@@ -653,8 +653,7 @@ const toplamYaz = v => v == null ? "—" : fmt(parseFloat(v));
 const girilenYaz = l => {
   if (l.sutun === "makine") return "—";
   const f = v => v == null ? "boş" : fmt(parseFloat(v));
-  const kol = /^n(\d)$/.test(l.sutun || "") ? "S" + l.sutun.slice(1) + ": " : "";
-  return kol + f(l.eski) + " → " + f(l.yeni);
+  return f(l.eski) + " → " + f(l.yeni);
 };
 // Veritabanı toplam_once/toplam_sonra'yı doldurmuyorsa, günün loglarından hesapla
 function toplamHarita() {
