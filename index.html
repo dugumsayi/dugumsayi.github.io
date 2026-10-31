@@ -650,6 +650,23 @@ const sure = sn => {
 };
 const saatOf = z => new Date(z).toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 const toplamYaz = v => v == null ? "—" : fmt(parseFloat(v));
+const girilenYaz = l => {
+  if (l.sutun === "makine") return "—";
+  const f = v => v == null ? "boş" : fmt(parseFloat(v));
+  const kol = /^n(\d)$/.test(l.sutun || "") ? "S" + l.sutun.slice(1) + ": " : "";
+  return kol + f(l.eski) + " → " + f(l.yeni);
+};
+// Veritabanı toplam_once/toplam_sonra'yı doldurmuyorsa, günün loglarından hesapla
+function toplamHarita() {
+  const m = new Map(), run = new Map();
+  logs.slice().sort((a, b) => new Date(a.zaman) - new Date(b.zaman)).forEach(l => {
+    if (l.sutun === "makine") return;
+    const k = (l.makine || "").trim().toLowerCase(), once = run.get(k) || 0;
+    const sonra = once + (parseFloat(l.yeni) || 0) - (parseFloat(l.eski) || 0);
+    run.set(k, sonra); m.set(l.id, [once, sonra]);
+  });
+  return m;
+}
 const makineYaz = l => l.sutun === "makine" ? (l.eski || "(adsız)") + " → " + (l.yeni || "(adsız)") + " (ad değişti)" : (l.makine || "(adsız)");
 // Herkes kimin girdiğini görür; sicil yalnızca yöneticiye ek olarak gösterilir (kullanıcı listesinden)
 const sicilHarita = () => new Map(adminList.map(u => [u.id, u.sicil]));
@@ -709,14 +726,16 @@ function logCiz() {
   const box2 = $("logTbl"); box2.textContent = "";
   if (!list.length) { box2.append(el("p", "mut", "Bu tarihte kayıt yok.")); return; }
   const tbl = el("table", "at"), head = el("thead"), hr = el("tr"), body = el("tbody");
-  ["SAAT", "KİM GİRDİ", "MAKİNE", "ÖNCEKİ TOPLAM", "SONRAKİ TOPLAM", "MAKİNEDE ÖNCEKİ GİRİŞTEN", "ÖNCEKİ GİRİŞTEN (GENEL)"].concat(isAdmin() ? ["İŞLEM"] : []).forEach(h => hr.append(el("th", "", h)));
+  ["SAAT", "KİM GİRDİ", "MAKİNE", "GİRİLEN SAYI", "ÖNCEKİ TOPLAM", "SONRAKİ TOPLAM", "MAKİNEDE ÖNCEKİ GİRİŞTEN", "ÖNCEKİ GİRİŞTEN (GENEL)"].concat(isAdmin() ? ["İŞLEM"] : []).forEach(h => hr.append(el("th", "", h)));
   head.append(hr); tbl.append(head);
+  const th = toplamHarita();
   list.forEach(l => {
-    const tr = el("tr");
+    const tr = el("tr"), hs = th.get(l.id) || [];
     tr.append(el("td", "", saatOf(l.zaman)),
       el("td", "", logAd(l, sm) + (l.user_id === myId() ? " (siz)" : "")),
       el("td", "", makineYaz(l)),
-      el("td", "", toplamYaz(l.toplam_once)), el("td", "", toplamYaz(l.toplam_sonra)),
+      el("td", "", girilenYaz(l)),
+      el("td", "", toplamYaz(l.toplam_once ?? hs[0])), el("td", "", toplamYaz(l.toplam_sonra ?? hs[1])),
       el("td", "", sure(l.fark_makine_sn)), el("td", "", sure(l.fark_genel_sn)));
     if (isAdmin()) {
       const td = el("td", "act"), b = el("button", "sm red", "Sil");
@@ -732,11 +751,11 @@ function logCsv() {
   const list = logGorunen(), sm = sicilHarita();
   if (!list.length) { msg("İndirilecek kayıt yok."); return; }
   const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-  const baslik = ["Tarih", "Saat", "Kullanıcı"].concat(isAdmin() ? ["Sicil"] : [], ["Makine", "İşlem", "Önceki toplam", "Sonraki toplam", "Makinede önceki girişten (sn)", "Genel önceki girişten (sn)"]);
+  const baslik = ["Tarih", "Saat", "Kullanıcı"].concat(isAdmin() ? ["Sicil"] : [], ["Makine", "İşlem", "Girilen sayı", "Önceki toplam", "Sonraki toplam", "Makinede önceki girişten (sn)", "Genel önceki girişten (sn)"]);
   const satirlar = [baslik.map(q).join(";")];
-  const dv = v => v == null ? "" : toplamYaz(v);
+  const dv = v => v == null ? "" : toplamYaz(v), th = toplamHarita();
   list.slice().reverse().forEach(l => satirlar.push([secili, saatOf(l.zaman), l.kullanici].concat(isAdmin() ? [sm.get(l.user_id) || ""] : [],
-    [makineYaz(l), l.islem, dv(l.toplam_once), dv(l.toplam_sonra), l.fark_makine_sn, l.fark_genel_sn]).map(q).join(";")));
+    [makineYaz(l), l.islem, girilenYaz(l), dv(l.toplam_once ?? (th.get(l.id) || [])[0]), dv(l.toplam_sonra ?? (th.get(l.id) || [])[1]), l.fark_makine_sn, l.fark_genel_sn]).map(q).join(";")));
   const blob = new Blob(["\ufeff" + satirlar.join("\r\n")], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "giris-kayitlari-" + secili + ".csv";
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
