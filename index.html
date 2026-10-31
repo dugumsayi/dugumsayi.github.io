@@ -125,7 +125,7 @@ button.grn{background:#2a9d4a}
 <div id="app" class="hide">
   <h2>Benim girişlerim (bugün)</h2>
   <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="satirSilBtn" type="button" class="alt sm">− Satır sil</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
-  <div class="scroll"><table><thead><tr><th>MAKİNE</th><th>SAYI 1</th><th>SAYI 2</th><th>SAYI 3</th><th>SAYI 4</th><th>SAYI 5</th><th>SAYI 6</th><th>TOPLAM</th></tr></thead><tbody id="mine"></tbody></table></div>
+  <div class="scroll"><table><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI 1</th><th>SAYI 2</th><th>SAYI 3</th><th>SAYI 4</th><th>SAYI 5</th><th>SAYI 6</th></tr></thead><tbody id="mine"></tbody></table></div>
 </div>
 
 <details id="logBox" class="hide">
@@ -289,8 +289,8 @@ function satirEkle(r) {
       };
       i.onchange = () => { clearTimeout(otoTimer[r]); save(r).then(() => tabloDoluKontrol()); };
       td.append(i); tr.append(td); inp.push(i);
+      if (c === 0) { const tt0 = el("td", "t", "0"); tr.append(tt0); myTot.push(tt0); } // TOPLAM, makine adının yanında
     }
-    const tt = el("td", "t", "0"); tr.append(tt); myTot.push(tt);
     body.append(tr); myInputs.push(inp); myTr.push(tr);
   }
 }
