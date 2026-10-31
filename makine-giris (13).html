@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Makine Sayı Tablosu</title>
+<style>
+:root{--bg:#fff;--fg:#111;--blue:#00b0f0;--row:#ddebf7;--cell:#fff;--line:#111;--tot:#ff7c80;--mut:#555;--card:#f6f8fa}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#16181c;--fg:#f2f2f2;--row:#22344a;--cell:#1d2026;--line:#8a8f98;--mut:#aab;--card:#1d2026}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px;max-width:1100px;margin-inline:auto}
+h1{font-size:20px;margin:0 0 4px}
+h2{font-size:17px;margin:26px 0 8px}
+h3{font-size:16px;margin:22px 0 6px}
+#st{color:var(--mut);font-size:13px;margin:0 0 12px;min-height:18px}
+.mut{color:var(--mut);font-size:14px;margin:0 0 10px}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.bar span{color:var(--mut);font-size:14px}
+#auth{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px;max-width:360px;display:flex;flex-direction:column;gap:8px;margin-bottom:8px}
+#auth input,#profil input:not([type=checkbox]),#tarih{height:38px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);padding:0 10px;font:inherit}
+#profil{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px;max-width:420px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+#profil label.chk{display:flex;gap:10px;align-items:center;font-size:15px;cursor:pointer}
+#profil label.chk input{width:20px;height:20px;flex:none}
+#profil hr{border:0;border-top:1px solid var(--line);width:100%;margin:8px 0 4px}
+button{height:38px;border:0;border-radius:4px;background:var(--blue);color:#fff;font:inherit;font-weight:600;padding:0 14px;cursor:pointer}
+button.alt{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.scroll{overflow-x:auto;max-width:100%}
+table{border-collapse:collapse}
+th,td{border:1.5px solid var(--line);padding:0;height:40px}
+th{background:var(--blue);color:#fff;font-size:16px;padding:0 12px;min-width:80px;white-space:nowrap}
+td.m{background:var(--blue);min-width:150px}
+tbody tr:nth-child(odd) td:not(.m):not(.sn){background:var(--row)}
+tbody tr:nth-child(even) td:not(.m):not(.sn){background:var(--cell)}
+td input{width:100%;height:39px;border:0;background:transparent;color:var(--fg);font:inherit;font-size:17px;text-align:center;padding:0 6px}
+td.m input{color:#fff;font-weight:600}
+td.m input::placeholder{color:#ffffffaa;font-weight:400}
+td input:focus{outline:2px solid #1a73e8;outline-offset:-2px}
+td.v,td.t{text-align:center;font-size:17px;padding:0 12px}
+td.sn{background:var(--blue);color:#fff;font-weight:600;padding:0 12px;min-width:150px;text-align:center}
+tr.tot td{background:var(--tot)!important;color:#111;font-weight:600;text-align:center;padding:0 12px}
+#admin{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px;margin:12px 0}
+#admin .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+#admin input:not([type=checkbox]),#admin select{height:38px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);padding:0 10px;font:inherit}
+#admin hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+table.at th{min-width:0;font-size:14px;padding:0 10px}
+table.at td{padding:4px 10px;font-size:14px;height:auto;text-align:left;background:var(--cell)}
+table.at tr.ban td{background:#ff7c8030}
+table.at td.act{white-space:nowrap}
+button.sm{height:30px;padding:0 10px;font-size:13px;margin:2px 4px 2px 0}
+button.red{background:#d33}
+button.grn{background:#2a9d4a}
+.badge{display:inline-block;border-radius:10px;padding:1px 9px;font-size:12px;font-weight:600;color:#fff;background:#777}
+.badge.adm{background:#7b3fe4}
+.badge.ban{background:#d33}
+.badge.ok{background:#2a9d4a}
+#logBox{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 14px;margin:12px 0}
+#logBox summary{cursor:pointer;font-size:16px}
+#logKul,#logSira{height:38px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);padding:0 10px;font:inherit}
+#logOzet div{margin:2px 0}
+/* Telefonda ekran görüntüsü alınırken tablo (TOPLAM satırı dahil) tek ekrana sığsın diye daha kompakt */
+@media (max-width:600px){
+  #agg table,#users table{width:240px}
+  #agg th,#agg td,#users th,#users td{height:30px}
+  #agg th,#users th{font-size:14px;padding:0 8px}
+  #agg td.sn,#users td.sn{padding:0 8px;font-size:15px}
+  #agg td.t,#users td.t,#agg tr.tot td,#users tr.tot td{font-size:15px;padding:0 8px}
+  #users h3,h3{margin:14px 0 4px}
+}
+/* Paylaşılan tablolarda MAKİNE ve SAYI sütunları eşit genişlikte */
+#agg table,#users table{table-layout:fixed;width:300px;max-width:100%}
+#agg th,#agg td,#users th,#users td{width:50%;min-width:0}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<h1>Makine Sayı Tablosu</h1>
+<p id="st">Yükleniyor…</p>
+
+<div id="auth" class="hide">
+  <strong>Sayı girmek için giriş yapın</strong>
+  <input id="ad" placeholder="Ad Soyad (yalnızca kayıt olurken)" autocomplete="name">
+  <input id="sicil" placeholder="Sicil numarası" autocomplete="username" inputmode="text">
+  <input id="sifre" type="password" placeholder="Şifre (en az 6 karakter)" autocomplete="current-password">
+  <button id="giris">Giriş yap</button>
+  <button id="kayit" class="alt">Kayıt ol</button>
+</div>
+
+<div id="bar" class="bar hide"><span id="kim"></span><button id="profilBtn" type="button" class="alt">Profilim</button><button id="adminBtn" class="alt hide">Yönetim paneli</button><button id="cikis" type="button" class="alt">Çıkış yap</button></div>
+
+<div id="profil" class="hide">
+  <strong>Profilim</strong>
+  <input id="pAd" type="text" placeholder="Ad Soyad" autocomplete="name">
+  <span id="pSicil" class="mut"></span>
+  <label class="chk"><input id="pGizle" type="checkbox"> Sicil numaramı diğer kullanıcılardan gizle</label>
+  <button id="pKaydet">Profili kaydet</button>
+  <hr>
+  <strong>Şifre değiştir</strong>
+  <input id="pEski" type="password" placeholder="Mevcut şifre" autocomplete="current-password">
+  <input id="pYeni" type="password" placeholder="Yeni şifre (en az 6 karakter)" autocomplete="new-password">
+  <input id="pYeni2" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password">
+  <button id="pSifre">Şifreyi değiştir</button>
+</div>
+
+<div id="admin" class="hide">
+  <strong>Yönetim paneli</strong>
+  <p class="mut">Kullanıcıları banlayabilir, silebilir, yönetici yapabilir veya yeni kullanıcı ekleyebilirsiniz.</p>
+  <strong>Yeni kullanıcı ekle</strong>
+  <div class="row">
+    <input id="aAd" placeholder="Ad Soyad">
+    <input id="aSicil" placeholder="Sicil numarası">
+    <input id="aSifre" type="text" placeholder="Şifre (en az 6 karakter)" autocomplete="off">
+    <select id="aRol"><option value="user">Kullanıcı</option><option value="admin">Yönetici</option></select>
+    <button id="aEkle">Kullanıcı ekle</button>
+  </div>
+  <hr>
+  <strong>Toplu silme (tüm kullanıcılar)</strong>
+  <p class="mut">Aşağıdaki tarihte (<b id="tGun"></b>) tüm kullanıcıların girdiği makine adlarını ve sayıları siler. Kullanıcılar ve giriş kayıtları (log) silinmez. Geri alınamaz.</p>
+  <div class="row"><button id="tumSayiSil" class="red">Tüm kullanıcıların yalnızca sayılarını sil (makine adları kalır)</button></div>
+  <div class="row"><button id="tumSil" class="red">Tüm kullanıcıların makine adı ve sayılarını sil</button></div>
+  <hr>
+  <div class="row"><strong>Kullanıcılar</strong><input id="aAra" placeholder="Ad veya sicil ara…"><button id="aYenile" class="alt">Yenile</button><span id="aSayi" class="mut"></span></div>
+  <div id="aListe" class="scroll"></div>
+</div>
+
+<div id="app" class="hide">
+  <h2>Benim girişlerim (bugün)</h2>
+  <div class="bar"><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
+  <div class="scroll"><table><thead><tr><th>MAKİNE</th><th>SAYI 1</th><th>SAYI 2</th><th>SAYI 3</th><th>SAYI 4</th><th>SAYI 5</th><th>SAYI 6</th><th>TOPLAM</th></tr></thead><tbody id="mine"></tbody></table></div>
+</div>
+
+<details id="logBox" class="hide">
+  <summary><strong>Giriş kayıtları ve süre farkı</strong> <span id="logSayi" class="mut"></span></summary>
+  <p class="mut">Seçili günde girilen her sayı saat bilgisiyle kaydedilir. Her satırda kimin girdiği ve makinenin toplamının girişten önceki ve sonraki değeri görünür. Süre farkı, aynı makinedeki ve aynı kullanıcının bir önceki girişinden bu yana geçen süredir.</p>
+  <div class="bar"><select id="logKul" class="hide"></select><select id="logSira"><option value="">Saate göre</option><option value="kb">Makine adı: küçükten büyüğe</option></select><button id="logCsv" class="alt">CSV indir</button><button id="logSil" class="red hide">Görüntülenen kayıtları sil</button></div>
+  <p id="logMsg" class="mut hide"></p>
+  <div id="logOzet" class="mut"></div>
+  <div id="logTbl" class="scroll"></div>
+</details>
+
+<h2>Kullanıcıların tabloları</h2>
+<div class="bar"><input type="date" id="tarih"><button id="bugunBtn" class="alt">Bugün</button><span id="gunAd"></span></div>
+<p id="genel" class="mut"></p>
+<h3>Genel toplam (herkesin girdiği sayılar)</h3>
+<div class="bar"><button id="aggResim" type="button" class="alt sm">Resim olarak kaydet</button></div>
+<div id="agg" class="scroll"></div>
+<div id="users"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = "https://pgaqufqkxptoxrgtlrxv.supabase.co";
+const SUPABASE_KEY = "sb_publishable_hxb7BDh7sjAwoBDt4UjG1w_Tu6oAwO2";
+
+const N = 9, COLS = ["n1","n2","n3","n4","n5","n6"];
+const $ = id => document.getElementById(id);
+const st = $("st");
+const todayStr = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Istanbul" });
+let sb, me = null, rows = [], myInputs = [], myTot = [], myTr = [], timer = null;
+const OTO_MS = 700, otoTimer = {}, kirli = {}; let kayitZinciri = Promise.resolve();
+let bugun = todayStr(), secili = bugun;
+let profil = null, adminList = [], sonBan = "", cikisYapiliyor = false;
+
+const num = v => { const x = parseFloat(String(v ?? "").replace(",", ".")); return isNaN(x) ? 0 : x; };
+const fmt = x => Number.isInteger(x) ? String(x) : String(Math.round(x*100)/100).replace(".", ",");
+const rsum = r => COLS.reduce((a,k) => a + num(r[k]), 0);
+const show = v => v == null ? "" : String(v).replace(".", ",");
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const myId = () => (me ? me.id : null);
+const sicilOf = () => (me.user_metadata && me.user_metadata.sicil) || me.email.split("@")[0];
+const adOf = () => (me.user_metadata && me.user_metadata.ad) || "";
+const gizli = () => !!(me.user_metadata && me.user_metadata.sicil_gizle);
+const tamAd = () => adOf() + " (" + sicilOf() + ")";
+// Herkese görünen ad: sicil gizliyse yalnızca ad soyad
+const userName = () => gizli() ? (adOf() || "Kullanıcı") : tamAd();
+const msg = t => { st.textContent = t; };
+// Makine adına göre doğal sıralama: 3, 5, 8, 10, 15, 17 (adsızlar en sonda)
+const adKar = (a, b) => {
+  a = String(a || "").trim(); b = String(b || "").trim();
+  if (!a !== !b) return a ? -1 : 1;
+  return a.localeCompare(b, "tr", { numeric: true, sensitivity: "base" });
+};
+
+const mailOf = s => "makine.sicil." + s + "@gmail.com";
+function sicilAl() {
+  const s = $("sicil").value.trim().toLowerCase();
+  if (!/^[a-z0-9]{1,30}$/.test(s)) { msg("Sicil numarası yalnızca harf ve rakamdan oluşmalı (boşluk, nokta, tire olmaz)."); return null; }
+  return s;
+}
+
+$("giris").onclick = async () => {
+  const s = sicilAl(); if (!s) return;
+  sonBan = "";
+  msg("Giriş yapılıyor…");
+  const { error } = await sb.auth.signInWithPassword({ email: mailOf(s), password: $("sifre").value });
+  if (error) msg(/banned/i.test(error.message) ? "Bu hesap yasaklanmış. Yönetici ile iletişime geçin." :
+                 /invalid/i.test(error.message) ? "Sicil numarası veya şifre hatalı." : "Giriş yapılamadı: " + error.message);
+};
+$("kayit").onclick = async () => {
+  const s = sicilAl(); if (!s) return;
+  const ad = $("ad").value.trim();
+  if (!ad) { msg("Kayıt için adınızı yazın."); return; }
+  if ($("sifre").value.length < 6) { msg("Şifre en az 6 karakter olmalı."); return; }
+  msg("Kayıt yapılıyor…");
+  const { data, error } = await sb.auth.signUp({ email: mailOf(s), password: $("sifre").value, options: { data: { ad, sicil: s } } });
+  if (error) msg(/already/i.test(error.message) ? "Bu sicil numarasıyla zaten kayıt var. Giriş yapın." : "Kayıt yapılamadı: " + error.message);
+  else if (!data.session) msg("Kayıt oluşturuldu ama otomatik giriş olmadı. Supabase'de Confirm email seçeneğinin kapalı olduğunu kontrol edin.");
+};
+// Çıkış: telefonda ağ/oturum kilidi takılırsa signOut hiç dönmeyebilir; bu yüzden zaman aşımı + zorla temizleme var
+const bekle = ms => new Promise(r => setTimeout(r, ms));
+$("cikis").onclick = async () => {
+  const btn = $("cikis"); if (btn.disabled) return;
+  btn.disabled = true; msg("Çıkış yapılıyor…");
+  clearTimeout(timer); Object.keys(otoTimer).forEach(k => clearTimeout(otoTimer[k]));
+  try { await Promise.race([sb.auth.signOut(), bekle(2500)]); } catch (e) {}
+  try { await Promise.race([sb.auth.signOut({ scope: "local" }), bekle(1500)]); } catch (e) {}
+  try { [localStorage, sessionStorage].forEach(st0 => Object.keys(st0).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => st0.removeItem(k))); } catch (e) {}
+  me = null; profil = null; sonBan = ""; btn.disabled = false;
+  $("profil").classList.add("hide"); $("admin").classList.add("hide");
+  hazirla();
+};
+
+function kimYaz() {
+  $("kim").textContent = tamAd() + " olarak giriş yaptınız" + (gizli() ? " (sicil diğerlerinden gizli)" : "");
+}
+function profilDoldur() {
+  $("pAd").value = adOf();
+  $("pGizle").checked = gizli();
+  $("pSicil").textContent = "Sicil numaranız: " + sicilOf() + " (yalnızca yönetici değiştirebilir)";
+  ["pEski","pYeni","pYeni2"].forEach(i => $(i).value = "");
+}
+$("profilBtn").onclick = () => {
+  const p = $("profil"), acik = p.classList.contains("hide");
+  p.classList.toggle("hide", !acik);
+  if (acik) profilDoldur();
+};
+$("pKaydet").onclick = async () => {
+  const ad = $("pAd").value.trim();
+  if (!ad) { msg("Ad Soyad boş olamaz."); return; }
+  msg("Profil kaydediliyor…");
+  const { data, error } = await sb.auth.updateUser({ data: { ...(me.user_metadata || {}), ad, sicil_gizle: $("pGizle").checked } });
+  if (error) { msg("Profil kaydedilemedi: " + error.message); return; }
+  me = data.user;
+  // Tablolarda görünen adı (kullanici) tüm satırlarda güncelle
+  const up = await sb.from("sayilar").update({ kullanici: userName() }).eq("user_id", myId());
+  kimYaz();
+  if (up.error) { msg("Profil kaydedildi ama eski satırlardaki ad güncellenemedi: " + up.error.message); return; }
+  msg($("pGizle").checked ? "Profil güncellendi. Sicil numaranız artık diğer kullanıcılara görünmüyor." : "Profil güncellendi. Sicil numaranız adınızın yanında görünüyor.");
+  await load();
+};
+$("pSifre").onclick = async () => {
+  const eski = $("pEski").value, yeni = $("pYeni").value;
+  if (!eski) { msg("Mevcut şifrenizi yazın."); return; }
+  if (yeni.length < 6) { msg("Yeni şifre en az 6 karakter olmalı."); return; }
+  if (yeni !== $("pYeni2").value) { msg("Yeni şifreler aynı değil."); return; }
+  if (yeni === eski) { msg("Yeni şifre mevcut şifreyle aynı olamaz."); return; }
+  msg("Şifre değiştiriliyor…");
+  const chk = await sb.auth.signInWithPassword({ email: me.email, password: eski });
+  if (chk.error) { msg("Mevcut şifre hatalı."); return; }
+  const { error } = await sb.auth.updateUser({ password: yeni });
+  if (error) { msg("Şifre değiştirilemedi: " + error.message); return; }
+  ["pEski","pYeni","pYeni2"].forEach(i => $(i).value = "");
+  msg("Şifreniz değiştirildi. Bir sonraki girişte yeni şifrenizi kullanın.");
+};
+
+$("tarih").max = bugun; $("tarih").value = secili;
+$("tarih").onchange = () => { secili = $("tarih").value || bugun; if (secili > bugun) secili = bugun; hazirla(); };
+$("bugunBtn").onclick = () => { secili = bugun; hazirla(); };
+
+function buildMine() {
+  const body = $("mine"); body.textContent = ""; myInputs = []; myTot = []; myTr = [];
+  for (let r = 0; r < N; r++) {
+    const tr = el("tr"), inp = [];
+    for (let c = 0; c < 7; c++) {
+      const td = el("td", c === 0 ? "m" : ""), i = el("input");
+      i.type = "text"; if (c === 0) i.placeholder = "Makine adı"; else i.inputMode = "decimal";
+      i.oninput = () => {
+        const row = rows.find(x => x.user_id === myId() && x.satir === r); if (!row) return;
+        if (c === 0) row.name = i.value; else row[COLS[c-1]] = i.value;
+        myTot[r].textContent = fmt(rsum(row)); renderShared();
+        // Otomatik kayıt: yazmayı bıraktıktan kısa süre sonra kaydet
+        kirli[r] = true; msg("Yazılıyor… (otomatik kaydedilecek)");
+        clearTimeout(otoTimer[r]); otoTimer[r] = setTimeout(() => save(r), OTO_MS);
+      };
+      i.onchange = () => { clearTimeout(otoTimer[r]); save(r); };
+      td.append(i); tr.append(td); inp.push(i);
+    }
+    const tt = el("td", "t", "0"); tr.append(tt); myTot.push(tt);
+    body.append(tr); myInputs.push(inp); myTr.push(tr);
+  }
+}
+
+// "Benim girişlerim": makine adı küçükten büyüğe; boş satırlar en altta. Yazarken yer değiştirmez, odak tablodan çıkınca sıralanır.
+function siralaMine() {
+  const body = $("mine");
+  if (!body || myTr.length !== N || body.contains(document.activeElement)) return;
+  const key = r => {
+    const row = rows.find(x => x.user_id === myId() && x.satir === r);
+    if (!row) return { bos: 2, ad: "" };
+    const adsiz = !(row.name || "").trim();
+    const bos = adsiz && !COLS.some(k => row[k] != null && String(row[k]).trim() !== "");
+    return { bos: bos ? 2 : 0, ad: row.name };
+  };
+  const ks = myTr.map((_, r) => ({ r, ...key(r) }));
+  ks.sort((a, b) => a.bos - b.bos || adKar(a.ad, b.ad) || a.r - b.r);
+  ks.forEach(k => body.append(myTr[k.r]));
+}
+$("mine").addEventListener("focusout", e => { if (!$("mine").contains(e.relatedTarget)) setTimeout(siralaMine, 0); });
+
+function fillMine() {
+  for (let r = 0; r < N; r++) {
+    const row = rows.find(x => x.user_id === myId() && x.satir === r); if (!row) continue;
+    const f = myInputs[r];
+    if (document.activeElement !== f[0]) f[0].value = row.name || ""; else row.name = f[0].value;
+    COLS.forEach((k, i) => {
+      if (document.activeElement !== f[i+1]) f[i+1].value = show(row[k]);
+      else row[k] = f[i+1].value; // yazılmakta olan değer sunucudan gelen eski değerle ezilmesin
+    });
+    myTot[r].textContent = fmt(rsum(row));
+  }
+  siralaMine();
+}
+
+// Tabloyu (çerçeveyi) tam kırpılmış, yüksek çözünürlüklü PNG olarak kaydet.
+// Telefonda paylaşım menüsü (WhatsApp vb.) açılır, olmazsa indirir. Renkler ekrandaki görünümle aynıdır.
+function tabloResim(tbl, baslik, dosya) {
+  if (!tbl) { msg("Kaydedilecek tablo yok."); return; }
+  const r0 = tbl.getBoundingClientRect(), m = 6, sc = 4;           // m: ince kenar payı, sc: çözünürlük çarpanı
+  const W = Math.ceil(r0.width + m * 2), H = Math.ceil(r0.height + m * 2);
+  const cv = document.createElement("canvas"); cv.width = W * sc; cv.height = H * sc;
+  const c = cv.getContext("2d"); c.scale(sc, sc);
+  c.fillStyle = getComputedStyle(document.body).backgroundColor; c.fillRect(0, 0, W, H);
+  c.textAlign = "center"; c.textBaseline = "middle";
+  tbl.querySelectorAll("th,td").forEach(cell => {
+    const rc = cell.getBoundingClientRect(), cs = getComputedStyle(cell);
+    const x = rc.left - r0.left + m, y = rc.top - r0.top + m, w = rc.width, h = rc.height;
+    c.fillStyle = cs.backgroundColor; c.fillRect(x, y, w, h);
+    c.strokeStyle = cs.borderTopColor; c.lineWidth = 1.5; c.strokeRect(x, y, w, h);
+    c.fillStyle = cs.color; c.font = "800 " + Math.round(parseFloat(cs.fontSize) * 1.12) + "px system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif"; // kalın ve biraz büyük yazı
+    c.fillText(cell.textContent, x + w / 2, y + h / 2);
+  });
+  const ad = (dosya + "-" + secili).toLocaleLowerCase("tr").replace(/[^a-z0-9ğüşıöç_-]+/gi, "-").replace(/-+/g, "-") + ".png";
+  const indir = blob => {
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = ad;
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    msg("Resim kaydedildi: " + ad);
+  };
+  cv.toBlob(blob => {
+    if (!blob) { msg("Resim oluşturulamadı."); return; }
+    const f = new File([blob], ad, { type: "image/png" });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) {
+      navigator.share({ files: [f], title: baslik || "Tablo" }).then(() => msg("Resim paylaşıldı.")).catch(e => { if (e && e.name !== "AbortError") indir(blob); });
+    } else indir(blob);
+  }, "image/png");
+}
+$("aggResim").onclick = () => tabloResim($("agg").querySelector("table"), "Genel toplam", "genel-toplam");
+
+function renderShared() {
+  const box = $("users"); box.textContent = "";
+  const byUser = new Map();
+  rows.forEach(r => {
+    if (!byUser.has(r.user_id)) byUser.set(r.user_id, { ad: r.kullanici || "?", list: [] });
+    byUser.get(r.user_id).list.push(r);
+  });
+  const users = [...byUser.entries()].sort((a, b) =>
+    (a[0] === myId() ? -1 : 0) - (b[0] === myId() ? -1 : 0) || a[1].ad.localeCompare(b[1].ad, "tr"));
+  let grand = 0;
+  const agg = new Map();
+  users.forEach(([uid, u]) => {
+    const list = u.list.filter(r => (r.name || "").trim() || COLS.some(k => r[k] != null && r[k] !== ""))
+      .sort((a, b) => adKar(a.name, b.name) || a.satir - b.satir); // makine adı küçükten büyüğe
+    box.append(el("h3", "", u.ad + (uid === myId() ? " (siz)" : "")));
+    if (!list.length) { box.append(el("p", "mut", "Henüz giriş yok.")); return; }
+    const wrap = el("div", "scroll"), tbl = el("table"), head = el("thead"), hr = el("tr");
+    ["MAKİNE","SAYI"].forEach(h => hr.append(el("th", "", h)));
+    head.append(hr); tbl.append(head);
+    const body = el("tbody"); let total = 0;
+    list.forEach(r => {
+      const tr = el("tr"), s = rsum(r); total += s;
+      const nm = (r.name || "").trim() || "(adsız)", key = nm.toLocaleLowerCase("tr");
+      const cur = agg.get(key) || { nm, s: 0 }; cur.s += s; agg.set(key, cur);
+      tr.append(el("td", "sn", r.name || ""));
+      tr.append(el("td", "t", fmt(s))); body.append(tr);
+    });
+    const ft = el("tr", "tot");
+    ft.append(el("td", "", "TOPLAM"), el("td", "", fmt(total))); body.append(ft);
+    tbl.append(body); wrap.append(tbl); box.append(wrap);
+    const rb = el("button", "alt sm", "Resim olarak kaydet"); rb.type = "button";
+    rb.onclick = () => tabloResim(tbl, "", "makine-tablosu");
+    box.append(rb);
+    grand += total;
+  });
+  const ab = $("agg"); ab.textContent = "";
+  if (agg.size) {
+    const tbl = el("table"), head = el("thead"), hr = el("tr"), body = el("tbody");
+    ["MAKİNE","SAYI"].forEach(h => hr.append(el("th", "", h))); head.append(hr); tbl.append(head);
+    [...agg.values()].sort((a, b) => adKar(a.nm === "(adsız)" ? "" : a.nm, b.nm === "(adsız)" ? "" : b.nm)).forEach(x => {
+      const tr = el("tr"); tr.append(el("td", "sn", x.nm), el("td", "t", fmt(x.s))); body.append(tr);
+    });
+    const ft = el("tr", "tot"); ft.append(el("td", "", "GENEL TOPLAM"), el("td", "", fmt(grand))); body.append(ft);
+    tbl.append(body); ab.append(tbl);
+  } else ab.append(el("p", "mut", "Henüz sayı girilmemiş."));
+  $("genel").textContent = users.length ? (users.length + " kullanıcı, günün genel toplamı: " + fmt(grand)) : "Bu tarihte kayıtlı giriş yok.";
+}
+
+function save(r) { kayitZinciri = kayitZinciri.then(() => kaydet(r)).catch(() => {}); return kayitZinciri; }
+async function kaydet(r) {
+  if (!kirli[r]) return; // değişiklik yoksa tekrar kaydetme (log şişmesin)
+  kirli[r] = false;
+  const row = rows.find(x => x.user_id === myId() && x.satir === r); if (!row) return;
+  msg("Kaydediliyor…");
+  const body = { name: row.name || "", kullanici: userName() };
+  COLS.forEach(k => { const v = String(row[k] ?? "").trim(); body[k] = v === "" ? null : num(v); });
+  const { error } = await sb.from("sayilar").update(body).eq("user_id", myId()).eq("tarih", bugun).eq("satir", r);
+  if (error) kirli[r] = true;
+  msg(error ? "Kaydedilemedi: " + error.message : "Otomatik kaydedildi. Değişiklikler herkeste görünür.");
+  if (!error) logYukle();
+}
+
+async function load() {
+  const { data, error } = await sb.from("sayilar").select("*").eq("tarih", secili);
+  if (error) { msg("Veriler yüklenemedi: " + error.message); return; }
+  rows = data; if (me && secili === bugun) fillMine(); renderShared();
+  logYukle();
+}
+
+async function hazirla() {
+  $("tarih").value = secili;
+  $("gunAd").textContent = new Date(secili + "T12:00:00").toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  $("tGun").textContent = $("gunAd").textContent;
+  if (me) {
+    await profilYukle();
+    if (profil && profil.banli) { await banliCikis(); return; }
+  } else profil = null;
+  $("auth").classList.toggle("hide", !!me);
+  $("bar").classList.toggle("hide", !me);
+  if (!me) $("profil").classList.add("hide");
+  $("adminBtn").classList.toggle("hide", !isAdmin());
+  if (!isAdmin()) $("admin").classList.add("hide");
+  else if (!$("admin").classList.contains("hide")) adminYukle();
+  const duzenle = !!me && secili === bugun;
+  $("app").classList.toggle("hide", !duzenle);
+  if (me) kimYaz();
+  if (duzenle) {
+    buildMine();
+    const seed = Array.from({length: N}, (_, i) => ({ satir: i, tarih: bugun, kullanici: userName() }));
+    const ins = await sb.from("sayilar").upsert(seed, { onConflict: "user_id,tarih,satir", ignoreDuplicates: true });
+    if (ins.error) { msg("Satırlar oluşturulamadı: " + ins.error.message); return; }
+  }
+  await load();
+  msg(duzenle ? "Hücreye yazın, otomatik kaydedilir. Her gün yeni bir tablo açılır." :
+      me ? "Geçmiş günler yalnızca görüntülenir. Düzenlemek için \"Bugün\"e basın." :
+      (sonBan || "Sayıları herkes görebilir. Sayı girmek için giriş yapın veya kayıt olun."));
+}
+
+
+// ================= YÖNETİM / BAN =================
+// Not: Asıl yetki kontrolü veritabanında (RLS + admin_* fonksiyonları). Buradaki kontroller yalnızca arayüz içindir.
+async function profilYukle() {
+  if (!me) { profil = null; return; }
+  const { data, error } = await sb.from("profiles").select("rol,banli,ban_sebep").eq("id", myId()).maybeSingle();
+  profil = error ? null : data;   // tablo yoksa/hata olursa normal kullanıcı gibi devam
+}
+const isAdmin = () => !!profil && profil.rol === "admin" && !profil.banli;
+
+async function banliCikis() {
+  if (cikisYapiliyor) return;
+  cikisYapiliyor = true;
+  sonBan = "Hesabınız yasaklandı." + (profil && profil.ban_sebep ? " Sebep: " + profil.ban_sebep : "") + " Yönetici ile iletişime geçin.";
+  await sb.auth.signOut();
+  cikisYapiliyor = false;
+}
+
+$("adminBtn").onclick = () => {
+  const a = $("admin"), acik = a.classList.contains("hide");
+  a.classList.toggle("hide", !acik);
+  if (acik) adminYukle();
+};
+$("aYenile").onclick = () => adminYukle();
+$("aAra").oninput = () => adminCiz();
+
+async function adminYukle() {
+  const { data, error } = await sb.rpc("admin_kullanicilar");
+  if (error) { msg("Kullanıcı listesi alınamadı: " + error.message); return; }
+  adminList = data || []; adminCiz();
+}
+
+function adminCiz() {
+  const box = $("aListe"); box.textContent = "";
+  const q = $("aAra").value.trim().toLocaleLowerCase("tr");
+  const list = adminList.filter(u => !q || ((u.sicil || "") + " " + (u.ad || "")).toLocaleLowerCase("tr").includes(q));
+  $("aSayi").textContent = list.length + " / " + adminList.length + " kullanıcı";
+  if (!list.length) { box.append(el("p", "mut", "Kullanıcı bulunamadı.")); return; }
+  const tbl = el("table", "at"), head = el("thead"), hr = el("tr"), body = el("tbody");
+  ["SİCİL", "AD SOYAD", "ROL", "DURUM", "SON GİRİŞ", "İŞLEM"].forEach(h => hr.append(el("th", "", h)));
+  head.append(hr); tbl.append(head);
+  list.forEach(u => {
+    const tr = el("tr", u.banli ? "ban" : ""), self = u.id === myId();
+    tr.append(el("td", "", u.sicil || ""));
+    tr.append(el("td", "", (u.ad || "") + (self ? " (siz)" : "")));
+    const tdR = el("td"); tdR.append(el("span", "badge" + (u.rol === "admin" ? " adm" : ""), u.rol === "admin" ? "Yönetici" : "Kullanıcı")); tr.append(tdR);
+    const tdD = el("td"); tdD.append(el("span", "badge " + (u.banli ? "ban" : "ok"), u.banli ? "Banlı" : "Aktif"));
+    if (u.banli && u.ban_sebep) tdD.append(el("div", "mut", "Sebep: " + u.ban_sebep));
+    tr.append(tdD);
+    tr.append(el("td", "", u.son_giris ? new Date(u.son_giris).toLocaleString("tr-TR") : "—"));
+    const tdA = el("td", "act");
+    const b0 = el("button", "sm alt", "Sicil değiştir");
+    b0.onclick = () => adminSicil(u);
+    tdA.append(b0);
+    if (!self) {
+      const b1 = el("button", "sm " + (u.banli ? "grn" : "red"), u.banli ? "Banı kaldır" : "Banla");
+      b1.onclick = () => adminBan(u);
+      const b2 = el("button", "sm alt", u.rol === "admin" ? "Yöneticiliği al" : "Yönetici yap");
+      b2.onclick = () => adminRol(u);
+      const b3 = el("button", "sm red", "Sil");
+      b3.onclick = () => adminSil(u);
+      tdA.append(b1, b2, b3);
+    }
+    tr.append(tdA); body.append(tr);
+  });
+  tbl.append(body); box.append(tbl);
+}
+
+async function adminIslem(fn, args, okMsg) {
+  msg("İşlem yapılıyor…");
+  const { error } = await sb.rpc(fn, args);
+  if (error) { msg("İşlem başarısız: " + error.message); return false; }
+  msg(okMsg);
+  await adminYukle(); await load();
+  return true;
+}
+async function adminSicil(u) {
+  const ad = (u.ad || "") + " (" + u.sicil + ")", self = u.id === myId();
+  const yeni = prompt(ad + " için yeni sicil numarasını yazın (yalnızca harf ve rakam):", u.sicil);
+  if (yeni === null) return;
+  const s = yeni.trim().toLowerCase();
+  if (!/^[a-z0-9]{1,30}$/.test(s)) { msg("Sicil numarası yalnızca harf ve rakamdan oluşmalı (boşluk, nokta, tire olmaz)."); return; }
+  if (s === u.sicil) { msg("Yeni sicil mevcut sicille aynı."); return; }
+  if (!confirm(ad + " sicili \"" + u.sicil + "\" yerine \"" + s + "\" olarak değiştirilsin mi?" + (self ? "" : "\nKullanıcının açık oturumu kapanır, yeni sicille giriş yapması gerekir."))) return;
+  const ok = await adminIslem("admin_sicil_degistir", { hedef: u.id, yeni_sicil: s },
+    "Sicil değiştirildi: " + u.sicil + " → " + s + (self ? "." : ". Kullanıcı yeni sicille giriş yapmalı."));
+  if (ok && self) {
+    const r = await sb.auth.refreshSession();
+    if (r.data && r.data.session) me = r.data.session.user;
+    await hazirla();
+  }
+}
+async function adminBan(u) {
+  const ad = (u.ad || "") + " (" + u.sicil + ")";
+  if (u.banli) {
+    if (!confirm(ad + " kullanıcısının banı kaldırılsın mı?")) return;
+    await adminIslem("admin_ban", { hedef: u.id, ban: false, sebep: null }, ad + " banı kaldırıldı.");
+  } else {
+    const sebep = prompt(ad + " banlanacak. Sebep (boş bırakabilirsiniz):");
+    if (sebep === null) return;
+    await adminIslem("admin_ban", { hedef: u.id, ban: true, sebep }, ad + " banlandı. Oturumu kapatıldı ve giriş yapamaz.");
+  }
+}
+async function adminRol(u) {
+  const ad = (u.ad || "") + " (" + u.sicil + ")", yeni = u.rol === "admin" ? "user" : "admin";
+  if (!confirm(ad + (yeni === "admin" ? " yönetici yapılsın mı?" : " kullanıcının yöneticiliği alınsın mı?"))) return;
+  await adminIslem("admin_rol", { hedef: u.id, yeni_rol: yeni }, yeni === "admin" ? ad + " artık yönetici." : ad + " artık normal kullanıcı.");
+}
+async function adminSil(u) {
+  const ad = (u.ad || "") + " (" + u.sicil + ")";
+  if (!confirm(ad + " kullanıcısı ve TÜM sayı kayıtları kalıcı olarak silinecek. Bu işlem geri alınamaz. Devam edilsin mi?")) return;
+  await adminIslem("admin_sil", { hedef: u.id }, ad + " silindi.");
+}
+
+$("aEkle").onclick = async () => {
+  const ad = $("aAd").value.trim(), s = $("aSicil").value.trim().toLowerCase(), sifre = $("aSifre").value, rol = $("aRol").value;
+  if (!ad) { msg("Yeni kullanıcı için ad soyad yazın."); return; }
+  if (!/^[a-z0-9]{1,30}$/.test(s)) { msg("Sicil numarası yalnızca harf ve rakamdan oluşmalı."); return; }
+  if (sifre.length < 6) { msg("Şifre en az 6 karakter olmalı."); return; }
+  msg("Kullanıcı ekleniyor…");
+  // Ayrı, oturum tutmayan istemci: yöneticinin kendi oturumu bozulmaz
+  const sb2 = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "gecici-ekleme" } });
+  const { data, error } = await sb2.auth.signUp({ email: mailOf(s), password: sifre, options: { data: { ad, sicil: s } } });
+  if (error) { msg(/already|registered/i.test(error.message) ? "Bu sicil numarasıyla zaten kayıt var." : "Kullanıcı eklenemedi: " + error.message); return; }
+  if (!data.user) { msg("Kullanıcı oluşturulamadı."); return; }
+  if (rol === "admin") {
+    const r = await sb.rpc("admin_rol", { hedef: data.user.id, yeni_rol: "admin" });
+    if (r.error) { msg("Kullanıcı eklendi ama yönetici yapılamadı: " + r.error.message); await adminYukle(); return; }
+  }
+  ["aAd", "aSicil", "aSifre"].forEach(i => $(i).value = "");
+  msg(ad + " (" + s + ") eklendi. Şifreyi kullanıcıya iletin.");
+  await adminYukle();
+};
+
+// ================= TOPLU SİLME (TÜM KULLANICILAR) =================
+// Asıl yetki kontrolü veritabanındaki admin_sayilar_temizle fonksiyonunda (toplu-silme.sql)
+async function tumunuTemizle() {
+  if (!isAdmin()) { msg("Toplu silmek için yönetici olmalısınız."); return; }
+  const gun = secili;
+  msg(gun + " tarihindeki tüm girişler siliniyor…");
+  const { data, error } = await sb.rpc("admin_sayilar_temizle", { gun });
+  if (error) {
+    msg("Toplu silme başarısız: " + error.message +
+      (/could not find|schema cache|does not exist|function/i.test(error.message) ? " — Supabase'de toplu-silme.sql çalıştırılmamış olabilir." : ""));
+    return;
+  }
+  // Bu cihazda bekleyen yazımlar silinenleri geri yazmasın
+  Object.keys(kirli).forEach(r => { kirli[r] = false; clearTimeout(otoTimer[r]); });
+  await load();
+  msg(gun + " tarihinde " + data + " satır temizlendi (tüm kullanıcılar).");
+}
+onayli($("tumSil"), tumunuTemizle);
+
+// Yalnızca SAYI 1-6 hücrelerini sil, makine adları kalsın
+async function tumSayilariTemizle() {
+  if (!isAdmin()) { msg("Toplu silmek için yönetici olmalısınız."); return; }
+  const gun = secili;
+  msg(gun + " tarihindeki tüm sayılar siliniyor…");
+  const { data, error } = await sb.rpc("admin_sayilari_temizle", { gun });
+  if (error) {
+    msg("Toplu silme başarısız: " + error.message +
+      (/could not find|schema cache|does not exist|function/i.test(error.message) ? " — Supabase'de toplu-silme.sql çalıştırılmamış olabilir." : ""));
+    return;
+  }
+  Object.keys(kirli).forEach(r => { kirli[r] = false; clearTimeout(otoTimer[r]); });
+  await load();
+  msg(gun + " tarihinde " + data + " satırın sayıları silindi (makine adları korundu).");
+}
+onayli($("tumSayiSil"), tumSayilariTemizle);
+
+// Kendi tablom: yalnızca bugünün sayılarını sil, makine adları kalsın
+async function benimSayilarimiSil() {
+  if (!me || secili !== bugun) { msg("Yalnızca bugünün tablosundaki sayılar silinebilir."); return; }
+  msg("Sayılarınız siliniyor…");
+  Object.keys(kirli).forEach(r => { kirli[r] = false; clearTimeout(otoTimer[r]); });
+  const { error } = await sb.from("sayilar").update({ n1: null, n2: null, n3: null, n4: null, n5: null, n6: null })
+    .eq("user_id", myId()).eq("tarih", bugun);
+  if (error) { msg("Sayılar silinemedi: " + error.message); return; }
+  rows.forEach(r => { if (r.user_id === myId()) COLS.forEach(k => { r[k] = null; }); });
+  COLS.forEach((k, i) => myInputs.forEach(f => { f[i + 1].value = ""; }));
+  myTot.forEach(t => { t.textContent = "0"; });
+  renderShared();
+  msg("Sayılarınız silindi, makine adları korundu.");
+  await load();
+}
+onayli($("sayiSil"), benimSayilarimiSil);
+
+// ================= GİRİŞ LOGU + SÜRE FARKI =================
+let logs = [], logOk = true;
+const sure = sn => {
+  if (sn == null) return "—";
+  sn = Math.round(sn);
+  if (sn < 60) return sn + " sn";
+  const sa = Math.floor(sn / 3600), dk = Math.floor((sn % 3600) / 60), sc = sn % 60;
+  if (sa > 0) return sa + " sa " + dk + " dk";
+  return dk + " dk" + (sc ? " " + sc + " sn" : "");
+};
+const saatOf = z => new Date(z).toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+const toplamYaz = v => v == null ? "—" : fmt(parseFloat(v));
+const makineYaz = l => l.sutun === "makine" ? (l.eski || "(adsız)") + " → " + (l.yeni || "(adsız)") + " (ad değişti)" : (l.makine || "(adsız)");
+// Herkes kimin girdiğini görür; sicil yalnızca yöneticiye ek olarak gösterilir (kullanıcı listesinden)
+const sicilHarita = () => new Map(adminList.map(u => [u.id, u.sicil]));
+const logAd = (l, sm) => (l.kullanici || "?") + (isAdmin() && sm.get(l.user_id) ? " [" + sm.get(l.user_id) + "]" : "");
+
+async function logYukle() {
+  if (!sb || !me) { logs = []; logCiz(); return; }
+  const { data, error } = await sb.from("sayi_log").select("*").eq("tarih", secili).order("zaman", { ascending: false }).limit(2000);
+  if (error) { logOk = false; logCiz(); return; }   // tablo kurulmamışsa bölüm gizli kalır
+  logOk = true; logs = data || [];
+  if (isAdmin() && !adminList.length) {
+    const r = await sb.rpc("admin_kullanicilar");
+    if (!r.error) adminList = r.data || [];
+  }
+  logCiz();
+}
+
+function logGorunen() {
+  const v = $("logKul").value;
+  return v ? logs.filter(l => l.user_id === v) : logs;
+}
+
+function logCiz() {
+  const box = $("logBox");
+  if (!me || !logOk) { box.classList.add("hide"); return; }
+  box.classList.remove("hide");
+  const sm = sicilHarita(), sel = $("logKul");
+  sel.classList.remove("hide");
+  const cur = sel.value, kul = new Map();
+  logs.forEach(l => { if (!kul.has(l.user_id)) kul.set(l.user_id, logAd(l, sm)); });
+  sel.textContent = "";
+  const o0 = el("option", "", "Tüm kullanıcılar"); o0.value = ""; sel.append(o0);
+  [...kul.entries()].sort((a, b) => a[1].localeCompare(b[1], "tr")).forEach(([id, ad]) => {
+    const o = el("option", "", ad + (id === myId() ? " (siz)" : "")); o.value = id; sel.append(o);
+  });
+  sel.value = kul.has(cur) ? cur : "";
+
+  let list = logGorunen();
+  if ($("logSira").value === "kb") list = list.slice().sort((a, b) => adKar(a.sutun === "makine" ? a.yeni : a.makine, b.sutun === "makine" ? b.yeni : b.makine) || new Date(a.zaman) - new Date(b.zaman));
+  $("logSayi").textContent = "(" + list.length + " kayıt)";
+  $("logSil").classList.toggle("hide", !isAdmin() || !list.length);
+
+  // Özet: kullanıcı başına ilk/son giriş ve ortalama aralık
+  const oz = $("logOzet"); oz.textContent = "";
+  const grp = new Map();
+  list.filter(l => l.sutun !== "makine" && l.yeni != null).forEach(l => {
+    if (!grp.has(l.user_id)) grp.set(l.user_id, { ad: logAd(l, sm) + (l.user_id === myId() ? " (siz)" : ""), t: [] });
+    grp.get(l.user_id).t.push(new Date(l.zaman).getTime());
+  });
+  [...grp.values()].sort((a, b) => a.ad.localeCompare(b.ad, "tr")).forEach(g => {
+    g.t.sort((a, b) => a - b);
+    const n = g.t.length, ilk = g.t[0], son = g.t[n - 1], top = (son - ilk) / 1000;
+    oz.append(el("div", "", g.ad + ": " + n + " giriş · ilk " + saatOf(ilk) + " · son " + saatOf(son) +
+      " · toplam süre " + sure(top) + (n > 1 ? " · ortalama aralık " + sure(top / (n - 1)) : "")));
+  });
+
+  const box2 = $("logTbl"); box2.textContent = "";
+  if (!list.length) { box2.append(el("p", "mut", "Bu tarihte kayıt yok.")); return; }
+  const tbl = el("table", "at"), head = el("thead"), hr = el("tr"), body = el("tbody");
+  ["SAAT", "KİM GİRDİ", "MAKİNE", "ÖNCEKİ TOPLAM", "SONRAKİ TOPLAM", "MAKİNEDE ÖNCEKİ GİRİŞTEN", "ÖNCEKİ GİRİŞTEN (GENEL)"].concat(isAdmin() ? ["İŞLEM"] : []).forEach(h => hr.append(el("th", "", h)));
+  head.append(hr); tbl.append(head);
+  list.forEach(l => {
+    const tr = el("tr");
+    tr.append(el("td", "", saatOf(l.zaman)),
+      el("td", "", logAd(l, sm) + (l.user_id === myId() ? " (siz)" : "")),
+      el("td", "", makineYaz(l)),
+      el("td", "", toplamYaz(l.toplam_once)), el("td", "", toplamYaz(l.toplam_sonra)),
+      el("td", "", sure(l.fark_makine_sn)), el("td", "", sure(l.fark_genel_sn)));
+    if (isAdmin()) {
+      const td = el("td", "act"), b = el("button", "sm red", "Sil");
+      onayli(b, () => logSil([l.id]));
+      td.append(b); tr.append(td);
+    }
+    body.append(tr);
+  });
+  tbl.append(body); box2.append(tbl);
+}
+
+function logCsv() {
+  const list = logGorunen(), sm = sicilHarita();
+  if (!list.length) { msg("İndirilecek kayıt yok."); return; }
+  const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+  const baslik = ["Tarih", "Saat", "Kullanıcı"].concat(isAdmin() ? ["Sicil"] : [], ["Makine", "İşlem", "Önceki toplam", "Sonraki toplam", "Makinede önceki girişten (sn)", "Genel önceki girişten (sn)"]);
+  const satirlar = [baslik.map(q).join(";")];
+  const dv = v => v == null ? "" : toplamYaz(v);
+  list.slice().reverse().forEach(l => satirlar.push([secili, saatOf(l.zaman), l.kullanici].concat(isAdmin() ? [sm.get(l.user_id) || ""] : [],
+    [makineYaz(l), l.islem, dv(l.toplam_once), dv(l.toplam_sonra), l.fark_makine_sn, l.fark_genel_sn]).map(q).join(";")));
+  const blob = new Blob(["\ufeff" + satirlar.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "giris-kayitlari-" + secili + ".csv";
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+// Log silme: arayüz yalnızca yöneticiye gösterir; asıl yetki veritabanındaki admin_log_sil fonksiyonunda
+function logMesaj(t, hata) {
+  const m = $("logMsg");
+  m.textContent = t; m.style.color = hata ? "#d33" : "";
+  m.classList.toggle("hide", !t);
+  msg(t);
+}
+// confirm() bazı ortamlarda engellendiği için onay butonun kendisinde: ilk tık "Emin misiniz?", ikinci tık siler
+function onayli(btn, fn) {
+  const ilk = btn.textContent; let bekle = false, tm;
+  btn.onclick = () => {
+    if (!bekle) {
+      bekle = true; btn.textContent = "Emin misiniz? Tekrar basın";
+      tm = setTimeout(() => { bekle = false; btn.textContent = ilk; }, 5000);
+      return;
+    }
+    clearTimeout(tm); bekle = false; btn.textContent = ilk; fn();
+  };
+}
+async function logSil(idler) {
+  if (!isAdmin()) { logMesaj("Log silmek için yönetici olmalısınız.", true); return; }
+  if (!idler.length) return;
+  logMesaj("Log kayıtları siliniyor…");
+  const { data, error } = await sb.rpc("admin_log_sil", { idler });
+  if (error) {
+    logMesaj("Log silinemedi: " + error.message +
+      (/could not find|schema cache|does not exist|function/i.test(error.message) ? " — Supabase'de log-silme.sql çalıştırılmamış olabilir." : ""), true);
+    return;
+  }
+  await logYukle();
+  const kalan = logs.filter(l => idler.includes(l.id)).length;
+  if (kalan) logMesaj("Silme çağrısı tamamlandı ama " + kalan + " kayıt hâlâ görünüyor (silinen: " + data + "). Supabase'de log-silme.sql dosyasını yeniden çalıştırın.", true);
+  else logMesaj(data + " log kaydı silindi.");
+}
+onayli($("logSil"), () => logSil(logGorunen().map(x => x.id)));
+$("logKul").onchange = logCiz; $("logSira").onchange = logCiz;
+$("logCsv").onclick = logCsv;
+
+// Sayfadan ayrılmadan / sekme gizlenmeden önce bekleyen değişiklikleri hemen kaydet
+function bekleyenleriKaydet() {
+  Object.keys(kirli).forEach(r => { if (kirli[r]) { clearTimeout(otoTimer[r]); save(+r); } });
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden) bekleyenleriKaydet(); });
+window.addEventListener("pagehide", bekleyenleriKaydet);
+
+// Açık oturumdaki kullanıcı banlanırsa en geç 30 sn içinde çıkış yaptır
+setInterval(async () => {
+  if (!sb || !me) return;
+  await profilYukle();
+  if (profil && profil.banli) banliCikis();
+}, 30000);
+
+setInterval(() => {
+  const yeni = todayStr();
+  if (yeni !== bugun) { const bugunduydu = secili === bugun; bugun = yeni; $("tarih").max = bugun; if (bugunduydu) secili = bugun; if (sb) hazirla(); }
+}, 60000);
+
+(async function () {
+  if (SUPABASE_URL.includes("PROJE-KODUNUZ") || SUPABASE_KEY.includes("ANAHTARINIZ")) { msg("Önce dosyanın başındaki SUPABASE_URL ve SUPABASE_KEY değerlerini girin."); return; }
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  sb.channel("sayilar-canli").on("postgres_changes", { event: "*", schema: "public", table: "sayilar" }, () => {
+    clearTimeout(timer); timer = setTimeout(load, 300);
+  }).subscribe();
+  let started = false;
+  sb.auth.onAuthStateChange((ev, session) => {
+    if (session) { me = session.user; if (!started) { started = true; setTimeout(hazirla, 0); } }
+    else if (!session && (ev === "SIGNED_OUT" || ev === "INITIAL_SESSION")) { started = false; me = null; setTimeout(hazirla, 0); }
+  });
+})();
+</script>
+</body>
+</html>
