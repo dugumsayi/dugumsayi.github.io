@@ -124,7 +124,7 @@ button.grn{background:#2a9d4a}
 
 <div id="app" class="hide">
   <h2>Benim girişlerim (bugün)</h2>
-  <div class="bar"><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
+  <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
   <div class="scroll"><table><thead><tr><th>MAKİNE</th><th>SAYI 1</th><th>SAYI 2</th><th>SAYI 3</th><th>SAYI 4</th><th>SAYI 5</th><th>SAYI 6</th><th>TOPLAM</th></tr></thead><tbody id="mine"></tbody></table></div>
 </div>
 
@@ -287,7 +287,7 @@ function satirEkle(r) {
         clearTimeout(otoTimer[r]); otoTimer[r] = setTimeout(() => save(r), OTO_MS);
         tabloDoluKontrol();
       };
-      i.onchange = () => { clearTimeout(otoTimer[r]); save(r); };
+      i.onchange = () => { clearTimeout(otoTimer[r]); save(r).then(() => tabloDoluKontrol()); };
       td.append(i); tr.append(td); inp.push(i);
     }
     const tt = el("td", "t", "0"); tr.append(tt); myTot.push(tt);
@@ -301,16 +301,23 @@ const satirDolu = r => {
   const row = rows.find(x => x.user_id === myId() && x.satir === r);
   return !!row && (!!(row.name || "").trim() || COLS.some(k => row[k] != null && String(row[k]).trim() !== ""));
 };
-async function tabloDoluKontrol() {
-  if (satirEkleniyor || !me || secili !== bugun || N >= NMAX) return;
-  for (let r = 0; r < N; r++) if (!satirDolu(r)) return;
+async function tabloDoluKontrol(zorla) {
+  if (satirEkleniyor || !me || secili !== bugun) return;
+  if (N >= NMAX) { if (zorla) msg("En fazla " + NMAX + " satır eklenebilir."); return; }
+  if (!zorla) for (let r = 0; r < N; r++) if (!satirDolu(r)) return;
   satirEkleniyor = true;
   const r = N; N++; satirEkle(r);
-  const { error } = await sb.from("sayilar").upsert([{ satir: r, tarih: bugun, kullanici: userName() }], { onConflict: "user_id,tarih,satir", ignoreDuplicates: true });
-  if (error) {
+  try {
+    const { error } = await sb.from("sayilar").upsert([{ satir: r, tarih: bugun, kullanici: userName() }], { onConflict: "user_id,tarih,satir", ignoreDuplicates: true });
+    if (error) {
+      N--; myTr.pop().remove(); myInputs.pop(); myTot.pop();
+      msg("Yeni satır eklenemedi: " + error.message +
+        (/check|constraint|violates|policy|row-level/i.test(error.message) ? " — Supabase'de satir-ekle.sql çalıştırılmalı (satir sınırı/izin)." : ""));
+    } else { await load(); msg("Tablo doldu, yeni satır eklendi."); }
+  } catch (e) {
     N--; myTr.pop().remove(); myInputs.pop(); myTot.pop();
-    msg("Yeni satır eklenemedi: " + error.message);
-  } else await load();
+    msg("Yeni satır eklenemedi: " + (e && e.message ? e.message : e));
+  }
   satirEkleniyor = false;
 }
 
@@ -329,6 +336,7 @@ function siralaMine() {
   ks.sort((a, b) => a.bos - b.bos || adKar(a.ad, b.ad) || a.r - b.r);
   ks.forEach(k => body.append(myTr[k.r]));
 }
+$("satirBtn").onclick = () => tabloDoluKontrol(true);
 $("mine").addEventListener("focusout", e => { if (!$("mine").contains(e.relatedTarget)) setTimeout(siralaMine, 0); });
 
 function fillMine() {
@@ -475,6 +483,7 @@ async function hazirla() {
     if (ins.error) { msg("Satırlar oluşturulamadı: " + ins.error.message); return; }
   }
   await load();
+  if (duzenle) tabloDoluKontrol();
   msg(duzenle ? "Hücreye yazın, otomatik kaydedilir. Her gün yeni bir tablo açılır." :
       me ? "Geçmiş günler yalnızca görüntülenir. Düzenlemek için \"Bugün\"e basın." :
       (sonBan || "Sayıları herkes görebilir. Sayı girmek için giriş yapın veya kayıt olun."));
