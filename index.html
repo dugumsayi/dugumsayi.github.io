@@ -156,6 +156,19 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 #auth.kayit-modu .kayitOnly{display:block}
 #auth.kayit-modu #giris{display:none}
 #auth button#giris,#auth button#kayit{height:42px;border-radius:10px;width:100%;background:var(--blue);color:#fff;border:0}
+/* Log tablosu */
+#logOzet div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:6px 0;font-size:13px}
+table.lg{width:100%;font-size:14px}
+table.lg th{position:sticky;top:0;font-size:12px;letter-spacing:.04em;padding:8px 10px;text-align:left}
+table.lg td{padding:7px 10px;vertical-align:middle;height:auto}
+table.lg .lg-t{white-space:nowrap;color:var(--mut);font-variant-numeric:tabular-nums}
+table.lg .lg-mk{font-weight:600}
+table.lg .lg-alt{font-size:11px;font-weight:400;color:var(--mut)}
+table.lg .lg-e span{display:inline-block;min-width:44px;text-align:center;font-weight:700;border-radius:999px;padding:1px 10px;background:var(--bg);border:1px solid var(--line)}
+table.lg .lg-e .lg-art{color:#2ecc40;border-color:#2ecc4066}
+table.lg .lg-e .lg-eks,table.lg .lg-e .lg-sil{color:#e5484d;border-color:#e5484d66}
+table.lg .lg-tp{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
+table.lg tr.lg-ad td{opacity:.75}
 /* Profil paneli: iki sütun + kapat düğmesi */
 #profil{display:block;max-width:none;padding:16px 18px}
 .p-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 12px}
@@ -222,8 +235,8 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
   #profil{max-width:none}
   #logBox .bar select,#logBox .bar button{flex:1 1 140px}
   h2{font-size:16px}
-  #logTbl th,#logTbl td{font-size:13px;padding:0 6px;min-width:0}
-  #logTbl th:nth-child(n+5):nth-child(-n+8),#logTbl td:nth-child(n+5):nth-child(-n+8){display:none}
+  table.lg th,table.lg td{font-size:12.5px;padding:6px 6px}
+  table.lg th:nth-child(6),table.lg td:nth-child(6){display:none}
 }
 .hide{display:none!important}
 </style>
@@ -249,7 +262,7 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
     <div class="p-col">
       <strong>Şifre değiştir</strong>
       <input id="pEski" type="password" placeholder="Mevcut şifre" autocomplete="current-password">
-      <input id="pYeni" type="password" placeholder="Yeni şifre (min 6)" autocomplete="new-password">
+      <input id="pYeni" type="password" placeholder="Yeni şifre" autocomplete="new-password">
       <input id="pYeni2" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password">
       <button id="pSifre">Şifreyi değiştir</button>
     </div>
@@ -263,7 +276,7 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
   <div class="row">
     <input id="aAd" placeholder="Ad Soyad">
     <input id="aSicil" placeholder="Sicil numarası">
-    <input id="aSifre" type="text" placeholder="Şifre (en az 6 karakter)" autocomplete="off">
+    <input id="aSifre" type="text" placeholder="Şifre" autocomplete="off">
     <select id="aRol"><option value="user">Kullanıcı</option><option value="admin">Yönetici</option></select>
     <button id="aEkle">Kullanıcı ekle</button>
   </div>
@@ -336,6 +349,9 @@ const SUPABASE_KEY = "sb_publishable_hxb7BDh7sjAwoBDt4UjG1w_Tu6oAwO2";
 const N0 = 9, NMAX = 60, COLS = ["n1","n2","n3","n4","n5","n6"];
 const $ = id => document.getElementById(id);
 const st = $("st");
+// Şifre kuralı yok: istenen şifre kullanılır. Supabase sunucusu en az 6 karakter istediği için
+// 6 karakterden kısa şifreler arka planda sabit bir ekle tamamlanır (giriş, kayıt, değiştirme hepsinde aynı).
+const sifreHazirla = p => p.length >= 6 ? p : p + "#Mkn24".slice(0, 6 - p.length);
 const todayStr = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Istanbul" });
 let N = N0, sb, me = null, rows = [], myInputs = [], myTot = [], myTr = [], timer = null;
 const OTO_MS = 700, otoTimer = {}, kirli = {}; let kayitZinciri = Promise.resolve();
@@ -372,7 +388,7 @@ function sicilAl() {
 function authMod(k) {
   $("auth").classList.toggle("kayit-modu", k);
   $("tabGiris").classList.toggle("on", !k); $("tabKayit").classList.toggle("on", k);
-  $("sifre").placeholder = k ? "Şifre (en az 6 karakter)" : "Şifre";
+  $("sifre").placeholder = "Şifre";
   $("sifre").autocomplete = k ? "new-password" : "current-password";
 }
 $("tabGiris").onclick = () => authMod(false);
@@ -382,7 +398,7 @@ $("giris").onclick = async () => {
   const s = sicilAl(); if (!s) return;
   sonBan = "";
   msg("Giriş yapılıyor…");
-  const { error } = await sb.auth.signInWithPassword({ email: mailOf(s), password: $("sifre").value });
+  const { error } = await sb.auth.signInWithPassword({ email: mailOf(s), password: sifreHazirla($("sifre").value) });
   if (error) msg(/banned/i.test(error.message) ? "Bu hesap yasaklanmış. Yönetici ile iletişime geçin." :
                  /invalid/i.test(error.message) ? "Sicil numarası veya şifre hatalı." : "Giriş yapılamadı: " + error.message);
 };
@@ -392,9 +408,9 @@ $("kayit").onclick = async () => {
   if (!ad) { msg("Kayıt için adınızı yazın."); return; }
   const vk = $("vardiyaKayit").value;
   if (!vk) { msg("Kayıt için vardiyanızı seçin (A, B, C veya D)."); return; }
-  if ($("sifre").value.length < 6) { msg("Şifre en az 6 karakter olmalı."); return; }
+  if (!$("sifre").value) { msg("Bir şifre yazın."); return; }
   msg("Kayıt yapılıyor…");
-  const { data, error } = await sb.auth.signUp({ email: mailOf(s), password: $("sifre").value, options: { data: { ad, sicil: s, vardiya: vk } } });
+  const { data, error } = await sb.auth.signUp({ email: mailOf(s), password: sifreHazirla($("sifre").value), options: { data: { ad, sicil: s, vardiya: vk } } });
   if (!error && data.session) {   // kayıt sonrası otomatik giriş olduysa seçilen vardiyayı profile yaz
     const r = await sb.rpc("vardiya_sec", { yeni: vk });
     if (r.error) msg("Kayıt oluştu ama vardiya kaydedilemedi: " + r.error.message + " — Profilim bölümünden vardiyanızı seçebilirsiniz.");
@@ -451,13 +467,13 @@ $("pKaydet").onclick = async () => {
 $("pSifre").onclick = async () => {
   const eski = $("pEski").value, yeni = $("pYeni").value;
   if (!eski) { msg("Mevcut şifrenizi yazın."); return; }
-  if (yeni.length < 6) { msg("Yeni şifre en az 6 karakter olmalı."); return; }
+  if (!yeni) { msg("Yeni şifreyi yazın."); return; }
   if (yeni !== $("pYeni2").value) { msg("Yeni şifreler aynı değil."); return; }
   if (yeni === eski) { msg("Yeni şifre mevcut şifreyle aynı olamaz."); return; }
   msg("Şifre değiştiriliyor…");
-  const chk = await sb.auth.signInWithPassword({ email: me.email, password: eski });
+  const chk = await sb.auth.signInWithPassword({ email: me.email, password: sifreHazirla(eski) });
   if (chk.error) { msg("Mevcut şifre hatalı."); return; }
-  const { error } = await sb.auth.updateUser({ password: yeni });
+  const { error } = await sb.auth.updateUser({ password: sifreHazirla(yeni) });
   if (error) { msg("Şifre değiştirilemedi: " + error.message); return; }
   ["pEski","pYeni","pYeni2"].forEach(i => $(i).value = "");
   msg("Şifreniz değiştirildi. Bir sonraki girişte yeni şifrenizi kullanın.");
@@ -916,11 +932,11 @@ $("aEkle").onclick = async () => {
   const ad = $("aAd").value.trim(), s = $("aSicil").value.trim().toLowerCase(), sifre = $("aSifre").value, rol = $("aRol").value;
   if (!ad) { msg("Yeni kullanıcı için ad soyad yazın."); return; }
   if (!/^[a-z0-9]{1,30}$/.test(s)) { msg("Sicil numarası yalnızca harf ve rakamdan oluşmalı."); return; }
-  if (sifre.length < 6) { msg("Şifre en az 6 karakter olmalı."); return; }
+  if (!sifre) { msg("Bir şifre yazın."); return; }
   msg("Kullanıcı ekleniyor…");
   // Ayrı, oturum tutmayan istemci: yöneticinin kendi oturumu bozulmaz
   const sb2 = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "gecici-ekleme" } });
-  const { data, error } = await sb2.auth.signUp({ email: mailOf(s), password: sifre, options: { data: { ad, sicil: s } } });
+  const { data, error } = await sb2.auth.signUp({ email: mailOf(s), password: sifreHazirla(sifre), options: { data: { ad, sicil: s } } });
   if (error) { msg(/already|registered/i.test(error.message) ? "Bu sicil numarasıyla zaten kayıt var." : "Kullanıcı eklenemedi: " + error.message); return; }
   if (!data.user) { msg("Kullanıcı oluşturulamadı."); return; }
   if (rol === "admin") {
@@ -997,8 +1013,19 @@ const sure = sn => {
 };
 const saatOf = z => new Date(z).toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 const toplamYaz = v => v == null ? "—" : fmt(parseFloat(v));
-// Örn. ilk giriş 5 -> "5", tekrar 5 girince -> "10" (girişten sonraki makine toplamı)
-const girilenYaz = (l, hs) => l.sutun === "makine" ? "—" : toplamYaz(l.toplam_sonra ?? (hs || [])[1]);
+// Log: bu girişte toplama ne eklendi / çıkarıldı (+16, −10, silindi)
+const logFark = l => l.sutun === "makine" ? null : (parseFloat(l.yeni) || 0) - (parseFloat(l.eski) || 0);
+function eklenenYaz(l) {
+  const d = logFark(l);
+  if (d == null) return "—";
+  if (l.yeni == null && l.eski != null) return "silindi (" + fmt(parseFloat(l.eski) || 0) + ")";
+  return d > 0 ? "+" + fmt(d) : d < 0 ? "−" + fmt(-d) : "0";
+}
+function toplamOkYaz(l, hs) {
+  if (l.sutun === "makine") return "—";
+  const a = l.toplam_once ?? (hs || [])[0], b = l.toplam_sonra ?? (hs || [])[1];
+  return a == null || b == null ? "—" : fmt(parseFloat(a)) + " → " + fmt(parseFloat(b));
+}
 // Veritabanı toplam_once/toplam_sonra'yı doldurmuyorsa, günün loglarından hesapla
 function toplamHarita() {
   const m = new Map(), run = new Map();
@@ -1068,18 +1095,24 @@ function logCiz() {
 
   const box2 = $("logTbl"); box2.textContent = "";
   if (!list.length) { box2.append(el("p", "mut", "Bu tarihte kayıt yok.")); return; }
-  const tbl = el("table", "at"), head = el("thead"), hr = el("tr"), body = el("tbody");
-  ["SAAT", "KİM GİRDİ", "MAKİNE", "GİRİLEN SAYI", "ÖNCEKİ TOPLAM", "SONRAKİ TOPLAM", "MAKİNEDE ÖNCEKİ GİRİŞTEN", "ÖNCEKİ GİRİŞTEN (GENEL)"].concat(isAdmin() ? ["İŞLEM"] : []).forEach(h => hr.append(el("th", "", h)));
+  const tbl = el("table", "at lg"), head = el("thead"), hr = el("tr"), body = el("tbody");
+  ["SAAT", "KİM", "MAKİNE", "EKLENEN", "TOPLAM", "SÜRE"].concat(isAdmin() ? [""] : []).forEach(h => hr.append(el("th", "", h)));
   head.append(hr); tbl.append(head);
   const th = toplamHarita();
   list.forEach(l => {
-    const tr = el("tr"), hs = th.get(l.id) || [];
-    tr.append(el("td", "", saatOf(l.zaman)),
-      el("td", "", logAd(l, sm) + (l.user_id === myId() ? " (siz)" : "")),
-      el("td", "", makineYaz(l)),
-      el("td", "", girilenYaz(l, hs)),
-      el("td", "", toplamYaz(l.toplam_once ?? hs[0])), el("td", "", toplamYaz(l.toplam_sonra ?? hs[1])),
-      el("td", "", sure(l.fark_makine_sn)), el("td", "", sure(l.fark_genel_sn)));
+    const hs = th.get(l.id) || [], ad = l.sutun === "makine", d = logFark(l);
+    const tr = el("tr", ad ? "lg-ad" : "");
+    const tdMk = el("td", "lg-mk");
+    tdMk.append(el("div", "", ad ? (l.eski || "(adsız)") + " → " + (l.yeni || "(adsız)") : (l.makine || "(adsız)")));
+    if (ad) tdMk.append(el("div", "lg-alt", "makine adı değişti"));
+    const tdE = el("td", "lg-e"), cls = d == null ? "" : (l.yeni == null && l.eski != null) ? "lg-sil" : d > 0 ? "lg-art" : d < 0 ? "lg-eks" : "";
+    tdE.append(el("span", cls, eklenenYaz(l)));
+    const tdS = el("td", "lg-s"), mk = sure(l.fark_makine_sn), gn = sure(l.fark_genel_sn);
+    tdS.append(el("div", "", mk));
+    if (gn !== "—" && gn !== mk) tdS.append(el("div", "lg-alt", "genel: " + gn));
+    tr.append(el("td", "lg-t", saatOf(l.zaman)),
+      el("td", "", (l.kullanici || "?") + (isAdmin() && sm.get(l.user_id) ? " [" + sm.get(l.user_id) + "]" : "") + (l.user_id === myId() ? " (siz)" : "")),
+      tdMk, tdE, el("td", "lg-tp", toplamOkYaz(l, hs)), tdS);
     if (isAdmin()) {
       const td = el("td", "act"), b = el("button", "sm red", "Sil");
       onayli(b, () => logSil([l.id]));
@@ -1094,11 +1127,11 @@ function logCsv() {
   const list = logGorunen(), sm = sicilHarita();
   if (!list.length) { msg("İndirilecek kayıt yok."); return; }
   const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-  const baslik = ["Tarih", "Saat", "Kullanıcı"].concat(isAdmin() ? ["Sicil"] : [], ["Makine", "İşlem", "Girilen sayı", "Önceki toplam", "Sonraki toplam", "Makinede önceki girişten (sn)", "Genel önceki girişten (sn)"]);
+  const baslik = ["Tarih", "Saat", "Kullanıcı"].concat(isAdmin() ? ["Sicil"] : [], ["Makine", "İşlem", "Eklenen", "Önceki toplam", "Sonraki toplam", "Makinede önceki girişten (sn)", "Genel önceki girişten (sn)"]);
   const satirlar = [baslik.map(q).join(";")];
   const dv = v => v == null ? "" : toplamYaz(v), th = toplamHarita();
   list.slice().reverse().forEach(l => satirlar.push([secili, saatOf(l.zaman), l.kullanici].concat(isAdmin() ? [sm.get(l.user_id) || ""] : [],
-    [makineYaz(l), l.islem, girilenYaz(l, th.get(l.id)), dv(l.toplam_once ?? (th.get(l.id) || [])[0]), dv(l.toplam_sonra ?? (th.get(l.id) || [])[1]), l.fark_makine_sn, l.fark_genel_sn]).map(q).join(";")));
+    [makineYaz(l), l.islem, eklenenYaz(l), dv(l.toplam_once ?? (th.get(l.id) || [])[0]), dv(l.toplam_sonra ?? (th.get(l.id) || [])[1]), l.fark_makine_sn, l.fark_genel_sn]).map(q).join(";")));
   const blob = new Blob(["\ufeff" + satirlar.join("\r\n")], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "giris-kayitlari-" + secili + ".csv";
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
