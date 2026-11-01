@@ -157,7 +157,14 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 #auth.kayit-modu #giris{display:none}
 #auth button#giris,#auth button#kayit{height:42px;border-radius:10px;width:100%;background:var(--blue);color:#fff;border:0}
 /* Log tablosu */
-#logOzet div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:6px 0;font-size:13px}
+#logOzet .oz-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0}
+#logOzet .oz-card>strong{color:var(--fg);font-size:14px}
+.oz-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.oz-chip{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:4px 10px;min-width:0}
+.oz-chip small{font-size:11px;color:var(--mut)}
+.oz-chip b{font-size:14px;color:var(--fg)}
+.oz-chip.vurgu{border-color:var(--blue)}
+.oz-chip.vurgu b{color:var(--blue)}
 table.lg{width:100%;font-size:14px}
 table.lg th{position:sticky;top:0;font-size:12px;letter-spacing:.04em;padding:8px 10px;text-align:left}
 table.lg td{padding:7px 10px;vertical-align:middle;height:auto}
@@ -1079,18 +1086,31 @@ function logCiz() {
   $("logSayi").textContent = "(" + list.length + " kayıt)";
   $("logSil").classList.toggle("hide", !isAdmin() || !list.length);
 
-  // Özet: kullanıcı başına ilk/son giriş ve ortalama aralık
+  // Özet: kullanıcı başına toplam sayı, ilk/son giriş, ilk girişten sona geçen süre
   const oz = $("logOzet"); oz.textContent = "";
   const grp = new Map();
-  list.filter(l => l.sutun !== "makine" && l.yeni != null).forEach(l => {
-    if (!grp.has(l.user_id)) grp.set(l.user_id, { ad: logAd(l, sm) + (l.user_id === myId() ? " (siz)" : ""), t: [] });
-    grp.get(l.user_id).t.push(new Date(l.zaman).getTime());
+  list.filter(l => l.sutun !== "makine").forEach(l => {
+    if (!grp.has(l.user_id)) grp.set(l.user_id, { ad: logAd(l, sm) + (l.user_id === myId() ? " (siz)" : ""), t: [], net: 0 });
+    const g = grp.get(l.user_id);
+    g.net += logFark(l) || 0;                                     // girilen toplam (silinenler düşer)
+    if (l.yeni != null) g.t.push(new Date(l.zaman).getTime());   // giriş zamanları
   });
   [...grp.values()].sort((a, b) => a.ad.localeCompare(b.ad, "tr")).forEach(g => {
+    if (!g.t.length) return;
     g.t.sort((a, b) => a - b);
-    const n = g.t.length, ilk = g.t[0], son = g.t[n - 1], top = (son - ilk) / 1000;
-    oz.append(el("div", "", g.ad + ": " + n + " giriş · ilk " + saatOf(ilk) + " · son " + saatOf(son) +
-      " · toplam süre " + sure(top) + (n > 1 ? " · ortalama aralık " + sure(top / (n - 1)) : "")));
+    const n = g.t.length, ilk = g.t[0], son = g.t[n - 1], top = (son - ilk) / 1000, saat = top / 3600;
+    const card = el("div", "oz-card");
+    card.append(el("strong", "", g.ad));
+    const chips = el("div", "oz-chips");
+    const chip = (k, v, vurgu) => { const c = el("span", "oz-chip" + (vurgu ? " vurgu" : "")); c.append(el("small", "", k), el("b", "", v)); chips.append(c); };
+    chip("Atılan toplam sayı", fmt(Math.round(g.net * 100) / 100), true);
+    chip("İlk giriş", saatOf(ilk));
+    chip("Son giriş", saatOf(son));
+    chip("İlk girişten sona", n > 1 ? sure(top) + " (" + fmt(Math.round(saat * 100) / 100) + " saat)" : "tek giriş", true);
+    if (n > 1 && saat >= 1 / 60) chip("Saatte ortalama", fmt(Math.round(g.net / saat * 10) / 10) + " sayı");
+    chip("Giriş sayısı", String(n));
+    if (n > 1) chip("Ort. aralık", sure(top / (n - 1)));
+    card.append(chips); oz.append(card);
   });
 
   const box2 = $("logTbl"); box2.textContent = "";
