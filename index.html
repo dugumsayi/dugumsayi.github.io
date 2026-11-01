@@ -156,6 +156,24 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 #auth.kayit-modu .kayitOnly{display:block}
 #auth.kayit-modu #giris{display:none}
 #auth button#giris,#auth button#kayit{height:42px;border-radius:10px;width:100%;background:var(--blue);color:#fff;border:0}
+/* Profil paneli: iki sütun + kapat düğmesi */
+#profil{display:block;max-width:none;padding:16px 18px}
+.p-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 12px}
+.p-head strong{font-size:16px}
+.p-cols{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.p-col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.p-col>strong{font-size:14px;color:var(--mut)}
+.p-col input:not([type=checkbox]),.p-col select{width:100%;border-radius:8px}
+@media (max-width:700px){
+  .p-cols{gap:10px}
+  .p-col{gap:6px}
+  .p-col>strong{font-size:13px}
+  .p-col input:not([type=checkbox]),.p-col select{height:40px;padding:0 8px;font-size:15px}
+  .p-col .mut,#profil label.chk{font-size:12px}
+  #profil label.chk{gap:6px;align-items:flex-start}
+  #profil label.chk input{width:16px;height:16px;margin-top:2px}
+  .p-col button{height:38px;padding:0 6px;font-size:13px}
+}
 /* ===== Mobil: sade ve tek sütun ===== */
 @media (max-width:600px){
   body{padding:10px 10px 40px;font-size:15px}
@@ -217,23 +235,29 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 </header>
 
 <div id="profil" class="hide">
-  <strong>Profilim</strong>
-  <input id="pAd" type="text" placeholder="Ad Soyad" autocomplete="name">
-  <span id="pSicil" class="mut"></span>
-  <label class="chk"><input id="pGizle" type="checkbox"> Sicil numaramı diğer kullanıcılardan gizle</label>
-  <label class="mut" for="pVardiya">Vardiyam</label>
-  <select id="pVardiya"><option value="">Vardiya seçilmedi</option><option value="A">A vardiyası</option><option value="B">B vardiyası</option><option value="C">C vardiyası</option><option value="D">D vardiyası</option></select>
-  <button id="pKaydet">Profili kaydet</button>
-  <hr>
-  <strong>Şifre değiştir</strong>
-  <input id="pEski" type="password" placeholder="Mevcut şifre" autocomplete="current-password">
-  <input id="pYeni" type="password" placeholder="Yeni şifre (en az 6 karakter)" autocomplete="new-password">
-  <input id="pYeni2" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password">
-  <button id="pSifre">Şifreyi değiştir</button>
+  <div class="p-head"><strong>Profilim</strong><button id="profilKapat" type="button" class="alt sm">✕ Kapat</button></div>
+  <div class="p-cols">
+    <div class="p-col">
+      <strong>Bilgilerim</strong>
+      <input id="pAd" type="text" placeholder="Ad Soyad" autocomplete="name">
+      <span id="pSicil" class="mut"></span>
+      <label class="chk"><input id="pGizle" type="checkbox"> Sicil numaramı diğer kullanıcılardan gizle</label>
+      <label class="mut" for="pVardiya">Vardiyam</label>
+      <select id="pVardiya"><option value="">Vardiya seçilmedi</option><option value="A">A vardiyası</option><option value="B">B vardiyası</option><option value="C">C vardiyası</option><option value="D">D vardiyası</option></select>
+      <button id="pKaydet">Profili kaydet</button>
+    </div>
+    <div class="p-col">
+      <strong>Şifre değiştir</strong>
+      <input id="pEski" type="password" placeholder="Mevcut şifre" autocomplete="current-password">
+      <input id="pYeni" type="password" placeholder="Yeni şifre (min 6)" autocomplete="new-password">
+      <input id="pYeni2" type="password" placeholder="Yeni şifre (tekrar)" autocomplete="new-password">
+      <button id="pSifre">Şifreyi değiştir</button>
+    </div>
+  </div>
 </div>
 
 <div id="admin" class="hide">
-  <strong>Yönetim paneli</strong>
+  <div class="p-head"><strong>Yönetim paneli</strong><button id="adminKapat" type="button" class="alt sm">✕ Kapat</button></div>
   <p class="mut">Kullanıcıları banlayabilir, silebilir, yönetici yapabilir veya yeni kullanıcı ekleyebilirsiniz.</p>
   <strong>Yeni kullanıcı ekle</strong>
   <div class="row">
@@ -408,6 +432,8 @@ $("profilBtn").onclick = () => {
   if (acik) { profilDoldur(); $("pVardiya").value = vardiyaOf(myId()) || ""; }
   if (acik) p.scrollIntoView({ behavior: "smooth", block: "start" });
 };
+$("profilKapat").onclick = () => $("profil").classList.add("hide");
+$("adminKapat").onclick = () => $("admin").classList.add("hide");
 $("pKaydet").onclick = async () => {
   const ad = $("pAd").value.trim();
   if (!ad) { msg("Ad Soyad boş olamaz."); return; }
