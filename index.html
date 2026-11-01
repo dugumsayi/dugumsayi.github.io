@@ -145,6 +145,17 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 #genel{margin:0 0 12px}
 @media (min-width:601px){#agg table,#users table{width:100%}}
 @media (max-width:600px){body{padding:12px 10px 40px}.top{padding:12px}.stat .v{font-size:24px}}
+/* Giriş kartı: en üstte, sade */
+#auth{display:flex;flex-direction:column;gap:10px;max-width:440px;margin:0 auto 16px;padding:16px}
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--bg);border:1px solid var(--line);border-radius:10px}
+.auth-tabs button{height:34px;background:transparent;color:var(--mut);border:0;border-radius:7px;font-weight:600}
+.auth-tabs button.on{background:var(--card);color:var(--fg);box-shadow:var(--shadow)}
+.auth-tabs button:hover{filter:none}
+#auth input,#auth select{height:42px;border-radius:10px;width:100%}
+#auth .kayitOnly{display:none}
+#auth.kayit-modu .kayitOnly{display:block}
+#auth.kayit-modu #giris{display:none}
+#auth button#giris,#auth button#kayit{height:42px;border-radius:10px;width:100%;background:var(--blue);color:#fff;border:0}
 /* ===== Mobil: sade ve tek sütun ===== */
 @media (max-width:600px){
   body{padding:10px 10px 40px;font-size:15px}
@@ -205,6 +216,16 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
   <div id="bar" class="bar hide"><span id="kim"></span><button id="profilBtn" type="button" class="alt">Profilim</button><button id="adminBtn" class="alt hide">Yönetim paneli</button><button id="cikis" type="button" class="alt">Çıkış yap</button></div>
 </header>
 
+<div id="auth" class="hide">
+  <div class="auth-tabs"><button type="button" id="tabGiris" class="on">Giriş yap</button><button type="button" id="tabKayit">Kayıt ol</button></div>
+  <input id="ad" class="kayitOnly" placeholder="Ad Soyad" autocomplete="name">
+  <select id="vardiyaKayit" class="kayitOnly" title="Vardiya (yalnızca kayıt olurken)"><option value="">Vardiyanızı seçin</option><option value="A">A vardiyası</option><option value="B">B vardiyası</option><option value="C">C vardiyası</option><option value="D">D vardiyası</option></select>
+  <input id="sicil" placeholder="Sicil numarası" autocomplete="username" inputmode="text">
+  <input id="sifre" type="password" placeholder="Şifre" autocomplete="current-password">
+  <button id="giris">Giriş yap</button>
+  <button id="kayit" class="kayitOnly">Kayıt ol</button>
+</div>
+
 <div id="vardiyaBox" class="hide">
   <div id="vardiyaStat" class="stats"></div>
   <div class="sec-head"><h2>Vardiya listesi</h2><button id="vardiyaYenile" type="button" class="alt sm">Yenile</button></div>
@@ -212,15 +233,7 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
   <p id="vardiyaAtanmamis" class="mut"></p>
 </div>
 
-<div id="auth" class="hide">
-  <strong>Sayı girmek için giriş yapın</strong>
-  <input id="ad" placeholder="Ad Soyad (yalnızca kayıt olurken)" autocomplete="name">
-  <select id="vardiyaKayit" title="Vardiya (yalnızca kayıt olurken)"><option value="">Vardiya seçin (kayıt olurken)</option><option value="A">A vardiyası</option><option value="B">B vardiyası</option><option value="C">C vardiyası</option><option value="D">D vardiyası</option></select>
-  <input id="sicil" placeholder="Sicil numarası" autocomplete="username" inputmode="text">
-  <input id="sifre" type="password" placeholder="Şifre (en az 6 karakter)" autocomplete="current-password">
-  <button id="giris">Giriş yap</button>
-  <button id="kayit" class="alt">Kayıt ol</button>
-</div>
+
 
 
 
@@ -330,6 +343,15 @@ function sicilAl() {
   return s;
 }
 
+function authMod(k) {
+  $("auth").classList.toggle("kayit-modu", k);
+  $("tabGiris").classList.toggle("on", !k); $("tabKayit").classList.toggle("on", k);
+  $("sifre").placeholder = k ? "Şifre (en az 6 karakter)" : "Şifre";
+  $("sifre").autocomplete = k ? "new-password" : "current-password";
+}
+$("tabGiris").onclick = () => authMod(false);
+$("tabKayit").onclick = () => authMod(true);
+$("sifre").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $($("auth").classList.contains("kayit-modu") ? "kayit" : "giris").click(); } });
 $("giris").onclick = async () => {
   const s = sicilAl(); if (!s) return;
   sonBan = "";
