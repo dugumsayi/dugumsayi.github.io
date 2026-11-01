@@ -247,6 +247,21 @@ table.lg tr.lg-ad td{opacity:.75}
   table.lg th:nth-child(6),table.lg td:nth-child(6){display:none}
 }
 .hide{display:none!important}
+
+/* Haftalık ortalama grafiği */
+#haftaPanel .ucard{padding:12px 14px}
+#hGrafik svg{width:100%;height:auto;display:block}
+.hc-t{fill:var(--mut);font-size:12px}
+.hc-v{fill:var(--fg);font-size:12px;font-weight:700}
+.hc-g{stroke:var(--line);stroke-width:1}
+.hc-bar{fill:var(--blue)}
+.hc-bar.sel{fill:#2563eb}
+.hc-bar.fut{fill:var(--line)}
+.hc-avg{stroke:#f59e0b;stroke-width:2;stroke-dasharray:6 4}
+.hc-avgt{fill:#f59e0b;font-size:12px;font-weight:700}
+.hc-col{cursor:pointer}
+.hc-col:hover .hc-bar{filter:brightness(1.12)}
+#hStat .stat .s{min-height:15px}
 </style>
 </head>
 <body>
@@ -338,6 +353,13 @@ table.lg tr.lg-ad td{opacity:.75}
     </div>
     <div id="users"></div>
   </div>
+</section>
+
+<section class="panel" id="haftaPanel">
+  <div class="sec-head"><h2>Haftalık ortalama</h2><div class="bar"><button id="hOnce" type="button" class="alt sm">◀ Önceki hafta</button><button id="hBu" type="button" class="alt sm">Bu hafta</button><button id="hSonra" type="button" class="alt sm">Sonraki hafta ▶</button></div></div>
+  <p id="hEtiket" class="mut"></p>
+  <div id="hStat" class="stats"></div>
+  <div class="ucard"><div id="hGrafik"></div></div>
 </section>
 
 <details id="logBox" class="hide">
@@ -712,6 +734,7 @@ async function load() {
   if (error) { msg("Veriler yüklenemedi: " + error.message); return; }
   rows = data; if (me && secili === bugun) fillMine(); renderShared();
   logYukle();
+  haftaPlanla();
 }
 
 async function hazirla() {
@@ -1194,6 +1217,101 @@ async function logSil(idler) {
 onayli($("logSil"), () => logSil(logGorunen().map(x => x.id)));
 $("logKul").onchange = logCiz; $("logSira").onchange = logCiz;
 $("logCsv").onclick = logCsv;
+
+// ================= HAFTALIK ORTALAMA (Pazartesi – Pazar) =================
+const GUN_KISA = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+const tarihStr = d => d.toLocaleDateString("sv-SE");
+const gunEkle = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const haftaPzt = str => { const d = new Date(str + "T12:00:00"); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; };
+const yuv = x => Math.round(x * 100) / 100;
+let haftaTimer = null, haftaSeq = 0, haftaGunler = [];
+
+function haftaPlanla() { clearTimeout(haftaTimer); haftaTimer = setTimeout(haftaYukle, 800); }
+
+async function haftaYukle() {
+  if (!sb) return;
+  const seq = ++haftaSeq, pzt = haftaPzt(secili);
+  const gunler = Array.from({ length: 7 }, (_, i) => tarihStr(gunEkle(pzt, i)));
+  haftaGunler = gunler;
+  const tot = {}, var_ = {};
+  gunler.forEach(g => { tot[g] = 0; var_[g] = false; });
+  for (let from = 0; ; from += 1000) {   // Supabase tek sorguda en fazla 1000 satır verir; sayfa sayfa çekilir
+    const { data, error } = await sb.from("sayilar").select("tarih,n1,n2,n3,n4,n5,n6")
+      .gte("tarih", gunler[0]).lte("tarih", gunler[6])
+      .order("tarih").order("user_id").order("satir").range(from, from + 999);
+    if (seq !== haftaSeq) return;
+    if (error) { $("hEtiket").textContent = "Haftalık veriler yüklenemedi: " + error.message; return; }
+    data.forEach(r => {
+      tot[r.tarih] += rsum(r);
+      if (COLS.some(k => r[k] != null && r[k] !== "")) var_[r.tarih] = true;
+    });
+    if (data.length < 1000) break;
+  }
+  haftaCiz(gunler, tot, var_);
+}
+
+function haftaCiz(gunler, tot, var_) {
+  const vals = gunler.map(g => yuv(tot[g]));
+  const aktif = gunler.filter(g => var_[g] && g <= bugun);
+  const toplam = yuv(aktif.reduce((a, g) => a + tot[g], 0));
+  const ort = aktif.length ? yuv(toplam / aktif.length) : 0;
+  const ort7 = yuv(toplam / 7);
+  const kisa = d => new Date(d + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
+  $("hEtiket").textContent = kisa(gunler[0]) + " (Pazartesi) – " + kisa(gunler[6]) + " (Pazar) " + new Date(gunler[6] + "T12:00:00").getFullYear() +
+    (aktif.length ? " · ortalama, sayı girilen " + aktif.length + " günün ortalamasıdır" : "");
+  $("hSonra").disabled = tarihStr(gunEkle(new Date(gunler[0] + "T12:00:00"), 7)) > bugun;
+  $("hBu").disabled = gunler[0] <= bugun && bugun <= gunler[6];
+
+  // Özet kartları
+  const hs = $("hStat"); hs.textContent = "";
+  let enIdx = -1;
+  aktif.forEach(g => { const i = gunler.indexOf(g); if (enIdx < 0 || vals[i] > vals[enIdx]) enIdx = i; });
+  const stat = (k, v, s, cls) => { const c = el("div", "stat" + (cls ? " " + cls : "")); c.append(el("div", "k", k), el("div", "v", v), el("div", "s", s || "")); hs.append(c); };
+  stat("Günlük ortalama", fmt(ort), aktif.length ? "7 güne bölünürse: " + fmt(ort7) : "", "g");
+  stat("Haftalık toplam", fmt(toplam), "");
+
+  // Grafik (satır içi SVG, dış kütüphane yok)
+  const box = $("hGrafik"); box.textContent = "";
+  if (!aktif.length) { box.append(el("p", "mut", "Bu haftada henüz sayı girilmemiş.")); return; }
+  const NS = "http://www.w3.org/2000/svg", W = 700, H = 280, L = 48, R = 16, T = 30, B = 34;
+  const mk = (n, a, t) => { const e = document.createElementNS(NS, n); for (const k in a || {}) e.setAttribute(k, a[k]); if (t != null) e.textContent = t; return e; };
+  const svg = mk("svg", { viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": "Günlük atılan sayı grafiği" });
+  const hedef = Math.max(...vals, ort, 1) * 1.12;
+  const adim = (() => { const ham = hedef / 4, us = Math.pow(10, Math.floor(Math.log10(ham))), f = ham / us; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * us; })();
+  const ust = adim * 4, y = v => T + (H - T - B) * (1 - v / ust);
+  for (let i = 0; i <= 4; i++) {
+    const v = adim * i;
+    svg.append(mk("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), class: "hc-g" }));
+    svg.append(mk("text", { x: L - 8, y: y(v) + 4, "text-anchor": "end", class: "hc-t" }, fmt(yuv(v))));
+  }
+  const kol = (W - L - R) / 7, bw = Math.min(54, kol * 0.62);
+  gunler.forEach((g, i) => {
+    const cx = L + kol * i + kol / 2, gelecek = g > bugun, dolu = var_[g] && !gelecek, v = vals[i];
+    const grp = mk("g", { class: "hc-col" });
+    grp.append(mk("title", {}, GUN_KISA[i] + " " + kisa(g) + ": " + (gelecek ? "henüz yok" : fmt(v))));
+    grp.append(mk("rect", { x: cx - kol / 2, y: T - 14, width: kol, height: H - T - B + 14, fill: "transparent" }));
+    if (dolu) {
+      const h = Math.max(2, y(0) - y(v));
+      grp.append(mk("rect", { x: cx - bw / 2, y: y(0) - h, width: bw, height: h, rx: 5, class: "hc-bar" + (g === secili ? " sel" : "") }));
+      grp.append(mk("text", { x: cx, y: y(0) - h - 6, "text-anchor": "middle", class: "hc-v" }, fmt(v)));
+    } else if (gelecek) {
+      grp.append(mk("rect", { x: cx - bw / 2, y: y(0) - 3, width: bw, height: 3, rx: 1.5, class: "hc-bar fut" }));
+    } else {
+      grp.append(mk("text", { x: cx, y: y(0) - 6, "text-anchor": "middle", class: "hc-t" }, "—"));
+    }
+    grp.append(mk("text", { x: cx, y: H - 12, "text-anchor": "middle", class: "hc-t", style: g === secili ? "font-weight:700;fill:var(--fg)" : "" }, GUN_KISA[i]));
+    if (!gelecek) grp.onclick = () => { secili = g; hazirla(); };
+    svg.append(grp);
+  });
+  // Ortalama çizgisi
+  svg.append(mk("line", { x1: L, x2: W - R, y1: y(ort), y2: y(ort), class: "hc-avg" }));
+  svg.append(mk("text", { x: W - R, y: y(ort) - 6, "text-anchor": "end", class: "hc-avgt" }, "Ortalama " + fmt(ort)));
+  box.append(svg);
+}
+
+$("hOnce").onclick = () => { secili = tarihStr(gunEkle(haftaPzt(secili), -7)); hazirla(); };
+$("hSonra").onclick = () => { const n = tarihStr(gunEkle(haftaPzt(secili), 7)); secili = n > bugun ? bugun : n; hazirla(); };
+$("hBu").onclick = () => { secili = bugun; hazirla(); };
 
 // Sayfadan ayrılmadan / sekme gizlenmeden önce bekleyen değişiklikleri hemen kaydet
 function bekleyenleriKaydet() {
