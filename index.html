@@ -216,27 +216,6 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
   <div id="bar" class="bar hide"><span id="kim"></span><button id="profilBtn" type="button" class="alt">Profilim</button><button id="adminBtn" class="alt hide">Yönetim paneli</button><button id="cikis" type="button" class="alt">Çıkış yap</button></div>
 </header>
 
-<div id="auth" class="hide">
-  <div class="auth-tabs"><button type="button" id="tabGiris" class="on">Giriş yap</button><button type="button" id="tabKayit">Kayıt ol</button></div>
-  <input id="ad" class="kayitOnly" placeholder="Ad Soyad" autocomplete="name">
-  <select id="vardiyaKayit" class="kayitOnly" title="Vardiya (yalnızca kayıt olurken)"><option value="">Vardiyanızı seçin</option><option value="A">A vardiyası</option><option value="B">B vardiyası</option><option value="C">C vardiyası</option><option value="D">D vardiyası</option></select>
-  <input id="sicil" placeholder="Sicil numarası" autocomplete="username" inputmode="text">
-  <input id="sifre" type="password" placeholder="Şifre" autocomplete="current-password">
-  <button id="giris">Giriş yap</button>
-  <button id="kayit" class="kayitOnly">Kayıt ol</button>
-</div>
-
-<div id="vardiyaBox" class="hide">
-  <div id="vardiyaStat" class="stats"></div>
-  <div class="sec-head"><h2>Vardiya listesi</h2><button id="vardiyaYenile" type="button" class="alt sm">Yenile</button></div>
-  <div id="vardiyaGrid"></div>
-  <p id="vardiyaAtanmamis" class="mut"></p>
-</div>
-
-
-
-
-
 <div id="profil" class="hide">
   <strong>Profilim</strong>
   <input id="pAd" type="text" placeholder="Ad Soyad" autocomplete="name">
@@ -273,6 +252,29 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
   <div class="row"><strong>Kullanıcılar</strong><input id="aAra" placeholder="Ad veya sicil ara…"><button id="aYenile" class="alt">Yenile</button><span id="aSayi" class="mut"></span></div>
   <div id="aListe" class="scroll"></div>
 </div>
+
+<div id="auth" class="hide">
+  <div class="auth-tabs"><button type="button" id="tabGiris" class="on">Giriş yap</button><button type="button" id="tabKayit">Kayıt ol</button></div>
+  <input id="ad" class="kayitOnly" placeholder="Ad Soyad" autocomplete="name">
+  <select id="vardiyaKayit" class="kayitOnly" title="Vardiya (yalnızca kayıt olurken)"><option value="">Vardiyanızı seçin</option><option value="A">A vardiyası</option><option value="B">B vardiyası</option><option value="C">C vardiyası</option><option value="D">D vardiyası</option></select>
+  <input id="sicil" placeholder="Sicil numarası" autocomplete="username" inputmode="text">
+  <input id="sifre" type="password" placeholder="Şifre" autocomplete="current-password">
+  <button id="giris">Giriş yap</button>
+  <button id="kayit" class="kayitOnly">Kayıt ol</button>
+</div>
+
+<div id="vardiyaBox" class="hide">
+  <div id="vardiyaStat" class="stats"></div>
+  <div class="sec-head"><h2>Vardiya listesi</h2><button id="vardiyaYenile" type="button" class="alt sm">Yenile</button></div>
+  <div id="vardiyaGrid"></div>
+  <p id="vardiyaAtanmamis" class="mut"></p>
+</div>
+
+
+
+
+
+
 
 <div id="app" class="hide">
   <h2>Benim girişlerim (bugün)</h2>
@@ -404,6 +406,7 @@ $("profilBtn").onclick = () => {
   const p = $("profil"), acik = p.classList.contains("hide");
   p.classList.toggle("hide", !acik);
   if (acik) { profilDoldur(); $("pVardiya").value = vardiyaOf(myId()) || ""; }
+  if (acik) p.scrollIntoView({ behavior: "smooth", block: "start" });
 };
 $("pKaydet").onclick = async () => {
   const ad = $("pAd").value.trim();
@@ -717,7 +720,7 @@ async function banliCikis() {
 $("adminBtn").onclick = () => {
   const a = $("admin"), acik = a.classList.contains("hide");
   a.classList.toggle("hide", !acik);
-  if (acik) adminYukle();
+  if (acik) { adminYukle(); a.scrollIntoView({ behavior: "smooth", block: "start" }); }
 };
 $("aYenile").onclick = () => adminYukle();
 $("aAra").oninput = () => adminCiz();
