@@ -145,6 +145,50 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 #genel{margin:0 0 12px}
 @media (min-width:601px){#agg table,#users table{width:100%}}
 @media (max-width:600px){body{padding:12px 10px 40px}.top{padding:12px}.stat .v{font-size:24px}}
+/* ===== Mobil: sade ve tek sütun ===== */
+@media (max-width:600px){
+  body{padding:10px 10px 40px;font-size:15px}
+  .top{flex-direction:column;align-items:stretch;gap:10px;padding:12px}
+  .logo{width:38px;height:38px;font-size:19px}
+  .top h1{font-size:17px}
+  .top .bar{gap:6px}
+  .top #kim{width:100%;font-size:12px}
+  .top .bar button{flex:1;height:36px;padding:0 8px;font-size:13px}
+  #auth{grid-template-columns:1fr;padding:14px}
+  .stats{grid-template-columns:1fr 1fr;gap:8px}
+  .stat{padding:10px 12px}
+  .stat .v{font-size:22px}
+  .stat .s{display:none}
+  .sec-head{flex-direction:column;align-items:stretch;gap:8px}
+  .sec-head .bar{width:100%}
+  #tarih{flex:1;min-width:0}
+  #vardiyaGrid{grid-template-columns:1fr;gap:8px}
+  .vcard{padding:10px 12px}
+  .vbadge{width:30px;height:30px}
+  .vtot{font-size:19px}
+  .vcard li.vm{padding:6px 8px;font-size:14px}
+  .ugrid{grid-template-columns:minmax(0,1fr);gap:10px}
+  .ucard{padding:12px}
+  #agg table,#users table{width:100%;table-layout:fixed}
+  #app{padding:12px}
+  #app .bar{gap:6px}
+  #app .bar button{flex:1 1 auto;font-size:12px;padding:0 8px;height:34px}
+  #app .scroll table{width:100%;table-layout:fixed}
+  #app th{min-width:0;font-size:12px;padding:0 4px}
+  #app th:nth-child(1){width:34%}#app th:nth-child(2){width:22%}#app th:nth-child(3){width:44%}
+  #app td.m{min-width:0}
+  #app td.sy{min-width:0;white-space:nowrap}
+  #app td input{font-size:16px;padding:0 4px}
+  #app td.m input{font-size:15px}
+  #app td.sy input{width:calc(100% - 38px)}
+  #app td.sy button.ekle{width:34px;margin:0 2px 0 0}
+  #profil,#admin,#logBox{padding:12px}
+  #profil{max-width:none}
+  #logBox .bar select,#logBox .bar button{flex:1 1 140px}
+  h2{font-size:16px}
+  #logTbl th,#logTbl td{font-size:13px;padding:0 6px;min-width:0}
+  #logTbl th:nth-child(n+5):nth-child(-n+8),#logTbl td:nth-child(n+5):nth-child(-n+8){display:none}
+}
 .hide{display:none!important}
 </style>
 </head>
