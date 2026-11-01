@@ -104,7 +104,7 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 #auth{max-width:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:center;padding:16px 18px;margin:0 0 14px}
 #auth strong{grid-column:1/-1;font-size:15px}
 #auth button{width:100%}
-#auth input{border-radius:8px}
+#auth input,#auth select{border-radius:8px;height:38px;border:1px solid var(--line);background:var(--bg);color:var(--fg);padding:0 10px;font:inherit}
 #app{background:var(--card);border:1px solid var(--line);padding:16px 18px;margin:0 0 14px}
 #app h2{margin:0 0 10px}
 #profil,#admin,#logBox{margin:0 0 14px}
@@ -161,6 +161,7 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 <div id="auth" class="hide">
   <strong>Sayı girmek için giriş yapın</strong>
   <input id="ad" placeholder="Ad Soyad (yalnızca kayıt olurken)" autocomplete="name">
+  <select id="vardiyaKayit" title="Vardiya (yalnızca kayıt olurken)"><option value="">Vardiya seçin (kayıt olurken)</option><option value="A">A vardiyası</option><option value="B">B vardiyası</option><option value="C">C vardiyası</option><option value="D">D vardiyası</option></select>
   <input id="sicil" placeholder="Sicil numarası" autocomplete="username" inputmode="text">
   <input id="sifre" type="password" placeholder="Şifre (en az 6 karakter)" autocomplete="current-password">
   <button id="giris">Giriş yap</button>
@@ -287,9 +288,16 @@ $("kayit").onclick = async () => {
   const s = sicilAl(); if (!s) return;
   const ad = $("ad").value.trim();
   if (!ad) { msg("Kayıt için adınızı yazın."); return; }
+  const vk = $("vardiyaKayit").value;
+  if (!vk) { msg("Kayıt için vardiyanızı seçin (A, B, C veya D)."); return; }
   if ($("sifre").value.length < 6) { msg("Şifre en az 6 karakter olmalı."); return; }
   msg("Kayıt yapılıyor…");
-  const { data, error } = await sb.auth.signUp({ email: mailOf(s), password: $("sifre").value, options: { data: { ad, sicil: s } } });
+  const { data, error } = await sb.auth.signUp({ email: mailOf(s), password: $("sifre").value, options: { data: { ad, sicil: s, vardiya: vk } } });
+  if (!error && data.session) {   // kayıt sonrası otomatik giriş olduysa seçilen vardiyayı profile yaz
+    const r = await sb.rpc("vardiya_sec", { yeni: vk });
+    if (r.error) msg("Kayıt oluştu ama vardiya kaydedilemedi: " + r.error.message + " — Profilim bölümünden vardiyanızı seçebilirsiniz.");
+    else vardiyaYukle();
+  }
   if (error) msg(/already/i.test(error.message) ? "Bu sicil numarasıyla zaten kayıt var. Giriş yapın." : "Kayıt yapılamadı: " + error.message);
   else if (!data.session) msg("Kayıt oluşturuldu ama otomatik giriş olmadı. Supabase'de Confirm email seçeneğinin kapalı olduğunu kontrol edin.");
 };
