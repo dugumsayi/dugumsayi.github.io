@@ -81,16 +81,79 @@ button.grn{background:#2a9d4a}
 /* Paylaşılan tablolarda MAKİNE ve SAYI sütunları eşit genişlikte */
 #agg table,#users table{table-layout:fixed;width:300px;max-width:100%}
 #agg th,#agg td,#users th,#users td{width:50%;min-width:0}
+/* ===== Profesyonel tema ===== */
+:root{--bg:#f3f5f9;--fg:#171b24;--blue:#009fe3;--row:#eaf3fb;--cell:#fff;--line:#d3dae5;--tot:#ff8a8d;--mut:#677085;--card:#fff;--shadow:0 1px 2px rgba(16,24,40,.06),0 4px 14px rgba(16,24,40,.06);--r:12px}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1015;--fg:#eceff5;--row:#1b2a3d;--cell:#151922;--line:#2b3140;--mut:#8f98ab;--card:#171b24;--shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35)}}
+body{max-width:1180px;padding:20px 16px 56px;line-height:1.35}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin:0 0 14px}
+.brand{display:flex;gap:12px;align-items:center;min-width:0}
+.logo{flex:none;width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,#00b0f0,#2563eb);color:#fff;display:grid;place-items:center;font-weight:800;font-size:22px}
+.top h1{font-size:19px;margin:0}
+.top #st{margin:2px 0 0;font-size:13px;min-height:0}
+.top .bar{margin:0}
+.top #kim{font-size:13px}
+h2{font-size:17px;margin:0;display:flex;align-items:center;gap:8px}
+h2::before{content:"";width:4px;height:18px;border-radius:2px;background:var(--blue);flex:none}
+.sec-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.sec-head .bar{margin:0}
+button{border-radius:8px;transition:filter .15s,background .15s}
+button:hover{filter:brightness(1.08)}
+button.alt:hover{background:var(--row);filter:none}
+input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
+#auth,#profil,#admin,#logBox,#app{border-radius:var(--r);box-shadow:var(--shadow)}
+#auth{max-width:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:center;padding:16px 18px;margin:0 0 14px}
+#auth strong{grid-column:1/-1;font-size:15px}
+#auth button{width:100%}
+#auth input{border-radius:8px}
+#app{background:var(--card);border:1px solid var(--line);padding:16px 18px;margin:0 0 14px}
+#app h2{margin:0 0 10px}
+#profil,#admin,#logBox{margin:0 0 14px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:0 0 14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow)}
+.stat .k{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
+.stat .v{font-size:28px;font-weight:800;margin-top:2px}
+.stat .s{font-size:12px;color:var(--mut);min-height:15px}
+.stat.g .v{color:#2ecc40}
+#vardiyaBox{margin:0 0 20px}
+#vardiyaGrid{grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.vcard{--vc:var(--line);border-radius:var(--r);border-top:3px solid var(--vc);box-shadow:var(--shadow);padding:12px 14px}
+.vcard.vA{--vc:#00a7e8}.vcard.vB{--vc:#8b5cf6}.vcard.vC{--vc:#f59e0b}.vcard.vD{--vc:#14b8a6}
+.vh{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+.vbadge{flex:none;width:34px;height:34px;border-radius:50%;background:var(--vc);color:#fff;display:grid;place-items:center;font-weight:800}
+.vname{font-weight:700;font-size:15px}
+.vcard .vt{margin:0;font-size:12px}
+.vtot{margin-left:auto;font-size:22px;font-weight:800}
+.vcard ul.vl{display:flex;flex-direction:column;gap:5px}
+.vcard li.vm{display:flex;align-items:center;gap:8px;margin:0;padding:7px 9px;border-radius:8px;background:var(--bg);border-left:3px solid transparent;font-size:14px}
+.vcard li.vm.on{border-left-color:#2ecc40}
+.vcard li.vm.off{border-left-color:#d33}
+.vcard li .vn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vcard li .vs{float:none;margin:0;font-weight:700;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:1px 10px;font-size:13px}
+.dot{margin-right:0;flex:none}
+.panel{margin:0 0 20px}
+.ugrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;align-items:start}
+#users{display:contents}
+.ucard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);min-width:0}
+.ucard.gen{border-top:3px solid var(--tot)}
+.ucard h3{margin:0 0 10px;font-size:15px}
+.ucard .bar{margin:0 0 10px}
+.ucard>button{margin-top:10px}
+.ucard p.mut{margin:0}
+#genel{margin:0 0 12px}
+@media (min-width:601px){#agg table,#users table{width:100%}}
+@media (max-width:600px){body{padding:12px 10px 40px}.top{padding:12px}.stat .v{font-size:24px}}
 .hide{display:none!important}
 </style>
 </head>
 <body>
-<h1>Makine Sayı Tablosu</h1>
-<p id="st">Yükleniyor…</p>
+<header class="top">
+  <div class="brand"><div class="logo">Σ</div><div><h1>Makine Sayı Tablosu</h1><p id="st">Yükleniyor…</p></div></div>
+  <div id="bar" class="bar hide"><span id="kim"></span><button id="profilBtn" type="button" class="alt">Profilim</button><button id="adminBtn" class="alt hide">Yönetim paneli</button><button id="cikis" type="button" class="alt">Çıkış yap</button></div>
+</header>
 
 <div id="vardiyaBox" class="hide">
-  <div class="bar"><h2 style="margin:0">Vardiya listesi</h2><button id="vardiyaYenile" type="button" class="alt sm">Yenile</button></div>
-  <p id="vardiyaGenel" class="vgenel"></p>
+  <div id="vardiyaStat" class="stats"></div>
+  <div class="sec-head"><h2>Vardiya listesi</h2><button id="vardiyaYenile" type="button" class="alt sm">Yenile</button></div>
   <div id="vardiyaGrid"></div>
   <p id="vardiyaAtanmamis" class="mut"></p>
 </div>
@@ -104,7 +167,7 @@ button.grn{background:#2a9d4a}
   <button id="kayit" class="alt">Kayıt ol</button>
 </div>
 
-<div id="bar" class="bar hide"><span id="kim"></span><button id="profilBtn" type="button" class="alt">Profilim</button><button id="adminBtn" class="alt hide">Yönetim paneli</button><button id="cikis" type="button" class="alt">Çıkış yap</button></div>
+
 
 <div id="profil" class="hide">
   <strong>Profilim</strong>
@@ -158,13 +221,18 @@ button.grn{background:#2a9d4a}
   <div id="logTbl" class="scroll"></div>
 </details>
 
-<h2>Kullanıcıların tabloları</h2>
-<div class="bar"><input type="date" id="tarih"><button id="bugunBtn" class="alt">Bugün</button><span id="gunAd"></span></div>
-<p id="genel" class="mut"></p>
-<h3>Genel toplam (herkesin girdiği sayılar)</h3>
-<div class="bar"><button id="aggResim" type="button" class="alt sm">Resim olarak kaydet</button></div>
-<div id="agg" class="scroll"></div>
-<div id="users"></div>
+<section class="panel">
+  <div class="sec-head"><h2>Kullanıcıların tabloları</h2><div class="bar"><input type="date" id="tarih"><button id="bugunBtn" class="alt">Bugün</button><span id="gunAd"></span></div></div>
+  <p id="genel" class="mut"></p>
+  <div class="ugrid">
+    <div class="ucard gen">
+      <h3>Genel toplam (herkesin girdiği sayılar)</h3>
+      <div class="bar"><button id="aggResim" type="button" class="alt sm">Resim olarak kaydet</button></div>
+      <div id="agg" class="scroll"></div>
+    </div>
+    <div id="users"></div>
+  </div>
+</section>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -443,8 +511,9 @@ function renderShared() {
   users.forEach(([uid, u]) => {
     const list = u.list.filter(r => (r.name || "").trim() || COLS.some(k => r[k] != null && r[k] !== ""))
       .sort((a, b) => adKar(a.name, b.name) || a.satir - b.satir); // makine adı küçükten büyüğe
-    box.append(el("h3", "", u.ad + (uid === myId() ? " (siz)" : "")));
-    if (!list.length) { box.append(el("p", "mut", "Henüz giriş yok.")); return; }
+    const card = el("div", "ucard");
+    card.append(el("h3", "", u.ad + (uid === myId() ? " (siz)" : "")));
+    if (!list.length) { card.append(el("p", "mut", "Henüz giriş yok.")); box.append(card); return; }
     const wrap = el("div", "scroll"), tbl = el("table"), head = el("thead"), hr = el("tr");
     ["MAKİNE","SAYI"].forEach(h => hr.append(el("th", "", h)));
     head.append(hr); tbl.append(head);
@@ -458,10 +527,10 @@ function renderShared() {
     });
     const ft = el("tr", "tot");
     ft.append(el("td", "", "TOPLAM"), el("td", "", fmt(total))); body.append(ft);
-    tbl.append(body); wrap.append(tbl); box.append(wrap);
+    tbl.append(body); wrap.append(tbl); card.append(wrap);
     const rb = el("button", "alt sm", "Resim olarak kaydet"); rb.type = "button";
     rb.onclick = () => tabloResim(tbl, "", "makine-tablosu");
-    box.append(rb);
+    card.append(rb); box.append(card);
     grand += total;
   });
   const ab = $("agg"); ab.textContent = "";
@@ -579,30 +648,30 @@ function vardiyaCiz() {
   const ad = u => (u.ad || "?") + (u.sicil && (!u.gizli || (me && isAdmin())) ? " [" + u.sicil + "]" : "") + (me && u.id === myId() ? " (siz)" : "");
   const sirala = l => l.slice().sort((a, b) => (a.ad || "").localeCompare(b.ad || "", "tr"));
   const satir = u => {
-    const li = el("li");
+    const li = el("li", "vm" + (bugunMu ? (u.aktif ? " on" : " off") : ""));
     if (bugunMu) li.append(el("span", "dot" + (u.aktif ? " on" : "")));
-    li.append(document.createTextNode(ad(u)), el("span", "vs", fmt(num(u))));
+    li.append(el("span", "vn", ad(u)), el("span", "vs", fmt(num(u))));
     li.title = bugunMu ? (u.aktif ? "Aktif (sitede)" : "Aktif değil") : "";
     return li;
   };
-  VARDIYALAR.forEach(v => {
-    const uy = sirala(vardiyaList.filter(u => u.vardiya === v));
-    const card = el("div", "vcard"), ul = el("ul", "vl");
-    card.append(el("h4", "", v + " vardiyası (" + uy.length + " kişi)"));
-    card.append(el("p", "vt", "Toplam atılan sayı: " + fmt(uy.reduce((x, u) => x + num(u), 0)) + (bugunMu ? " · Aktif: " + uy.filter(u => u.aktif).length : "")));
+  const kart = (harf, baslik, uy) => {
+    const card = el("div", "vcard" + (harf ? " v" + harf : "")), ul = el("ul", "vl"), h = el("div", "vh"), t = el("div");
+    t.append(el("div", "vname", baslik), el("p", "vt", uy.length + " kişi" + (bugunMu ? " · " + uy.filter(u => u.aktif).length + " aktif" : "")));
+    h.append(el("span", "vbadge", harf || "—"), t, el("div", "vtot", fmt(uy.reduce((x, u) => x + num(u), 0))));
     uy.forEach(u => ul.append(satir(u)));
-    if (!uy.length) ul.append(el("li", "", "—"));
-    card.append(ul); grid.append(card);
-  });
+    if (!uy.length) ul.append(el("li", "mut", "Kimse yok"));
+    card.append(h, ul); grid.append(card);
+  };
+  VARDIYALAR.forEach(v => kart(v, v + " vardiyası", sirala(vardiyaList.filter(u => u.vardiya === v))));
   const yok = sirala(vardiyaList.filter(u => !u.vardiya));
-  if (yok.length) {
-    const card = el("div", "vcard"), ul = el("ul", "vl");
-    card.append(el("h4", "", "Vardiyası atanmamış (" + yok.length + ")"));
-    yok.forEach(u => ul.append(satir(u)));
-    card.append(ul); grid.append(card);
-  }
-  const genel = vardiyaList.reduce((x, u) => x + num(u), 0);
-  $("vardiyaGenel").textContent = "GENEL TOPLAM (" + $("gunAd").textContent + "): " + fmt(genel) + (bugunMu ? " · Aktif kullanıcı: " + vardiyaList.filter(u => u.aktif).length + " / " + vardiyaList.length : "");
+  if (yok.length) kart("", "Vardiyası atanmamış", yok);
+  // Özet kutuları
+  const st = $("vardiyaStat"); st.textContent = "";
+  const n = vardiyaList.length, aktif = vardiyaList.filter(u => u.aktif).length;
+  const tile = (k, v, sub, cls) => { const d = el("div", "stat" + (cls ? " " + cls : "")); d.append(el("div", "k", k), el("div", "v", v), el("div", "s", sub || "")); st.append(d); };
+  tile("Genel toplam", fmt(vardiyaList.reduce((x, u) => x + num(u), 0)), $("gunAd").textContent);
+  tile(bugunMu ? "Aktif kullanıcı" : "Kullanıcı", bugunMu ? aktif + " / " + n : String(n), bugunMu ? "şu an sitede" : "kayıtlı", bugunMu ? "g" : "");
+  tile("Vardiyası olan", (n - yok.length) + " / " + n, yok.length ? yok.length + " kişi atanmamış" : "herkes atanmış");
   $("vardiyaAtanmamis").textContent = "";
 }
 // Kullanıcı kendi vardiyasını seçer
