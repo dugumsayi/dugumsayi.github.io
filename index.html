@@ -162,11 +162,18 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
   .sec-head{flex-direction:column;align-items:stretch;gap:8px}
   .sec-head .bar{width:100%}
   #tarih{flex:1;min-width:0}
-  #vardiyaGrid{grid-template-columns:1fr;gap:8px}
-  .vcard{padding:10px 12px}
-  .vbadge{width:30px;height:30px}
-  .vtot{font-size:19px}
-  .vcard li.vm{padding:6px 8px;font-size:14px}
+  #vardiyaGrid{grid-template-columns:1fr 1fr;gap:8px}   /* telefonda vardiyalar yan yana (2x2) */
+  .vcard{padding:8px;min-width:0}
+  .vh{gap:6px;margin:0 0 8px}
+  .vbadge{width:26px;height:26px;font-size:13px}
+  .vname{font-size:13px}
+  .vcard .vt{font-size:11px}
+  .vtot{font-size:17px}
+  .vcard ul.vl{gap:4px}
+  .vcard li.vm{padding:5px 6px;gap:5px;font-size:12.5px;border-left-width:2px}
+  .vcard li .vs{padding:0 7px;font-size:12px}
+  .dot{width:8px;height:8px;box-shadow:0 0 5px 1px currentColor}
+  .dot{color:#d33}.dot.on{color:#2ecc40}
   .ugrid{grid-template-columns:minmax(0,1fr);gap:10px}
   .ucard{padding:12px}
   #agg table,#users table{width:100%;table-layout:fixed}
