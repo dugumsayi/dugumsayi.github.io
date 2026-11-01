@@ -672,14 +672,13 @@ function vardiyaCiz() {
   };
   VARDIYALAR.forEach(v => kart(v, v + " vardiyası", sirala(vardiyaList.filter(u => u.vardiya === v))));
   const yok = sirala(vardiyaList.filter(u => !u.vardiya));
-  if (yok.length) kart("", "Vardiyası atanmamış", yok);
+  // Vardiyası atanmamış kullanıcılar kartta gösterilmez (genel toplama yine dahildir)
   // Özet kutuları
   const st = $("vardiyaStat"); st.textContent = "";
   const n = vardiyaList.length, aktif = vardiyaList.filter(u => u.aktif).length;
   const tile = (k, v, sub, cls) => { const d = el("div", "stat" + (cls ? " " + cls : "")); d.append(el("div", "k", k), el("div", "v", v), el("div", "s", sub || "")); st.append(d); };
   tile("Genel toplam", fmt(vardiyaList.reduce((x, u) => x + num(u), 0)), $("gunAd").textContent);
   tile(bugunMu ? "Aktif kullanıcı" : "Kullanıcı", bugunMu ? aktif + " / " + n : String(n), bugunMu ? "şu an sitede" : "kayıtlı", bugunMu ? "g" : "");
-  tile("Vardiyası olan", (n - yok.length) + " / " + n, yok.length ? yok.length + " kişi atanmamış" : "herkes atanmış");
   $("vardiyaAtanmamis").textContent = "";
 }
 // Kullanıcı kendi vardiyasını seçer
