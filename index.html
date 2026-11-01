@@ -82,6 +82,9 @@ button.grn{background:#2a9d4a}
 #agg table,#users table{table-layout:fixed;width:300px;max-width:100%}
 #agg th,#agg td,#users th,#users td{width:50%;min-width:0}
 /* ===== Profesyonel tema ===== */
+td.sy{min-width:200px;white-space:nowrap}
+td.sy input{width:calc(100% - 46px)}
+td.sy button.ekle{width:38px;height:30px;padding:0;margin:0 4px 0 0;font-size:20px;line-height:1;vertical-align:middle}
 :root{--bg:#f3f5f9;--fg:#171b24;--blue:#009fe3;--row:#eaf3fb;--cell:#fff;--line:#d3dae5;--tot:#ff8a8d;--mut:#677085;--card:#fff;--shadow:0 1px 2px rgba(16,24,40,.06),0 4px 14px rgba(16,24,40,.06);--r:12px}
 @media (prefers-color-scheme:dark){:root{--bg:#0e1015;--fg:#eceff5;--row:#1b2a3d;--cell:#151922;--line:#2b3140;--mut:#8f98ab;--card:#171b24;--shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35)}}
 body{max-width:1180px;padding:20px 16px 56px;line-height:1.35}
@@ -210,7 +213,7 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 <div id="app" class="hide">
   <h2>Benim girişlerim (bugün)</h2>
   <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="satirSilBtn" type="button" class="alt sm">− Satır sil</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
-  <div class="scroll"><table><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI 1</th><th>SAYI 2</th><th>SAYI 3</th><th>SAYI 4</th><th>SAYI 5</th><th>SAYI 6</th></tr></thead><tbody id="mine"></tbody></table></div>
+  <div class="scroll"><table><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody></table></div>
 </div>
 
 <details id="logBox" class="hide">
@@ -369,27 +372,41 @@ function buildMine() {
 
 // Tabloya tek satır (r numaralı) çizer ve en alta ekler
 function satirEkle(r) {
-  const body = $("mine");
-  {
-    const tr = el("tr"), inp = [];
-    for (let c = 0; c < 7; c++) {
-      const td = el("td", c === 0 ? "m" : ""), i = el("input");
-      i.type = "text"; if (c === 0) i.placeholder = "Makine adı"; else i.inputMode = "decimal";
-      i.oninput = () => {
-        const row = rows.find(x => x.user_id === myId() && x.satir === r); if (!row) return;
-        if (c === 0) row.name = i.value; else row[COLS[c-1]] = i.value;
-        myTot[r].textContent = fmt(rsum(row)); renderShared();
-        // Otomatik kayıt: yazmayı bıraktıktan kısa süre sonra kaydet
-        kirli[r] = true; msg("Yazılıyor… (otomatik kaydedilecek)");
-        clearTimeout(otoTimer[r]); otoTimer[r] = setTimeout(() => save(r), OTO_MS);
-        tabloDoluKontrol();
-      };
-      i.onchange = () => { clearTimeout(otoTimer[r]); save(r).then(() => tabloDoluKontrol()); };
-      td.append(i); tr.append(td); inp.push(i);
-      if (c === 0) { const tt0 = el("td", "t", "0"); tr.append(tt0); myTot.push(tt0); } // TOPLAM, makine adının yanında
-    }
-    body.append(tr); myInputs.push(inp); myTr.push(tr);
-  }
+  const body = $("mine"), tr = el("tr");
+  const myRow = () => rows.find(x => x.user_id === myId() && x.satir === r);
+  // MAKİNE
+  const tdM = el("td", "m"), iAd = el("input");
+  iAd.type = "text"; iAd.placeholder = "Makine adı";
+  iAd.oninput = () => {
+    const row = myRow(); if (!row) return;
+    row.name = iAd.value; renderShared();
+    kirli[r] = true; msg("Yazılıyor… (otomatik kaydedilecek)");
+    clearTimeout(otoTimer[r]); otoTimer[r] = setTimeout(() => save(r), OTO_MS);
+    tabloDoluKontrol();
+  };
+  iAd.onchange = () => { clearTimeout(otoTimer[r]); save(r).then(() => tabloDoluKontrol()); };
+  tdM.append(iAd); tr.append(tdM);
+  // TOPLAM
+  const tt = el("td", "t", "0"); tr.append(tt); myTot.push(tt);
+  // SAYI: yazılan sayı satırın toplamına eklenir, kutu boşalır
+  const tdS = el("td", "sy"), iSayi = el("input"), btn = el("button", "ekle", "+");
+  iSayi.type = "text"; iSayi.inputMode = "decimal"; iSayi.placeholder = "Sayı yaz";
+  btn.type = "button"; btn.title = "Toplama ekle";
+  const ekle = () => {
+    const ham = iSayi.value.trim(); if (!ham) return;
+    const v = parseFloat(ham.replace(",", "."));
+    if (isNaN(v)) { msg("Geçerli bir sayı yazın."); iSayi.value = ""; return; }
+    const row = myRow(); if (!row) { msg("Satır henüz hazır değil, birkaç saniye sonra tekrar deneyin."); return; }
+    row.n1 = Math.round((num(row.n1) + v) * 1e6) / 1e6;     // toplam n1'de birikir (eski n2-n6 değerleri de toplamda sayılır)
+    iSayi.value = ""; tt.textContent = fmt(rsum(row)); renderShared();
+    kirli[r] = true; clearTimeout(otoTimer[r]); save(r).then(() => tabloDoluKontrol());
+  };
+  iSayi.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); ekle(); } };
+  iSayi.onchange = ekle;
+  btn.onmousedown = e => e.preventDefault();   // tıklayınca kutu odağını kaybedip çift ekleme olmasın
+  btn.onclick = ekle;
+  tdS.append(iSayi, btn); tr.append(tdS);
+  body.append(tr); myInputs.push([iAd, iSayi]); myTr.push(tr);
 }
 
 // Tüm satırlar dolunca altına yeni boş satır ekle
@@ -462,10 +479,6 @@ function fillMine() {
     const row = rows.find(x => x.user_id === myId() && x.satir === r); if (!row) continue;
     const f = myInputs[r];
     if (document.activeElement !== f[0]) f[0].value = row.name || ""; else row.name = f[0].value;
-    COLS.forEach((k, i) => {
-      if (document.activeElement !== f[i+1]) f[i+1].value = show(row[k]);
-      else row[k] = f[i+1].value; // yazılmakta olan değer sunucudan gelen eski değerle ezilmesin
-    });
     myTot[r].textContent = fmt(rsum(row));
   }
   siralaMine();
@@ -862,7 +875,7 @@ async function benimSayilarimiSil() {
     .eq("user_id", myId()).eq("tarih", bugun);
   if (error) { msg("Sayılar silinemedi: " + error.message); return; }
   rows.forEach(r => { if (r.user_id === myId()) COLS.forEach(k => { r[k] = null; }); });
-  COLS.forEach((k, i) => myInputs.forEach(f => { f[i + 1].value = ""; }));
+  myInputs.forEach(f => { f[1].value = ""; });
   myTot.forEach(t => { t.textContent = "0"; });
   renderShared();
   msg("Sayılarınız silindi, makine adları korundu.");
