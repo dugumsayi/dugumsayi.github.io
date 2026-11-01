@@ -262,6 +262,18 @@ table.lg tr.lg-ad td{opacity:.75}
 .hc-col{cursor:pointer}
 .hc-col:hover .hc-bar{filter:brightness(1.12)}
 #hStat .stat .s{min-height:15px}
+.hc-seg{fill:#fff;font-size:11px;font-weight:700;pointer-events:none}
+.hc-v{paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round}
+.hc-leg{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0 8px;font-size:13px}
+.hc-chip{display:inline-flex;align-items:center;gap:6px}
+.hc-chip i,.hc-k i{display:inline-block;width:10px;height:10px;border-radius:3px;flex:none}
+.hc-k i{margin-right:8px}
+table.hc-tbl{width:100%}
+table.hc-tbl td.hc-n,table.hc-tbl th{text-align:center}
+table.hc-tbl td.hc-k{white-space:nowrap;font-weight:600}
+table.hc-tbl td.hc-s{font-weight:700}
+table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
+
 </style>
 </head>
 <body>
@@ -1233,51 +1245,58 @@ async function haftaYukle() {
   const seq = ++haftaSeq, pzt = haftaPzt(secili);
   const gunler = Array.from({ length: 7 }, (_, i) => tarihStr(gunEkle(pzt, i)));
   haftaGunler = gunler;
-  const tot = {}, var_ = {};
-  gunler.forEach(g => { tot[g] = 0; var_[g] = false; });
+  const kisi = new Map();   // user_id -> { ad, g: { tarih: toplam }, var: { tarih: true } }
   for (let from = 0; ; from += 1000) {   // Supabase tek sorguda en fazla 1000 satır verir; sayfa sayfa çekilir
-    const { data, error } = await sb.from("sayilar").select("tarih,n1,n2,n3,n4,n5,n6")
+    const { data, error } = await sb.from("sayilar").select("tarih,user_id,kullanici,n1,n2,n3,n4,n5,n6")
       .gte("tarih", gunler[0]).lte("tarih", gunler[6])
       .order("tarih").order("user_id").order("satir").range(from, from + 999);
     if (seq !== haftaSeq) return;
     if (error) { $("hEtiket").textContent = "Haftalık veriler yüklenemedi: " + error.message; return; }
     data.forEach(r => {
-      tot[r.tarih] += rsum(r);
-      if (COLS.some(k => r[k] != null && r[k] !== "")) var_[r.tarih] = true;
+      if (!COLS.some(k => r[k] != null && r[k] !== "")) return;   // sayı girilmemiş satırlar sayılmaz
+      let u = kisi.get(r.user_id);
+      if (!u) { u = { ad: r.kullanici || "?", g: {} }; kisi.set(r.user_id, u); }
+      if (r.kullanici) u.ad = r.kullanici;
+      u.g[r.tarih] = (u.g[r.tarih] || 0) + rsum(r);
     });
     if (data.length < 1000) break;
   }
-  haftaCiz(gunler, tot, var_);
+  haftaCiz(gunler, kisi);
 }
 
-function haftaCiz(gunler, tot, var_) {
-  const vals = gunler.map(g => yuv(tot[g]));
-  const aktif = gunler.filter(g => var_[g] && g <= bugun);
-  const toplam = yuv(aktif.reduce((a, g) => a + tot[g], 0));
-  const ort = aktif.length ? yuv(toplam / aktif.length) : 0;
-  const ort7 = yuv(toplam / 7);
+const HC_RENK = ["#009fe3", "#8b5cf6", "#f59e0b", "#14b8a6", "#ef4444", "#ec4899", "#84cc16", "#6366f1"];
+
+function haftaCiz(gunler, kisi) {
+  // Kişileri haftalık toplama göre büyükten küçüğe sırala; renk sırayla atanır
+  const us = [...kisi.values()].map(u => ({ ...u, top: gunler.reduce((a, g) => a + (u.g[g] || 0), 0) }))
+    .filter(u => u.top !== 0 || Object.keys(u.g).length)
+    .sort((a, b) => b.top - a.top || a.ad.localeCompare(b.ad, "tr"));
+  us.forEach((u, i) => { u.renk = HC_RENK[i % HC_RENK.length]; });
+  const gunTop = gunler.map(g => yuv(us.reduce((a, u) => a + (u.g[g] || 0), 0)));
+  const dolu = gunler.map(g => g <= bugun && us.some(u => u.g[g] != null));
+  const aktifSay = dolu.filter(Boolean).length;
+  const toplam = yuv(gunTop.reduce((a, v, i) => a + (dolu[i] ? v : 0), 0));
+  const ort = aktifSay ? yuv(toplam / aktifSay) : 0;
   const kisa = d => new Date(d + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
   $("hEtiket").textContent = kisa(gunler[0]) + " (Pazartesi) – " + kisa(gunler[6]) + " (Pazar) " + new Date(gunler[6] + "T12:00:00").getFullYear() +
-    (aktif.length ? " · ortalama, sayı girilen " + aktif.length + " günün ortalamasıdır" : "");
+    (aktifSay ? " · ortalama, sayı girilen " + aktifSay + " günün ortalamasıdır" : "");
   $("hSonra").disabled = tarihStr(gunEkle(new Date(gunler[0] + "T12:00:00"), 7)) > bugun;
   $("hBu").disabled = gunler[0] <= bugun && bugun <= gunler[6];
 
-  // Özet kartları
   const hs = $("hStat"); hs.textContent = "";
-  let enIdx = -1;
-  aktif.forEach(g => { const i = gunler.indexOf(g); if (enIdx < 0 || vals[i] > vals[enIdx]) enIdx = i; });
-  const stat = (k, v, s, cls) => { const c = el("div", "stat" + (cls ? " " + cls : "")); c.append(el("div", "k", k), el("div", "v", v), el("div", "s", s || "")); hs.append(c); };
-  stat("Günlük ortalama", fmt(ort), aktif.length ? "7 güne bölünürse: " + fmt(ort7) : "", "g");
+  const stat = (k, v, sub, cls) => { const c = el("div", "stat" + (cls ? " " + cls : "")); c.append(el("div", "k", k), el("div", "v", v), el("div", "s", sub || "")); hs.append(c); };
+  stat("Günlük ortalama", fmt(ort), aktifSay ? "7 güne bölünürse: " + fmt(yuv(toplam / 7)) : "", "g");
   stat("Haftalık toplam", fmt(toplam), "");
 
-  // Grafik (satır içi SVG, dış kütüphane yok)
   const box = $("hGrafik"); box.textContent = "";
-  if (!aktif.length) { box.append(el("p", "mut", "Bu haftada henüz sayı girilmemiş.")); return; }
-  const NS = "http://www.w3.org/2000/svg", W = 700, H = 280, L = 48, R = 16, T = 30, B = 34;
-  const mk = (n, a, t) => { const e = document.createElementNS(NS, n); for (const k in a || {}) e.setAttribute(k, a[k]); if (t != null) e.textContent = t; return e; };
-  const svg = mk("svg", { viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": "Günlük atılan sayı grafiği" });
-  const hedef = Math.max(...vals, ort, 1) * 1.12;
-  const adim = (() => { const ham = hedef / 4, us = Math.pow(10, Math.floor(Math.log10(ham))), f = ham / us; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * us; })();
+  if (!aktifSay) { box.append(el("p", "mut", "Bu haftada henüz sayı girilmemiş.")); return; }
+
+  // ---- Yığın çubuk grafik: her renk bir kullanıcı ----
+  const NS = "http://www.w3.org/2000/svg", W = 700, H = 280, L = 48, R = 84, T = 30, B = 34;
+  const mk = (n, at, t) => { const e = document.createElementNS(NS, n); for (const k in at || {}) e.setAttribute(k, at[k]); if (t != null) e.textContent = t; return e; };
+  const svg = mk("svg", { viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": "Günlük atılan sayı grafiği (kullanıcıya göre)" });
+  const hedef = Math.max(...gunTop, ort, 1) * 1.12;
+  const adim = (() => { const ham = hedef / 4, e = Math.pow(10, Math.floor(Math.log10(ham))), f = ham / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * e; })();
   const ust = adim * 4, y = v => T + (H - T - B) * (1 - v / ust);
   for (let i = 0; i <= 4; i++) {
     const v = adim * i;
@@ -1286,14 +1305,21 @@ function haftaCiz(gunler, tot, var_) {
   }
   const kol = (W - L - R) / 7, bw = Math.min(54, kol * 0.62);
   gunler.forEach((g, i) => {
-    const cx = L + kol * i + kol / 2, gelecek = g > bugun, dolu = var_[g] && !gelecek, v = vals[i];
+    const cx = L + kol * i + kol / 2, gelecek = g > bugun, v = gunTop[i];
     const grp = mk("g", { class: "hc-col" });
-    grp.append(mk("title", {}, GUN_KISA[i] + " " + kisa(g) + ": " + (gelecek ? "henüz yok" : fmt(v))));
+    const kim = us.filter(u => u.g[g] != null).map(u => u.ad + ": " + fmt(yuv(u.g[g]))).join("\n");
+    grp.append(mk("title", {}, GUN_KISA[i] + " " + kisa(g) + (gelecek ? ": henüz yok" : " · toplam " + fmt(v) + (kim ? "\n" + kim : ""))));
     grp.append(mk("rect", { x: cx - kol / 2, y: T - 14, width: kol, height: H - T - B + 14, fill: "transparent" }));
-    if (dolu) {
-      const h = Math.max(2, y(0) - y(v));
-      grp.append(mk("rect", { x: cx - bw / 2, y: y(0) - h, width: bw, height: h, rx: 5, class: "hc-bar" + (g === secili ? " sel" : "") }));
-      grp.append(mk("text", { x: cx, y: y(0) - h - 6, "text-anchor": "middle", class: "hc-v" }, fmt(v)));
+    if (dolu[i]) {
+      let alt = 0;
+      us.forEach(u => {
+        const d = u.g[g]; if (d == null || d <= 0) return;
+        const yy = y(alt + d), h = y(alt) - yy;
+        grp.append(mk("rect", { x: cx - bw / 2, y: yy, width: bw, height: Math.max(h, 1), fill: u.renk, stroke: "var(--card)", "stroke-width": 1 }));
+        if (h >= 18) grp.append(mk("text", { x: cx, y: yy + h / 2 + 4, "text-anchor": "middle", class: "hc-seg" }, fmt(yuv(d))));
+        alt += d;
+      });
+      grp.append(mk("text", { x: cx, y: y(alt) - 6, "text-anchor": "middle", class: "hc-v" }, fmt(v)));
     } else if (gelecek) {
       grp.append(mk("rect", { x: cx - bw / 2, y: y(0) - 3, width: bw, height: 3, rx: 1.5, class: "hc-bar fut" }));
     } else {
@@ -1303,10 +1329,30 @@ function haftaCiz(gunler, tot, var_) {
     if (!gelecek) grp.onclick = () => { secili = g; hazirla(); };
     svg.append(grp);
   });
-  // Ortalama çizgisi
-  svg.append(mk("line", { x1: L, x2: W - R, y1: y(ort), y2: y(ort), class: "hc-avg" }));
-  svg.append(mk("text", { x: W - R, y: y(ort) - 6, "text-anchor": "end", class: "hc-avgt" }, "Ortalama " + fmt(ort)));
+  // Ortalama çizgisi: etiket çizginin sağ ucunda, çubuk değerleriyle çakışmaz
+  svg.append(mk("line", { x1: L, x2: W - R + 6, y1: y(ort), y2: y(ort), class: "hc-avg" }));
+  svg.append(mk("text", { x: W - R + 10, y: y(ort) + 4, "text-anchor": "start", class: "hc-avgt" }, "Ort. " + fmt(ort)));
   box.append(svg);
+
+  // ---- Kim ne kadar attı: gün gün kişi tablosu ----
+  const leg = el("div", "hc-leg");
+  us.forEach(u => {
+    const c = el("span", "hc-chip"), d = el("i"); d.style.background = u.renk;
+    c.append(d, el("span", "", u.ad + " · " + fmt(yuv(u.top)))); leg.append(c);
+  });
+  box.append(leg);
+  const wrap = el("div", "scroll"), tbl = el("table", "at hc-tbl"), head = el("thead"), hr = el("tr"), body = el("tbody");
+  ["KİM"].concat(GUN_KISA, ["TOPLAM"]).forEach(h => hr.append(el("th", "", h))); head.append(hr); tbl.append(head);
+  us.forEach(u => {
+    const tr = el("tr"), k = el("td", "hc-k"), d = el("i"); d.style.background = u.renk;
+    k.append(d, document.createTextNode(u.ad)); tr.append(k);
+    gunler.forEach(g => tr.append(el("td", "hc-n", u.g[g] != null ? fmt(yuv(u.g[g])) : "—")));
+    tr.append(el("td", "hc-n hc-s", fmt(yuv(u.top)))); body.append(tr);
+  });
+  const ft = el("tr", "tot"); ft.append(el("td", "", "GENEL TOPLAM"));
+  gunTop.forEach((v, i) => ft.append(el("td", "", dolu[i] ? fmt(v) : "—")));
+  ft.append(el("td", "", fmt(toplam))); body.append(ft);
+  tbl.append(body); wrap.append(tbl); box.append(wrap);
 }
 
 $("hOnce").onclick = () => { secili = tarihStr(gunEkle(haftaPzt(secili), -7)); hazirla(); };
