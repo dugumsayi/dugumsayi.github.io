@@ -88,7 +88,7 @@ td.sy button.ekle{width:38px;height:30px;padding:0;margin:0 4px 0 0;font-size:20
 :root{--bg:#f3f5f9;--fg:#171b24;--blue:#009fe3;--row:#eaf3fb;--cell:#fff;--line:#d3dae5;--tot:#ff8a8d;--mut:#677085;--card:#fff;--shadow:0 1px 2px rgba(16,24,40,.06),0 4px 14px rgba(16,24,40,.06);--r:12px}
 @media (prefers-color-scheme:dark){:root{--bg:#0e1015;--fg:#eceff5;--row:#1b2a3d;--cell:#151922;--line:#2b3140;--mut:#8f98ab;--card:#171b24;--shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35)}}
 body{max-width:1180px;padding:20px 16px 56px;line-height:1.35}
-.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin:0 0 14px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:0;background:none;border:none;border-radius:0;box-shadow:none;margin:0 0 14px}
 .brand{display:flex;gap:12px;align-items:center;min-width:0}
 .logo{flex:none;width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,#00b0f0,#2563eb);color:#fff;display:grid;place-items:center;font-weight:800;font-size:22px}
 .top h1{font-size:19px;margin:0}
@@ -144,7 +144,7 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 .ucard p.mut{margin:0}
 #genel{margin:0 0 12px}
 @media (min-width:601px){#agg table,#users table{width:100%}}
-@media (max-width:600px){body{padding:12px 10px 40px}.top{padding:12px}.stat .v{font-size:24px}}
+@media (max-width:600px){body{padding:12px 10px 40px}.top{padding:0}.stat .v{font-size:24px}}
 /* Giriş kartı: en üstte, sade */
 #auth{display:flex;flex-direction:column;gap:10px;max-width:440px;margin:0 auto 16px;padding:16px}
 .auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--bg);border:1px solid var(--line);border-radius:10px}
@@ -197,7 +197,7 @@ table.lg tr.lg-ad td{opacity:.75}
 /* ===== Mobil: sade ve tek sütun ===== */
 @media (max-width:600px){
   body{padding:10px 10px 40px;font-size:15px}
-  .top{flex-direction:column;align-items:stretch;gap:10px;padding:12px}
+  .top{flex-direction:column;align-items:stretch;gap:10px;padding:0}
   .logo{width:38px;height:38px;font-size:19px}
   .top h1{font-size:17px}
   .top .bar{gap:6px}
@@ -250,7 +250,7 @@ table.lg tr.lg-ad td{opacity:.75}
 </head>
 <body>
 <header class="top">
-  <div class="brand"><div class="logo">Σ</div><div><h1>Makine Sayı Tablosu</h1><p id="st">Yükleniyor…</p></div></div>
+  <div class="brand"><div><p id="st">Yükleniyor…</p></div></div>
   <div id="bar" class="bar hide"><span id="kim"></span><button id="profilBtn" type="button" class="alt">Profilim</button><button id="adminBtn" class="alt hide">Yönetim paneli</button><button id="cikis" type="button" class="alt">Çıkış yap</button></div>
 </header>
 
@@ -745,7 +745,7 @@ async function hazirla() {
   if (duzenle) tabloDoluKontrol();
   msg(duzenle ? "Hücreye yazın, otomatik kaydedilir. Her gün yeni bir tablo açılır." :
       me ? "Geçmiş günler yalnızca görüntülenir. Düzenlemek için \"Bugün\"e basın." :
-      (sonBan || "Sayıları herkes görebilir. Sayı girmek için giriş yapın veya kayıt olun."));
+      (sonBan || ""));
 }
 
 
