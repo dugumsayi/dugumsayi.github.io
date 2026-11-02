@@ -813,14 +813,16 @@ $("aAra").oninput = () => adminCiz();
 // ---- Vardiya sistemi (A, B, C, D) ----
 // Veritabanı: profiles.vardiya + vardiya_listesi() + admin_vardiya() (vardiya.sql)
 const VARDIYALAR = ["A", "B", "C", "D"];
-let vardiyaList = [];
+let vardiyaList = [], girisSayi = null;   // girisSayi: seçili günde sayfaya giren kişi sayısı
 const vardiyaOf = id => { const x = vardiyaList.find(u => u.id === id); return x ? x.vardiya : null; };
 async function vardiyaYukle() {
   const box = $("vardiyaBox");
   if (!sb) { box.classList.add("hide"); return; }
   const { data, error } = await sb.rpc("vardiya_listesi", { gun: secili });   // giriş yapmayanlar da görebilir
   if (error) { box.classList.add("hide"); return; }   // vardiya.sql çalıştırılmamışsa bölüm gizli kalır
-  vardiyaList = data || []; box.classList.remove("hide"); vardiyaCiz();
+  vardiyaList = data || [];
+  try { const g = await sb.rpc("giris_sayisi", { gun: secili }); girisSayi = g.error ? null : g.data; } catch (e) { girisSayi = null; }
+  box.classList.remove("hide"); vardiyaCiz();
   if (me && isAdmin() && !$("admin").classList.contains("hide")) adminCiz();
   if (me && !$("profil").classList.contains("hide")) $("pVardiya").value = vardiyaOf(myId()) || "";
 }
@@ -853,6 +855,7 @@ function vardiyaCiz() {
   const tile = (k, v, sub, cls) => { const d = el("div", "stat" + (cls ? " " + cls : "")); d.append(el("div", "k", k), el("div", "v", v), el("div", "s", sub || "")); st.append(d); };
   tile("Genel toplam", fmt(vardiyaList.reduce((x, u) => x + num(u), 0)), $("gunAd").textContent);
   tile(bugunMu ? "Aktif kullanıcı" : "Kullanıcı", bugunMu ? aktif + " / " + n : String(n), bugunMu ? "şu an sitede" : "kayıtlı", bugunMu ? "g" : "");
+  if (girisSayi != null) tile("Sayfaya giren kişi", String(girisSayi), bugunMu ? "bugün" : $("gunAd").textContent);
   $("vardiyaAtanmamis").textContent = "";
 }
 // Kullanıcı kendi vardiyasını seçer
@@ -865,9 +868,15 @@ $("pVardiya").onchange = async () => {
   await vardiyaYukle();
 };
 // Aktiflik: açık sayfa her 45 sn'de "buradayım" bilgisi gönderir; son 2 dk içinde gönderenler aktif (yeşil), diğerleri kırmızı
+let girisKayitGun = "";
 async function kalpAt() {
   if (!sb || !me || document.hidden) return;
   try { await sb.rpc("kalp_at"); } catch (e) {}
+  // Günlük giriş sayacı: kullanıcı o gün sayfaya girdiyse bir kez kaydedilir (giris-sayisi.sql)
+  const g = todayStr();
+  if (girisKayitGun !== me.id + g) {
+    try { const r = await sb.rpc("giris_kaydet"); if (!r.error) girisKayitGun = me.id + g; } catch (e) {}
+  }
 }
 setInterval(async () => { await kalpAt(); vardiyaYukle(); }, 45000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { kalpAt().then(vardiyaYukle); } });
@@ -1236,7 +1245,7 @@ const tarihStr = d => d.toLocaleDateString("sv-SE");
 const gunEkle = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const haftaPzt = str => { const d = new Date(str + "T12:00:00"); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; };
 const yuv = x => Math.round(x * 100) / 100;
-let haftaTimer = null, haftaSeq = 0, haftaGunler = [];
+let haftaTimer = null, haftaSeq = 0, haftaGunler = [], haftaGiris = null;
 
 function haftaPlanla() { clearTimeout(haftaTimer); haftaTimer = setTimeout(haftaYukle, 800); }
 
@@ -1261,6 +1270,13 @@ async function haftaYukle() {
     });
     if (data.length < 1000) break;
   }
+  haftaGiris = {};
+  try {
+    const g = await sb.rpc("giris_hafta", { bas_gun: gunler[0], son_gun: gunler[6] });
+    if (!g.error && g.data) g.data.forEach(x => { haftaGiris[x.tarih] = x.sayi; });
+    else haftaGiris = null;
+  } catch (e) { haftaGiris = null; }
+  if (seq !== haftaSeq) return;
   haftaCiz(gunler, kisi);
 }
 
@@ -1349,6 +1365,11 @@ function haftaCiz(gunler, kisi) {
     gunler.forEach(g => tr.append(el("td", "hc-n", u.g[g] != null ? fmt(yuv(u.g[g])) : "—")));
     tr.append(el("td", "hc-n hc-s", fmt(yuv(u.top)))); body.append(tr);
   });
+  if (haftaGiris) {
+    const tr = el("tr"), k = el("td", "hc-k"); k.append(document.createTextNode("Sayfaya giren kişi")); tr.append(k);
+    gunler.forEach(g => tr.append(el("td", "hc-n", g > bugun ? "—" : String(haftaGiris[g] || 0))));
+    tr.append(el("td", "hc-n hc-s", "—")); body.append(tr);
+  }
   const ft = el("tr", "tot"); ft.append(el("td", "", "GENEL TOPLAM"));
   gunTop.forEach((v, i) => ft.append(el("td", "", dolu[i] ? fmt(v) : "—")));
   ft.append(el("td", "", fmt(toplam))); body.append(ft);
