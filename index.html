@@ -813,7 +813,7 @@ $("aAra").oninput = () => adminCiz();
 // ---- Vardiya sistemi (A, B, C, D) ----
 // Veritabanı: profiles.vardiya + vardiya_listesi() + admin_vardiya() (vardiya.sql)
 const VARDIYALAR = ["A", "B", "C", "D"];
-let vardiyaList = [], girisSayi = null;   // girisSayi: seçili günde sayfaya giren kişi sayısı
+let vardiyaList = [], girisSayi = null, ziyaretSayi = null;   // girisSayi: seçili günde sayfaya giren kişi sayısı
 const vardiyaOf = id => { const x = vardiyaList.find(u => u.id === id); return x ? x.vardiya : null; };
 async function vardiyaYukle() {
   const box = $("vardiyaBox");
@@ -822,6 +822,7 @@ async function vardiyaYukle() {
   if (error) { box.classList.add("hide"); return; }   // vardiya.sql çalıştırılmamışsa bölüm gizli kalır
   vardiyaList = data || [];
   try { const g = await sb.rpc("giris_sayisi", { gun: secili }); girisSayi = g.error ? null : g.data; } catch (e) { girisSayi = null; }
+  try { const z = await sb.rpc("ziyaret_sayisi", { gun: secili }); ziyaretSayi = z.error ? null : z.data; } catch (e) { ziyaretSayi = null; }
   box.classList.remove("hide"); vardiyaCiz();
   if (me && isAdmin() && !$("admin").classList.contains("hide")) adminCiz();
   if (me && !$("profil").classList.contains("hide")) $("pVardiya").value = vardiyaOf(myId()) || "";
@@ -853,6 +854,7 @@ function vardiyaCiz() {
   const st = $("vardiyaStat"); st.textContent = "";
   const n = vardiyaList.length, aktif = vardiyaList.filter(u => u.aktif).length;
   const tile = (k, v, sub, cls) => { const d = el("div", "stat" + (cls ? " " + cls : "")); d.append(el("div", "k", k), el("div", "v", v), el("div", "s", sub || "")); st.append(d); };
+  if (ziyaretSayi != null) tile("Siteye bakan kişi", String(ziyaretSayi), bugunMu ? "bugün" : $("gunAd").textContent, "g");
   tile("Genel toplam", fmt(vardiyaList.reduce((x, u) => x + num(u), 0)), $("gunAd").textContent);
   tile(bugunMu ? "Aktif kullanıcı" : "Kullanıcı", bugunMu ? aktif + " / " + n : String(n), bugunMu ? "şu an sitede" : "kayıtlı", bugunMu ? "g" : "");
   if (girisSayi != null) tile("Sayfaya giren kişi", String(girisSayi), bugunMu ? "bugün" : $("gunAd").textContent);
@@ -1272,7 +1274,7 @@ async function haftaYukle() {
   }
   haftaGiris = {};
   try {
-    const g = await sb.rpc("giris_hafta", { bas_gun: gunler[0], son_gun: gunler[6] });
+    const g = await sb.rpc("giris_hafta", { bas: gunler[0], bit: gunler[6] });
     if (!g.error && g.data) g.data.forEach(x => { haftaGiris[x.tarih] = x.sayi; });
     else haftaGiris = null;
   } catch (e) { haftaGiris = null; }
@@ -1399,9 +1401,27 @@ setInterval(() => {
   if (yeni !== bugun) { const bugunduydu = secili === bugun; bugun = yeni; $("tarih").max = bugun; if (bugunduydu) secili = bugun; if (sb) hazirla(); }
 }, 60000);
 
+// Ziyaretçi sayacı: tarayıcıya rastgele kimlik yazılır; aynı kişi günde bir kez sayılır (giriş yapmasa da)
+function ziyaretciId() {
+  try {
+    let z = localStorage.getItem("ziyaretci-id");
+    if (!z) { z = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2)); localStorage.setItem("ziyaretci-id", z); }
+    return z;
+  } catch (e) { return "gecici-" + Math.random().toString(36).slice(2); }
+}
+let ziyaretGun = "";
+async function ziyaretKaydet() {
+  if (!sb) return;
+  const g = todayStr();
+  if (ziyaretGun === g) return;
+  try { const r = await sb.rpc("ziyaret_kaydet", { zid: ziyaretciId() }); if (!r.error) { ziyaretGun = g; vardiyaYukle(); } } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) ziyaretKaydet(); });
+
 (async function () {
   if (SUPABASE_URL.includes("PROJE-KODUNUZ") || SUPABASE_KEY.includes("ANAHTARINIZ")) { msg("Önce dosyanın başındaki SUPABASE_URL ve SUPABASE_KEY değerlerini girin."); return; }
   sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  ziyaretKaydet();
   sb.channel("sayilar-canli").on("postgres_changes", { event: "*", schema: "public", table: "sayilar" }, () => {
     clearTimeout(timer); timer = setTimeout(load, 300);
   }).subscribe();
