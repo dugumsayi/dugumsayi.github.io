@@ -247,6 +247,10 @@ table.lg tr.lg-ad td{opacity:.75}
   table.lg th:nth-child(6),table.lg td:nth-child(6){display:none}
 }
 .hide{display:none!important}
+.gz{display:none!important}
+#gList{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin:8px 0}
+#gList label{display:flex;gap:10px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:14px}
+#gList input{width:18px;height:18px;flex:none}
 
 /* Haftalık ortalama grafiği */
 #haftaPanel .ucard{padding:12px 14px}
@@ -316,6 +320,11 @@ table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
     <button id="aEkle">Kullanıcı ekle</button>
   </div>
   <hr>
+  <strong>Ana sayfa görünürlüğü</strong>
+  <p class="mut">Giriş yapmamış ziyaretçiler ana sayfada hiçbir pencere görmez (yalnızca giriş kutusu). Giriş yapan kullanıcılara hangi pencerelerin gösterileceğini buradan seçin. Yöneticiler her zaman hepsini görür.</p>
+  <div id="gList"></div>
+  <div class="row"><button id="gKaydet">Görünürlüğü kaydet</button></div>
+  <hr>
   <strong>Toplu silme (tüm kullanıcılar)</strong>
   <p class="mut">Aşağıdaki tarihte (<b id="tGun"></b>) tüm kullanıcıların girdiği makine adlarını ve sayıları siler. Kullanıcılar ve giriş kayıtları (log) silinmez. Geri alınamaz.</p>
   <div class="row"><button id="tumSayiSil" class="red">Tüm kullanıcıların yalnızca sayılarını sil (makine adları kalır)</button></div>
@@ -337,7 +346,7 @@ table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
 
 <div id="vardiyaBox" class="hide">
   <div id="vardiyaStat" class="stats"></div>
-  <div class="sec-head"><h2>Vardiya listesi</h2><button id="vardiyaYenile" type="button" class="alt sm">Yenile</button></div>
+  <div class="sec-head" id="vardiyaHead"><h2>Vardiya listesi</h2><button id="vardiyaYenile" type="button" class="alt sm">Yenile</button></div>
   <div id="vardiyaGrid"></div>
   <p id="vardiyaAtanmamis" class="mut"></p>
 </div>
@@ -354,11 +363,11 @@ table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
   <div class="scroll"><table><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody></table></div>
 </div>
 
-<section class="panel">
+<section class="panel" id="gunPanel">
   <div class="sec-head"><h2>Kullanıcıların tabloları</h2><div class="bar"><input type="date" id="tarih"><button id="bugunBtn" class="alt">Bugün</button><span id="gunAd"></span></div></div>
   <p id="genel" class="mut"></p>
   <div class="ugrid">
-    <div class="ucard gen">
+    <div class="ucard gen" id="genCard">
       <h3>Genel toplam (herkesin girdiği sayılar)</h3>
       <div class="bar"><button id="aggResim" type="button" class="alt sm">Resim olarak kaydet</button></div>
       <div id="agg" class="scroll"></div>
@@ -742,6 +751,7 @@ async function kaydet(r) {
 }
 
 async function load() {
+  if (!me) return;
   const { data, error } = await sb.from("sayilar").select("*").eq("tarih", secili);
   if (error) { msg("Veriler yüklenemedi: " + error.message); return; }
   rows = data; if (me && secili === bugun) fillMine(); renderShared();
@@ -766,6 +776,8 @@ async function hazirla() {
   const duzenle = !!me && secili === bugun;
   $("app").classList.toggle("hide", !duzenle);
   if (me) kimYaz();
+  await gorYukle();
+  if (!me) { rows = []; msg(sonBan || ""); return; }   // giriş yapılmadan hiçbir pencere yüklenmez/gösterilmez
   await kalpAt();
   vardiyaYukle();
   if (duzenle) {
@@ -817,7 +829,7 @@ let vardiyaList = [], girisSayi = null, ziyaretSayi = null;   // girisSayi: seç
 const vardiyaOf = id => { const x = vardiyaList.find(u => u.id === id); return x ? x.vardiya : null; };
 async function vardiyaYukle() {
   const box = $("vardiyaBox");
-  if (!sb) { box.classList.add("hide"); return; }
+  if (!sb || !me) { box.classList.add("hide"); return; }
   const { data, error } = await sb.rpc("vardiya_listesi", { gun: secili });   // giriş yapmayanlar da görebilir
   if (error) { box.classList.add("hide"); return; }   // vardiya.sql çalıştırılmamışsa bölüm gizli kalır
   vardiyaList = data || [];
@@ -880,7 +892,7 @@ async function kalpAt() {
     try { const r = await sb.rpc("giris_kaydet"); if (!r.error) girisKayitGun = me.id + g; } catch (e) {}
   }
 }
-setInterval(async () => { await kalpAt(); vardiyaYukle(); }, 45000);
+setInterval(async () => { await kalpAt(); vardiyaYukle(); gorYukle(); }, 45000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { kalpAt().then(vardiyaYukle); } });
 async function adminVardiya(u, v) {
   msg("Vardiya kaydediliyor…");
@@ -1000,6 +1012,56 @@ $("aEkle").onclick = async () => {
   ["aAd", "aSicil", "aSifre"].forEach(i => $(i).value = "");
   msg(ad + " (" + s + ") eklendi. Şifreyi kullanıcıya iletin.");
   await adminYukle();
+};
+
+// ================= ANA SAYFA GÖRÜNÜRLÜĞÜ =================
+// Giriş yapmayan: hiçbir pencere yok. Giriş yapan: yöneticinin seçtikleri. Yönetici: hepsi.
+// Ayarlar site_ayar tablosunda tutulur (gorunurluk.sql). Tablo yoksa giriş yapanlara hepsi görünür.
+const GOR = [
+  ["ozet", "Özet kutuları (siteye bakan, genel toplam, aktif kullanıcı…)", ["vardiyaStat"]],
+  ["vardiya", "Vardiya listesi (A, B, C, D kartları)", ["vardiyaHead", "vardiyaGrid"]],
+  ["genel", "Genel toplam tablosu", ["genCard", "genel"]],
+  ["tablolar", "Kullanıcıların tabloları", ["users"]],
+  ["hafta", "Haftalık ortalama", ["haftaPanel"]],
+  ["log", "Giriş kayıtları ve süre farkı", ["logBox"]]
+];
+let gorAyar = {};   // anahtar -> false ise gizli; kayıt yoksa görünür
+const gorunur = k => !!me && (isAdmin() || gorAyar[k] !== false);
+function gorUygula() {
+  $("vardiyaBox").classList.toggle("gz", !me);
+  $("gunPanel").classList.toggle("gz", !me);
+  GOR.forEach(([k, , ids]) => ids.forEach(id => $(id).classList.toggle("gz", !gorunur(k))));
+}
+function gorCiz() {
+  const box = $("gList"); box.textContent = "";
+  GOR.forEach(([k, ad]) => {
+    const lb = el("label"), cb = el("input");
+    cb.type = "checkbox"; cb.dataset.k = k; cb.checked = gorAyar[k] !== false;
+    lb.append(cb, document.createTextNode(ad)); box.append(lb);
+  });
+}
+async function gorYukle() {
+  if (!sb || !me) { gorUygula(); return; }
+  try {
+    const { data, error } = await sb.from("site_ayar").select("deger").eq("anahtar", "gorunurluk").maybeSingle();
+    if (!error && data && data.deger && typeof data.deger === "object") gorAyar = data.deger;
+  } catch (e) {}
+  gorUygula();
+  if (isAdmin() && !document.activeElement.closest("#gList")) gorCiz();
+}
+$("gKaydet").onclick = async () => {
+  if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
+  const ayar = {};
+  document.querySelectorAll("#gList input").forEach(i => { ayar[i.dataset.k] = i.checked; });
+  msg("Görünürlük kaydediliyor…");
+  const { error } = await sb.rpc("admin_gorunurluk_kaydet", { ayar });
+  if (error) {
+    msg("Kaydedilemedi: " + error.message +
+      (/could not find|schema cache|does not exist|function/i.test(error.message) ? " — Supabase'de gorunurluk.sql çalıştırılmalı." : ""));
+    return;
+  }
+  gorAyar = ayar; gorUygula();
+  msg("Görünürlük ayarları kaydedildi. Kullanıcılarda en geç 45 sn içinde güncellenir.");
 };
 
 // ================= TOPLU SİLME (TÜM KULLANICILAR) =================
