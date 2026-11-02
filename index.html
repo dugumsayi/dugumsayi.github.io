@@ -248,7 +248,7 @@ table.lg tr.lg-ad td{opacity:.75}
 }
 .hide{display:none!important}
 .gz{display:none!important}
-#gList{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin:8px 0}
+#gList{margin:8px 0;overflow-x:auto}
 #gList label{display:flex;gap:10px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:14px}
 #gList input{width:18px;height:18px;flex:none}
 
@@ -321,7 +321,7 @@ table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
   </div>
   <hr>
   <strong>Ana sayfa görünürlüğü</strong>
-  <p class="mut">Giriş yapmamış ziyaretçiler ana sayfada hiçbir pencere görmez (yalnızca giriş kutusu). Giriş yapan kullanıcılara hangi pencerelerin gösterileceğini buradan seçin. Yöneticiler her zaman hepsini görür.</p>
+  <p class="mut">Her pencere için iki ayrı seçim yapın: giriş yapmadan gelen ziyaretçiler ve giriş yapmış kullanıcılar ne görsün. Varsayılan: ziyaretçiye hiçbiri, kullanıcıya hepsi. Yöneticiler her zaman hepsini görür.</p>
   <div id="gList"></div>
   <div class="row"><button id="gKaydet">Görünürlüğü kaydet</button></div>
   <hr>
@@ -751,7 +751,6 @@ async function kaydet(r) {
 }
 
 async function load() {
-  if (!me) return;
   const { data, error } = await sb.from("sayilar").select("*").eq("tarih", secili);
   if (error) { msg("Veriler yüklenemedi: " + error.message); return; }
   rows = data; if (me && secili === bugun) fillMine(); renderShared();
@@ -777,7 +776,6 @@ async function hazirla() {
   $("app").classList.toggle("hide", !duzenle);
   if (me) kimYaz();
   await gorYukle();
-  if (!me) { rows = []; msg(sonBan || ""); return; }   // giriş yapılmadan hiçbir pencere yüklenmez/gösterilmez
   await kalpAt();
   vardiyaYukle();
   if (duzenle) {
@@ -829,7 +827,7 @@ let vardiyaList = [], girisSayi = null, ziyaretSayi = null;   // girisSayi: seç
 const vardiyaOf = id => { const x = vardiyaList.find(u => u.id === id); return x ? x.vardiya : null; };
 async function vardiyaYukle() {
   const box = $("vardiyaBox");
-  if (!sb || !me) { box.classList.add("hide"); return; }
+  if (!sb) { box.classList.add("hide"); return; }
   const { data, error } = await sb.rpc("vardiya_listesi", { gun: secili });   // giriş yapmayanlar da görebilir
   if (error) { box.classList.add("hide"); return; }   // vardiya.sql çalıştırılmamışsa bölüm gizli kalır
   vardiyaList = data || [];
@@ -1025,34 +1023,44 @@ const GOR = [
   ["hafta", "Haftalık ortalama", ["haftaPanel"]],
   ["log", "Giriş kayıtları ve süre farkı", ["logBox"]]
 ];
-let gorAyar = {};   // anahtar -> false ise gizli; kayıt yoksa görünür
-const gorunur = k => !!me && (isAdmin() || gorAyar[k] !== false);
+// misafir: giriş yapmadan (kayıt yoksa gizli) · uye: giriş yapınca (kayıt yoksa görünür)
+let gorAyar = { misafir: {}, uye: {} };
+const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {} } : { misafir: {}, uye: d || {} };
+const gorunur = k => isAdmin() || (me ? gorAyar.uye[k] !== false : gorAyar.misafir[k] === true);
 function gorUygula() {
-  $("vardiyaBox").classList.toggle("gz", !me);
-  $("gunPanel").classList.toggle("gz", !me);
   GOR.forEach(([k, , ids]) => ids.forEach(id => $(id).classList.toggle("gz", !gorunur(k))));
+  $("vardiyaBox").classList.toggle("gz", !(gorunur("ozet") || gorunur("vardiya")));
+  $("gunPanel").classList.toggle("gz", !(gorunur("genel") || gorunur("tablolar")));
 }
 function gorCiz() {
   const box = $("gList"); box.textContent = "";
+  const tbl = el("table", "at"), head = el("thead"), hr = el("tr"), body = el("tbody");
+  ["PENCERE", "GİRİŞ YAPMADAN", "GİRİŞ YAPINCA"].forEach(h => hr.append(el("th", "", h)));
+  head.append(hr); tbl.append(head);
   GOR.forEach(([k, ad]) => {
-    const lb = el("label"), cb = el("input");
-    cb.type = "checkbox"; cb.dataset.k = k; cb.checked = gorAyar[k] !== false;
-    lb.append(cb, document.createTextNode(ad)); box.append(lb);
+    const tr = el("tr"); tr.append(el("td", "", ad));
+    [["misafir", gorAyar.misafir[k] === true], ["uye", gorAyar.uye[k] !== false]].forEach(([g, on]) => {
+      const td = el("td"), cb = el("input");
+      cb.type = "checkbox"; cb.dataset.g = g; cb.dataset.k = k; cb.checked = on;
+      td.style.textAlign = "center"; td.append(cb); tr.append(td);
+    });
+    body.append(tr);
   });
+  tbl.append(body); box.append(tbl);
 }
 async function gorYukle() {
-  if (!sb || !me) { gorUygula(); return; }
+  if (!sb) { gorUygula(); return; }
   try {
     const { data, error } = await sb.from("site_ayar").select("deger").eq("anahtar", "gorunurluk").maybeSingle();
-    if (!error && data && data.deger && typeof data.deger === "object") gorAyar = data.deger;
+    if (!error && data && data.deger && typeof data.deger === "object") gorAyar = gorNorm(data.deger);
   } catch (e) {}
   gorUygula();
-  if (isAdmin() && !document.activeElement.closest("#gList")) gorCiz();
+  if (isAdmin() && !$("gList").children.length) gorCiz();   // yönetici düzenlerken yeniden çizilmez
 }
 $("gKaydet").onclick = async () => {
   if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
-  const ayar = {};
-  document.querySelectorAll("#gList input").forEach(i => { ayar[i.dataset.k] = i.checked; });
+  const ayar = { misafir: {}, uye: {} };
+  document.querySelectorAll("#gList input").forEach(i => { ayar[i.dataset.g][i.dataset.k] = i.checked; });
   msg("Görünürlük kaydediliyor…");
   const { error } = await sb.rpc("admin_gorunurluk_kaydet", { ayar });
   if (error) {
@@ -1061,8 +1069,9 @@ $("gKaydet").onclick = async () => {
     return;
   }
   gorAyar = ayar; gorUygula();
-  msg("Görünürlük ayarları kaydedildi. Kullanıcılarda en geç 45 sn içinde güncellenir.");
+  msg("Görünürlük ayarları kaydedildi. Ziyaretçi ve kullanıcılarda en geç 45 sn içinde güncellenir.");
 };
+gorUygula();   // sayfa açılır açılmaz varsayılan (misafir) görünümü uygula
 
 // ================= TOPLU SİLME (TÜM KULLANICILAR) =================
 // Asıl yetki kontrolü veritabanındaki admin_sayilar_temizle fonksiyonunda (toplu-silme.sql)
