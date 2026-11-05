@@ -303,6 +303,8 @@ table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
       <input id="pAd" type="text" placeholder="Ad Soyad" autocomplete="name">
       <span id="pSicil" class="mut"></span>
       <label class="chk"><input id="pGizle" type="checkbox"> Sicil numaramı diğer kullanıcılardan gizle</label>
+      <label id="pYoneticiGizleSatir" class="chk hide"><input id="pYoneticiGizle" type="checkbox"> Yönetici hesabımı kullanıcı listelerinde gizle</label>
+      <label id="pYoneticiGizleBilgi" class="mut hide">Bu ayar normal kullanıcıların ve ziyaretçilerin listelerinde geçerlidir. Yönetim yetkiniz değişmez.</label>
       <label class="mut" for="pVardiya">Vardiyam</label>
       <select id="pVardiya"><option value="">Vardiya seçilmedi</option><option value="A">A vardiyası</option><option value="B">B vardiyası</option><option value="C">C vardiyası</option><option value="D">D vardiyası</option></select>
       <button id="pKaydet">Profili kaydet</button>
@@ -504,6 +506,9 @@ function profilDoldur() {
   $("pAd").value = adOf();
   $("pGizle").checked = gizli();
   $("pSicil").textContent = "Sicil numaranız: " + sicilOf() + " (yalnızca yönetici değiştirebilir)";
+  $("pYoneticiGizleSatir").classList.toggle("hide", !isAdmin());
+  $("pYoneticiGizleBilgi").classList.toggle("hide", !isAdmin());
+  $("pYoneticiGizle").checked = !!(profil && profil.yonetici_gizli);
   ["pEski","pYeni","pYeni2"].forEach(i => $(i).value = "");
 }
 $("profilBtn").onclick = () => {
@@ -521,11 +526,18 @@ $("pKaydet").onclick = async () => {
   const { data, error } = await sb.auth.updateUser({ data: { ...(me.user_metadata || {}), ad, sicil_gizle: $("pGizle").checked } });
   if (error) { msg("Profil kaydedilemedi: " + error.message); return; }
   me = data.user;
+  // Yönetici kendi görünürlüğünü yalnızca sunucu tarafındaki yetkili RPC ile değiştirebilir.
+  if (isAdmin()) {
+    const { error: gizlilikHatasi } = await sb.rpc("yonetici_gizliligim", { yeni: $("pYoneticiGizle").checked });
+    if (gizlilikHatasi) { msg("Profil bilgileri kaydedildi ancak yönetici gizliliği değiştirilemedi: " + gizlilikHatasi.message + " — Supabase SQL kodunu çalıştırın."); return; }
+    await profilYukle();
+  }
   // Tablolarda görünen adı (kullanici) tüm satırlarda güncelle
   const up = await sb.from("sayilar").update({ kullanici: userName() }).eq("user_id", myId());
   kimYaz();
   if (up.error) { msg("Profil kaydedildi ama eski satırlardaki ad güncellenemedi: " + up.error.message); return; }
-  msg($("pGizle").checked ? "Profil güncellendi. Sicil numaranız artık diğer kullanıcılara görünmüyor." : "Profil güncellendi. Sicil numaranız adınızın yanında görünüyor.");
+  msg(isAdmin() && profil.yonetici_gizli ? "Profil kaydedildi. Yönetici hesabınız normal kullanıcıların listelerinden gizlendi." : "Profil güncellendi.");
+  await vardiyaYukle();
   await load();
 };
 $("pSifre").onclick = async () => {
@@ -703,7 +715,10 @@ $("aggResim").onclick = () => tabloResim($("agg").querySelector("table"), "Genel
 function renderShared() {
   const box = $("users"); box.textContent = "";
   const byUser = new Map();
+  const gorunenKullanicilar = vardiyaListeHazir ? new Set(vardiyaList.map(u => u.id)) : null;
   rows.forEach(r => {
+    // Vardiya RPC'sinde görünmeyen hesaplar (gizli yönetici dahil) ortak tablolarda da gösterilmez.
+    if (gorunenKullanicilar && !gorunenKullanicilar.has(r.user_id)) return;
     if (!byUser.has(r.user_id)) byUser.set(r.user_id, { ad: r.kullanici || "?", list: [] });
     byUser.get(r.user_id).list.push(r);
   });
@@ -790,7 +805,7 @@ async function hazirla() {
   if (me) kimYaz();
   await gorYukle();
   await kalpAt();
-  vardiyaYukle();
+  await vardiyaYukle();
   if (duzenle) {
     N = N0;
     const mx = await sb.from("sayilar").select("satir").eq("user_id", myId()).eq("tarih", bugun).order("satir", { ascending: false }).limit(1);
@@ -812,7 +827,7 @@ async function hazirla() {
 // Not: Asıl yetki kontrolü veritabanında (RLS + admin_* fonksiyonları). Buradaki kontroller yalnızca arayüz içindir.
 async function profilYukle() {
   if (!me) { profil = null; return; }
-  const { data, error } = await sb.from("profiles").select("rol,banli,ban_sebep").eq("id", myId()).maybeSingle();
+  const { data, error } = await sb.from("profiles").select("rol,banli,ban_sebep,yonetici_gizli").eq("id", myId()).maybeSingle();
   profil = error ? null : data;   // tablo yoksa/hata olursa normal kullanıcı gibi devam
 }
 const isAdmin = () => !!profil && profil.rol === "admin" && !profil.banli;
@@ -836,14 +851,15 @@ $("aAra").oninput = () => adminCiz();
 // ---- Vardiya sistemi (A, B, C, D) ----
 // Veritabanı: profiles.vardiya + vardiya_listesi() + admin_vardiya() (vardiya.sql)
 const VARDIYALAR = ["A", "B", "C", "D"];
-let vardiyaList = [], girisSayi = null, ziyaretSayi = null;   // girisSayi: seçili günde sayfaya giren kişi sayısı
+let vardiyaList = [], girisSayi = null, ziyaretSayi = null, vardiyaListeHazir = false;   // gizlilik filtresi için liste yükleme durumu
 const vardiyaOf = id => { const x = vardiyaList.find(u => u.id === id); return x ? x.vardiya : null; };
 async function vardiyaYukle() {
   const box = $("vardiyaBox");
   if (!sb) { box.classList.add("hide"); return; }
-  const { data, error } = await sb.rpc("vardiya_listesi", { gun: secili });   // giriş yapmayanlar da görebilir
-  if (error) { box.classList.add("hide"); return; }   // vardiya.sql çalıştırılmamışsa bölüm gizli kalır
+  const { data, error } = await sb.rpc("vardiya_listesi", { gun: secili });   // gizli yönetici kayıtları sunucuda filtrelenir
+  if (error) { vardiyaList = []; vardiyaListeHazir = true; box.classList.add("hide"); renderShared(); return; }
   vardiyaList = data || [];
+  vardiyaListeHazir = true;
   try { const g = await sb.rpc("giris_sayisi", { gun: secili }); girisSayi = g.error ? null : g.data; } catch (e) { girisSayi = null; }
   try { const z = await sb.rpc("ziyaret_sayisi", { gun: secili }); ziyaretSayi = z.error ? null : z.data; } catch (e) { ziyaretSayi = null; }
   box.classList.remove("hide"); vardiyaCiz();
