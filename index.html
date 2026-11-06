@@ -858,6 +858,7 @@ $("aAra").oninput = () => adminCiz();
 // ---- Vardiya sistemi (A, B, C, D) ----
 // Veritabanı: profiles.vardiya + vardiya_listesi() + admin_vardiya() (vardiya.sql)
 const VARDIYALAR = ["A", "B", "C", "D"];
+const MOLA_DK = 35, VARDIYA_DK = 480, NET_DK = VARDIYA_DK - MOLA_DK;   // 8 saatlik vardiyada 35 dk mola: net çalışma 445 dk (7 sa 25 dk)
 let vardiyaList = [], girisSayi = null, ziyaretSayi = null, vardiyaListeHazir = false;   // gizlilik filtresi için liste yükleme durumu
 const vardiyaOf = id => { const x = vardiyaList.find(u => u.id === id); return x ? x.vardiya : null; };
 async function vardiyaYukle() {
@@ -1275,7 +1276,7 @@ function logCiz() {
     if (!g.t.length) return;
     g.t.sort((a, b) => a - b);
     const n = g.t.length, ilk = g.t[0], son = g.t[n - 1], top = (son - ilk) / 1000, saat = top / 3600,
-      H8 = 8 * 3600000, vBas = ilk - ((ilk + 3 * 3600000) % H8), vSaat = (son - vBas) / 3600000;   // vardiya başlangıcı: ilk girişin düştüğü 8 saatlik blok (00/08/16, İstanbul)
+      H8 = 8 * 3600000, vBas = ilk - ((ilk + 3 * 3600000) % H8), vSaat = (son - vBas) / 3600000, calDk = vSaat * 60 - MOLA_DK;   // calDk: vardiya başından beri geçen süreden 35 dk mola düşülmüş net çalışma dakikası   // vardiya başlangıcı: ilk girişin düştüğü 8 saatlik blok (00/08/16, İstanbul)
     const card = el("div", "oz-card");
     card.append(el("strong", "", g.ad));
     const chips = el("div", "oz-chips");
@@ -1284,9 +1285,9 @@ function logCiz() {
     chip("İlk giriş", saatOf(ilk));
     chip("Son giriş", saatOf(son));
     chip("İlk girişten sona", n > 1 ? sure(top) + " (" + fmt(Math.round(saat * 100) / 100) + " saat)" : "tek giriş", true);
-    if (vSaat >= 1 / 60) chip("8 saatlik baz (tahmini)", fmt(Math.round(g.net / vSaat * 8 * 10) / 10) + " sayı");
-    if (vSaat >= 1 / 60 && g.net > 0) {
-      const dkHiz = g.net / (vSaat * 60);   // dakikada atılan sayı
+    if (calDk >= 1) chip("8 saatlik baz (35 dk mola düşülmüş, tahmini)", fmt(Math.round(g.net / calDk * NET_DK * 10) / 10) + " sayı");
+    if (calDk >= 1 && g.net > 0) {
+      const dkHiz = g.net / calDk;   // net çalışma dakikasında atılan sayı (mola hariç)
       [504, 552].forEach(hd => {
         const kalan = hd - g.net;
         if (kalan <= 0) { chip(hd + " hedefi", "tamamlandı (+" + fmt(Math.round(-kalan * 100) / 100) + ")", true); return; }
