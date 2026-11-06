@@ -1274,7 +1274,8 @@ function logCiz() {
   [...grp.values()].sort((a, b) => a.ad.localeCompare(b.ad, "tr")).forEach(g => {
     if (!g.t.length) return;
     g.t.sort((a, b) => a - b);
-    const n = g.t.length, ilk = g.t[0], son = g.t[n - 1], top = (son - ilk) / 1000, saat = top / 3600;
+    const n = g.t.length, ilk = g.t[0], son = g.t[n - 1], top = (son - ilk) / 1000, saat = top / 3600,
+      H8 = 8 * 3600000, vBas = ilk - ((ilk + 3 * 3600000) % H8), vSaat = (son - vBas) / 3600000;   // vardiya başlangıcı: ilk girişin düştüğü 8 saatlik blok (00/08/16, İstanbul)
     const card = el("div", "oz-card");
     card.append(el("strong", "", g.ad));
     const chips = el("div", "oz-chips");
@@ -1283,9 +1284,9 @@ function logCiz() {
     chip("İlk giriş", saatOf(ilk));
     chip("Son giriş", saatOf(son));
     chip("İlk girişten sona", n > 1 ? sure(top) + " (" + fmt(Math.round(saat * 100) / 100) + " saat)" : "tek giriş", true);
-    if (n > 1 && saat >= 1 / 60) chip("8 saatlik baz (tahmini)", fmt(Math.round(g.net / saat * 8 * 10) / 10) + " sayı");
-    if (n > 1 && saat >= 1 / 60 && g.net > 0) {
-      const dkHiz = g.net / (top / 60);   // dakikada atılan sayı
+    if (vSaat >= 1 / 60) chip("8 saatlik baz (tahmini)", fmt(Math.round(g.net / vSaat * 8 * 10) / 10) + " sayı");
+    if (vSaat >= 1 / 60 && g.net > 0) {
+      const dkHiz = g.net / (vSaat * 60);   // dakikada atılan sayı
       [504, 552].forEach(hd => {
         const kalan = hd - g.net;
         if (kalan <= 0) { chip(hd + " hedefi", "tamamlandı (+" + fmt(Math.round(-kalan * 100) / 100) + ")", true); return; }
