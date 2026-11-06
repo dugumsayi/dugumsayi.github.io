@@ -398,6 +398,13 @@ table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
   <div class="ucard"><div id="hGrafik"></div></div>
 </section>
 
+<section class="panel" id="ayPanel">
+  <div class="sec-head"><h2>Aylık ortalama</h2><div class="bar"><button id="aOnce" type="button" class="alt sm">◀ Önceki ay</button><button id="aBu" type="button" class="alt sm">Bu ay</button><button id="aSonra" type="button" class="alt sm">Sonraki ay ▶</button></div></div>
+  <p id="aEtiket" class="mut"></p>
+  <div id="aStat" class="stats"></div>
+  <div class="ucard"><div id="aTablo" class="scroll"></div></div>
+</section>
+
 <details id="logBox" class="hide">
   <summary><strong>Giriş kayıtları ve süre farkı</strong> <span id="logSayi" class="mut"></span></summary>
   <p class="mut">Seçili günde girilen her sayı saat bilgisiyle kaydedilir. Her satırda kimin girdiği ve makinenin toplamının girişten önceki ve sonraki değeri görünür. Süre farkı, aynı makinedeki ve aynı kullanıcının bir önceki girişinden bu yana geçen süredir.</p>
@@ -1071,6 +1078,7 @@ const GOR = [
   ["genel", "Genel toplam tablosu", ["genCard", "genel"]],
   ["tablolar", "Kullanıcıların tabloları", ["users"]],
   ["hafta", "Haftalık ortalama", ["haftaPanel"]],
+  ["ay", "Aylık ortalama", ["ayPanel"]],
   ["log", "Giriş kayıtları ve süre farkı", ["logBox"]]
 ];
 // misafir: giriş yapmadan (kayıt yoksa gizli) · uye: giriş yapınca (kayıt yoksa görünür)
@@ -1276,6 +1284,17 @@ function logCiz() {
     chip("Son giriş", saatOf(son));
     chip("İlk girişten sona", n > 1 ? sure(top) + " (" + fmt(Math.round(saat * 100) / 100) + " saat)" : "tek giriş", true);
     if (n > 1 && saat >= 1 / 60) chip("8 saatlik baz (tahmini)", fmt(Math.round(g.net / saat * 8 * 10) / 10) + " sayı");
+    if (n > 1 && saat >= 1 / 60 && g.net > 0) {
+      const dkHiz = g.net / (top / 60);   // dakikada atılan sayı
+      [504, 552].forEach(hd => {
+        const kalan = hd - g.net;
+        if (kalan <= 0) { chip(hd + " hedefi", "tamamlandı (+" + fmt(Math.round(-kalan * 100) / 100) + ")", true); return; }
+        const dk = kalan / dkHiz;
+        let bitis = "";
+        if (secili === bugun) bitis = " · bitiş " + new Date(Date.now() + dk * 60000).toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit" });
+        chip(hd + " için kalan", fmt(Math.round(kalan * 100) / 100) + " sayı · " + Math.ceil(dk) + " dk" + bitis, true);
+      });
+    }
     chip("Giriş sayısı", String(n));
     if (n > 1) chip("Ort. aralık", sure(top / (n - 1)));
     card.append(chips); oz.append(card);
@@ -1370,7 +1389,7 @@ const haftaPzt = str => { const d = new Date(str + "T12:00:00"); d.setDate(d.get
 const yuv = x => Math.round(x * 100) / 100;
 let haftaTimer = null, haftaSeq = 0, haftaGunler = [], haftaGiris = null;
 
-function haftaPlanla() { clearTimeout(haftaTimer); haftaTimer = setTimeout(haftaYukle, 800); }
+function haftaPlanla() { clearTimeout(haftaTimer); haftaTimer = setTimeout(() => { if (ayBas && ayBas.slice(0,7) !== secili.slice(0,7) && false) {} haftaYukle(); ayBas = null; ayYukle(); }, 800); }
 
 async function haftaYukle() {
   if (!sb) return;
@@ -1502,6 +1521,54 @@ function haftaCiz(gunler, kisi) {
 $("hOnce").onclick = () => { secili = tarihStr(gunEkle(haftaPzt(secili), -7)); hazirla(); };
 $("hSonra").onclick = () => { const n = tarihStr(gunEkle(haftaPzt(secili), 7)); secili = n > bugun ? bugun : n; hazirla(); };
 $("hBu").onclick = () => { secili = bugun; hazirla(); };
+
+// ================= AYLIK ORTALAMA =================
+let ayBas = null, aySeq = 0;
+const ayBaslangic = str => str.slice(0, 7) + "-01";
+async function ayYukle() {
+  if (!sb) return;
+  const seq = ++aySeq, bas = ayBas || ayBaslangic(secili);
+  const d0 = new Date(bas + "T12:00:00"), sonGun = new Date(d0.getFullYear(), d0.getMonth() + 1, 0).getDate();
+  const bit = bas.slice(0, 7) + "-" + String(sonGun).padStart(2, "0");
+  const kisi = new Map(), gunler = new Set();
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await sb.from("sayilar").select("tarih,user_id,kullanici,n1,n2,n3,n4,n5,n6")
+      .gte("tarih", bas).lte("tarih", bit).order("tarih").order("user_id").order("satir").range(from, from + 999);
+    if (seq !== aySeq) return;
+    if (error) { $("aEtiket").textContent = "Aylık veriler yüklenemedi: " + error.message; return; }
+    data.forEach(r => {
+      if (!COLS.some(k => r[k] != null && r[k] !== "")) return;
+      let u = kisi.get(r.user_id); if (!u) { u = { ad: r.kullanici || "?", g: {} }; kisi.set(r.user_id, u); }
+      if (r.kullanici) u.ad = r.kullanici;
+      u.g[r.tarih] = (u.g[r.tarih] || 0) + rsum(r); gunler.add(r.tarih);
+    });
+    if (data.length < 1000) break;
+  }
+  const gunTop = {}; kisi.forEach(u => Object.keys(u.g).forEach(g => { gunTop[g] = (gunTop[g] || 0) + u.g[g]; }));
+  const gl = Object.keys(gunTop).filter(g => g <= bugun).sort(), say = gl.length;
+  const toplam = yuv(gl.reduce((a, g) => a + gunTop[g], 0)), ort = say ? yuv(toplam / say) : 0;
+  $("aEtiket").textContent = d0.toLocaleDateString("tr-TR", { month: "long", year: "numeric" }) + (say ? " · ortalama, sayı girilen " + say + " günün ortalamasıdır" : "");
+  $("aSonra").disabled = ayBaslangic(tarihStr(new Date(d0.getFullYear(), d0.getMonth() + 1, 1))) > bugun;
+  $("aBu").disabled = ayBaslangic(bugun) === bas;
+  const hs = $("aStat"); hs.textContent = "";
+  const stat = (k, v, sub, cls) => { const c = el("div", "stat" + (cls ? " " + cls : "")); c.append(el("div", "k", k), el("div", "v", v), el("div", "s", sub || "")); hs.append(c); };
+  stat("Günlük ortalama", fmt(ort), "sayı girilen günlere göre", "g");
+  stat("Aylık toplam", fmt(toplam), "");
+  stat("Çalışılan gün", String(say), "");
+  const box = $("aTablo"); box.textContent = "";
+  if (!say) { box.append(el("p", "mut", "Bu ayda henüz sayı girilmemiş.")); return; }
+  const tbl = el("table", "at hc-tbl"), head = el("thead"), hr = el("tr"), body = el("tbody");
+  ["KİM", "GÜN", "TOPLAM", "GÜNLÜK ORT."].forEach(h => hr.append(el("th", "", h))); head.append(hr); tbl.append(head);
+  [...kisi.values()].map(u => { const g = Object.keys(u.g).filter(x => x <= bugun); return { ad: u.ad, n: g.length, top: yuv(g.reduce((a, x) => a + u.g[x], 0)) }; })
+    .filter(u => u.n).sort((a, b) => b.top - a.top).forEach(u => {
+      const tr = el("tr"); tr.append(el("td", "hc-k", u.ad), el("td", "hc-n", String(u.n)), el("td", "hc-n hc-s", fmt(u.top)), el("td", "hc-n", fmt(yuv(u.top / u.n)))); body.append(tr);
+    });
+  const ft = el("tr", "tot"); ft.append(el("td", "", "GENEL"), el("td", "", String(say)), el("td", "", fmt(toplam)), el("td", "", fmt(ort))); body.append(ft);
+  tbl.append(body); box.append(tbl);
+}
+$("aOnce").onclick = () => { const d = new Date((ayBas || ayBaslangic(secili)) + "T12:00:00"); ayBas = ayBaslangic(tarihStr(new Date(d.getFullYear(), d.getMonth() - 1, 1))); ayYukle(); };
+$("aSonra").onclick = () => { const d = new Date((ayBas || ayBaslangic(secili)) + "T12:00:00"); ayBas = ayBaslangic(tarihStr(new Date(d.getFullYear(), d.getMonth() + 1, 1))); ayYukle(); };
+$("aBu").onclick = () => { ayBas = ayBaslangic(bugun); ayYukle(); };
 
 // Sayfadan ayrılmadan / sekme gizlenmeden önce bekleyen değişiklikleri hemen kaydet
 function bekleyenleriKaydet() {
