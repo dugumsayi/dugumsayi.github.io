@@ -1286,6 +1286,7 @@ function logCiz() {
     chip("Son giriş", saatOf(son));
     chip("İlk girişten sona", n > 1 ? sure(top) + " (" + fmt(Math.round(saat * 100) / 100) + " saat)" : "tek giriş", true);
     if (calDk >= 1) chip("8 saatlik baz (35 dk mola düşülmüş, tahmini)", fmt(Math.round(g.net / calDk * NET_DK * 10) / 10) + " sayı");
+    if (calDk >= 1) chip("Ortalama (saatte, mola hariç)", fmt(Math.round(g.net / calDk * 60 * 10) / 10) + " sayı/saat", true);
     if (calDk >= 1 && g.net > 0) {
       const dkHiz = g.net / calDk;   // net çalışma dakikasında atılan sayı (mola hariç)
       [504, 552].forEach(hd => {
