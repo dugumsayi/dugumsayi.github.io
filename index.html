@@ -181,6 +181,8 @@ table.lg td{padding:7px 10px;vertical-align:middle;height:auto}
 table.lg .lg-t{white-space:nowrap;color:var(--mut);font-variant-numeric:tabular-nums}
 table.lg .lg-mk{font-weight:600}
 table.lg .lg-alt{font-size:11px;font-weight:400;color:var(--mut)}
+table.lg .lg-ayni{display:inline-block;margin-top:3px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;color:#b45309;background:rgba(245,158,11,.18);border:1px solid rgba(245,158,11,.55)}
+@media (prefers-color-scheme:dark){table.lg .lg-ayni{color:#fbbf24;background:rgba(251,191,36,.14);border-color:rgba(251,191,36,.5)}}
 table.lg .lg-e span{display:inline-block;min-width:44px;text-align:center;font-weight:700;border-radius:999px;padding:1px 10px;background:var(--bg);border:1px solid var(--line)}
 table.lg .lg-e .lg-art{color:#2ecc40;border-color:#2ecc4066}
 table.lg .lg-e .lg-eks,table.lg .lg-e .lg-sil{color:#e5484d;border-color:#e5484d66}
@@ -1319,6 +1321,7 @@ function logCiz() {
     tdE.append(el("span", cls, eklenenYaz(l)));
     const tdS = el("td", "lg-s"), mk = sure(l.fark_makine_sn), gn = sure(l.fark_genel_sn);
     tdS.append(el("div", "", mk));
+    if (!ad && mk !== "—" && gn !== "—" && gn !== mk) tdS.append(el("div", "lg-ayni", "↺ Aynı makineye daha önce girdin"));   // arada başka makineye girilmişse uyar
     if (gn !== "—" && gn !== mk) tdS.append(el("div", "lg-alt", "genel: " + gn));
     tr.append(el("td", "lg-t", saatOf(l.zaman)),
       el("td", "", (l.kullanici || "?") + (isAdmin() && sm.get(l.user_id) ? " [" + sm.get(l.user_id) + "]" : "") + (l.user_id === myId() ? " (siz)" : "")),
