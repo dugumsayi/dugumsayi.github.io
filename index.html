@@ -259,12 +259,14 @@ table.lg tr.lg-ad td{opacity:.75}
 }
 .hide{display:none!important}
 .gz{display:none!important}
+.ort-gizli{display:none!important}
+button.alt.sel{background:var(--blue);color:#fff;border-color:var(--blue)}
 #gList{margin:8px 0;overflow-x:auto}
 #gList label{display:flex;gap:10px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:14px}
 #gList input{width:18px;height:18px;flex:none}
 
 /* Haftalık ortalama grafiği */
-#haftaPanel .ucard{padding:12px 14px}
+#haftaPanel .ucard,#ayPanel .ucard{padding:12px 14px}
 #hGrafik svg{width:100%;height:auto;display:block}
 .hc-t{fill:var(--mut);font-size:12px}
 .hc-v{fill:var(--fg);font-size:12px;font-weight:700}
@@ -393,18 +395,22 @@ table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
   </div>
 </section>
 
-<section class="panel" id="haftaPanel">
-  <div class="sec-head"><h2>Haftalık ortalama</h2><div class="bar"><button id="hOnce" type="button" class="alt sm">◀ Önceki hafta</button><button id="hBu" type="button" class="alt sm">Bu hafta</button><button id="hSonra" type="button" class="alt sm">Sonraki hafta ▶</button></div></div>
-  <p id="hEtiket" class="mut"></p>
-  <div id="hStat" class="stats"></div>
-  <div class="ucard"><div id="hGrafik"></div></div>
-</section>
+<section class="panel" id="ortPanel">
+  <div class="sec-head"><h2>Ortalama</h2><div class="bar" id="ortSekme"><button id="ortH" type="button" class="alt sm sel">Haftalık</button><button id="ortA" type="button" class="alt sm">Aylık</button></div></div>
 
-<section class="panel" id="ayPanel">
-  <div class="sec-head"><h2>Aylık ortalama</h2><div class="bar"><button id="aOnce" type="button" class="alt sm">◀ Önceki ay</button><button id="aBu" type="button" class="alt sm">Bu ay</button><button id="aSonra" type="button" class="alt sm">Sonraki ay ▶</button></div></div>
-  <p id="aEtiket" class="mut"></p>
-  <div id="aStat" class="stats"></div>
-  <div class="ucard"><div id="aTablo" class="scroll"></div></div>
+  <div id="haftaPanel">
+    <div class="sec-head"><div class="bar"><button id="hOnce" type="button" class="alt sm">◀ Önceki hafta</button><button id="hBu" type="button" class="alt sm">Bu hafta</button><button id="hSonra" type="button" class="alt sm">Sonraki hafta ▶</button></div></div>
+    <p id="hEtiket" class="mut"></p>
+    <div id="hStat" class="stats"></div>
+    <div class="ucard"><div id="hGrafik"></div></div>
+  </div>
+
+  <div id="ayPanel" class="ort-gizli">
+    <div class="sec-head"><div class="bar"><button id="aOnce" type="button" class="alt sm">◀ Önceki ay</button><button id="aBu" type="button" class="alt sm">Bu ay</button><button id="aSonra" type="button" class="alt sm">Sonraki ay ▶</button></div></div>
+    <p id="aEtiket" class="mut"></p>
+    <div id="aStat" class="stats"></div>
+    <div class="ucard"><div id="aTablo" class="scroll"></div></div>
+  </div>
 </section>
 
 <details id="logBox" class="hide">
@@ -1092,6 +1098,7 @@ function gorUygula() {
   GOR.forEach(([k, , ids]) => ids.forEach(id => $(id).classList.toggle("gz", !gorunur(k))));
   $("vardiyaBox").classList.toggle("gz", !(gorunur("ozet") || gorunur("vardiya")));
   $("gunPanel").classList.toggle("gz", !(gorunur("genel") || gorunur("tablolar")));
+  if (typeof ortUygula === "function") ortUygula();
 }
 function gorCiz() {
   const box = $("gList"); box.textContent = "";
@@ -1575,6 +1582,23 @@ async function ayYukle() {
 $("aOnce").onclick = () => { const d = new Date((ayBas || ayBaslangic(secili)) + "T12:00:00"); ayBas = ayBaslangic(tarihStr(new Date(d.getFullYear(), d.getMonth() - 1, 1))); ayYukle(); };
 $("aSonra").onclick = () => { const d = new Date((ayBas || ayBaslangic(secili)) + "T12:00:00"); ayBas = ayBaslangic(tarihStr(new Date(d.getFullYear(), d.getMonth() + 1, 1))); ayYukle(); };
 $("aBu").onclick = () => { ayBas = ayBaslangic(bugun); ayYukle(); };
+
+// Haftalık + aylık ortalama tek pencerede, sekmeli
+var ortSekme = "hafta";
+function ortUygula() {
+  const h = gorunur("hafta"), a = gorunur("ay");
+  if (ortSekme === "hafta" && !h && a) ortSekme = "ay";
+  if (ortSekme === "ay" && !a && h) ortSekme = "hafta";
+  $("haftaPanel").classList.toggle("ort-gizli", ortSekme !== "hafta");
+  $("ayPanel").classList.toggle("ort-gizli", ortSekme !== "ay");
+  $("ortH").classList.toggle("sel", ortSekme === "hafta");
+  $("ortA").classList.toggle("sel", ortSekme === "ay");
+  $("ortSekme").classList.toggle("hide", !(h && a));
+  $("ortPanel").classList.toggle("gz", !(h || a));
+}
+$("ortH").onclick = () => { ortSekme = "hafta"; ortUygula(); };
+$("ortA").onclick = () => { ortSekme = "ay"; ortUygula(); };
+ortUygula();
 
 // Sayfadan ayrılmadan / sekme gizlenmeden önce bekleyen değişiklikleri hemen kaydet
 function bekleyenleriKaydet() {
