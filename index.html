@@ -1328,7 +1328,7 @@ function logCiz() {
     tdE.append(el("span", cls, eklenenYaz(l)));
     const tdS = el("td", "lg-s"), mk = sure(l.fark_makine_sn), gn = sure(l.fark_genel_sn);
     tdS.append(el("div", "", mk));
-    if (!ad && mk !== "—" && gn !== "—" && gn !== mk) tdS.append(el("div", "lg-ayni", "↺ Aynı makineye daha önce girdin"));   // arada başka makineye girilmişse uyar
+    if (!ad && mk !== "—" && gn !== "—" && gn !== mk) tdS.append(el("div", "lg-ayni", "↺ Aynı makineye bir önceki girdiğin aradaki saat farkı"));   // arada başka makineye girilmişse uyar
     if (gn !== "—" && gn !== mk) tdS.append(el("div", "lg-alt", "genel: " + gn));
     tr.append(el("td", "lg-t", saatOf(l.zaman)),
       el("td", "", (l.kullanici || "?") + (isAdmin() && sm.get(l.user_id) ? " [" + sm.get(l.user_id) + "]" : "") + (l.user_id === myId() ? " (siz)" : "")),
