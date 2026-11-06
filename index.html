@@ -1389,7 +1389,7 @@ const haftaPzt = str => { const d = new Date(str + "T12:00:00"); d.setDate(d.get
 const yuv = x => Math.round(x * 100) / 100;
 let haftaTimer = null, haftaSeq = 0, haftaGunler = [], haftaGiris = null;
 
-function haftaPlanla() { clearTimeout(haftaTimer); haftaTimer = setTimeout(() => { if (ayBas && ayBas.slice(0,7) !== secili.slice(0,7) && false) {} haftaYukle(); ayBas = null; ayYukle(); }, 800); }
+let aySonAy = ""; function haftaPlanla() { clearTimeout(haftaTimer); haftaTimer = setTimeout(() => { haftaYukle(); if (aySonAy !== secili.slice(0, 7)) { aySonAy = secili.slice(0, 7); ayBas = null; } ayYukle(); }, 800); }
 
 async function haftaYukle() {
   if (!sb) return;
