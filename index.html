@@ -1275,7 +1275,7 @@ function logCiz() {
     chip("İlk giriş", saatOf(ilk));
     chip("Son giriş", saatOf(son));
     chip("İlk girişten sona", n > 1 ? sure(top) + " (" + fmt(Math.round(saat * 100) / 100) + " saat)" : "tek giriş", true);
-    if (n > 1 && saat >= 1 / 60) chip("Saatte ortalama", fmt(Math.round(g.net / saat * 10) / 10) + " sayı");
+    if (n > 1 && saat >= 1 / 60) chip("8 saatlik baz (tahmini)", fmt(Math.round(g.net / saat * 8 * 10) / 10) + " sayı");
     chip("Giriş sayısı", String(n));
     if (n > 1) chip("Ort. aralık", sure(top / (n - 1)));
     card.append(chips); oz.append(card);
