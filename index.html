@@ -254,8 +254,17 @@ table.lg tr.lg-ad td{opacity:.75}
   #profil{max-width:none}
   #logBox .bar select,#logBox .bar button{flex:1 1 140px}
   h2{font-size:16px}
-  table.lg th,table.lg td{font-size:12.5px;padding:6px 6px}
-  table.lg th:nth-child(6),table.lg td:nth-child(6){display:none}
+  /* Giriş kayıtları: telefon ekranında sütunları ezmek yerine yatay kaydırma */
+  #logTbl{display:block;width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-x}
+  #logTbl table.lg{width:760px;min-width:760px;max-width:none;table-layout:auto}
+  #logTbl table.lg th,#logTbl table.lg td{font-size:12px;padding:7px 7px;white-space:normal}
+  #logTbl table.lg th:nth-child(1),#logTbl table.lg td:nth-child(1){min-width:82px;white-space:nowrap}
+  #logTbl table.lg th:nth-child(2),#logTbl table.lg td:nth-child(2){min-width:145px}
+  #logTbl table.lg th:nth-child(3),#logTbl table.lg td:nth-child(3){min-width:105px}
+  #logTbl table.lg th:nth-child(4),#logTbl table.lg td:nth-child(4){min-width:85px}
+  #logTbl table.lg th:nth-child(5),#logTbl table.lg td:nth-child(5){min-width:105px;white-space:nowrap}
+  #logTbl table.lg th:nth-child(6),#logTbl table.lg td:nth-child(6){min-width:150px}
+  #logTbl table.lg th:nth-child(7),#logTbl table.lg td:nth-child(7){min-width:65px}
 }
 .hide{display:none!important}
 .gz{display:none!important}
