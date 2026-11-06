@@ -326,6 +326,13 @@ table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
 <div id="admin" class="hide">
   <div class="p-head"><strong>Yönetim paneli</strong><button id="adminKapat" type="button" class="red sm">✕ Kapat</button></div>
   <p class="mut">Kullanıcıları banlayabilir, silebilir, yönetici yapabilir veya yeni kullanıcı ekleyebilirsiniz.</p>
+  <strong>Kullanıcı kayıt ayarı</strong>
+  <p class="mut">Yeni kullanıcıların kendi kendine kayıt olmasını buradan açıp kapatabilirsiniz. Kapatıldığında mevcut kullanıcıların girişi etkilenmez.</p>
+  <div class="row">
+    <span id="kayitDurum" class="badge">Durum yükleniyor…</span>
+    <button id="kayitAcKapat" type="button" class="alt">Kayıt ayarını yükle</button>
+  </div>
+  <hr>
   <strong>Yeni kullanıcı ekle</strong>
   <div class="row">
     <input id="aAd" placeholder="Ad Soyad">
@@ -473,7 +480,11 @@ function authMod(k) {
   $("sifre").autocomplete = k ? "new-password" : "current-password";
 }
 $("tabGiris").onclick = () => authMod(false);
-$("tabKayit").onclick = () => authMod(true);
+$("tabKayit").onclick = async () => {
+  const acik = await kayitDurumuYukle();
+  if (!acik) { msg("Yeni kullanıcı kaydı şu anda yönetici tarafından kapatılmış."); authMod(false); return; }
+  authMod(true);
+};
 $("sifre").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $($("auth").classList.contains("kayit-modu") ? "kayit" : "giris").click(); } });
 $("giris").onclick = async () => {
   const s = sicilAl(); if (!s) return;
@@ -484,6 +495,8 @@ $("giris").onclick = async () => {
                  /invalid/i.test(error.message) ? "Sicil numarası veya şifre hatalı." : "Giriş yapılamadı: " + error.message);
 };
 $("kayit").onclick = async () => {
+  const kayitAcik = await kayitDurumuYukle();
+  if (!kayitAcik) { msg("Yeni kullanıcı kaydı şu anda kapalı. Yönetici ile iletişime geçin."); authMod(false); return; }
   const s = sicilAl(); if (!s) return;
   const ad = $("ad").value.trim();
   if (!ad) { msg("Kayıt için adınızı yazın."); return; }
@@ -810,6 +823,7 @@ async function hazirla() {
     if (profil && profil.banli) { await banliCikis(); return; }
   } else profil = null;
   $("auth").classList.toggle("hide", !!me);
+  if (!me) await kayitDurumuYukle();
   $("bar").classList.toggle("hide", !me);
   if (!me) $("profil").classList.add("hide");
   $("adminBtn").classList.toggle("hide", !isAdmin());
@@ -837,6 +851,51 @@ async function hazirla() {
       (sonBan || ""));
 }
 
+
+// ================= KULLANICI KAYIT AYARI =================
+// Ayar sunucuda site_ayar tablosunda tutulur; istemci tarafında gizlemek tek başına güvenlik değildir.
+// kayit_durumu() ve admin_kayit_ayari() fonksiyonları kayit-ayari.sql dosyasında tanımlanır.
+let kayitAcikMi = true;
+async function kayitDurumuYukle() {
+  if (!sb) return kayitAcikMi;
+  try {
+    const { data, error } = await sb.rpc("kayit_durumu");
+    if (error) throw error;
+    kayitAcikMi = data !== false;
+    kayitArayuzuUygula();
+  } catch (e) {
+    // SQL henüz kurulmadıysa mevcut davranışı koru; yönetici panelinde hata göster.
+    kayitAcikMi = true;
+    const durum = $("kayitDurum");
+    if (durum) durum.textContent = "SQL kurulumu gerekli";
+  }
+  return kayitAcikMi;
+}
+function kayitArayuzuUygula() {
+  const durum = $("kayitDurum"), btn = $("kayitAcKapat");
+  if (durum) {
+    durum.textContent = kayitAcikMi ? "Kayıt açık" : "Kayıt kapalı";
+    durum.className = "badge " + (kayitAcikMi ? "ok" : "ban");
+  }
+  if (btn) btn.textContent = kayitAcikMi ? "Kayıt olmayı kapat" : "Kayıt olmayı aç";
+  const tab = $("tabKayit");
+  if (tab) tab.classList.toggle("hide", !kayitAcikMi);
+  if ($("auth").classList.contains("kayit-modu") && !kayitAcikMi) authMod(false);
+}
+$("kayitAcKapat").onclick = async () => {
+  if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
+  const yeni = !kayitAcikMi;
+  if (!confirm(yeni ? "Yeni kullanıcı kayıtları açılsın mı?" : "Yeni kullanıcı kayıtları kapatılsın mı? Mevcut hesaplar etkilenmez.")) return;
+  msg("Kayıt ayarı güncelleniyor…");
+  const { data, error } = await sb.rpc("admin_kayit_ayari", { acik: yeni });
+  if (error) {
+    msg("Kayıt ayarı değiştirilemedi: " + error.message + " — Supabase'de kayit-ayari.sql dosyasını çalıştırın.");
+    return;
+  }
+  kayitAcikMi = data !== false;
+  kayitArayuzuUygula();
+  msg(kayitAcikMi ? "Yeni kullanıcı kaydı açıldı." : "Yeni kullanıcı kaydı kapatıldı.");
+};
 
 // ================= YÖNETİM / BAN =================
 // Not: Asıl yetki kontrolü veritabanında (RLS + admin_* fonksiyonları). Buradaki kontroller yalnızca arayüz içindir.
@@ -968,6 +1027,7 @@ async function adminVardiya(u, v) {
 $("vardiyaYenile").onclick = vardiyaYukle;
 
 async function adminYukle() {
+  await kayitDurumuYukle();
   const { data, error } = await sb.rpc("admin_kullanicilar");
   if (error) { msg("Kullanıcı listesi alınamadı: " + error.message); return; }
   adminList = data || []; adminCiz();
@@ -1328,7 +1388,7 @@ function logCiz() {
     tdE.append(el("span", cls, eklenenYaz(l)));
     const tdS = el("td", "lg-s"), mk = sure(l.fark_makine_sn), gn = sure(l.fark_genel_sn);
     tdS.append(el("div", "", mk));
-    if (!ad && mk !== "—" && gn !== "—" && gn !== mk) tdS.append(el("div", "lg-ayni", "↺ Aynı makineye bir önceki girdiğin aradaki saat farkı"));   // arada başka makineye girilmişse uyar
+    if (!ad && mk !== "—" && gn !== "—" && gn !== mk) tdS.append(el("div", "lg-ayni", "↺ Aynı makineye daha önce girdin"));   // arada başka makineye girilmişse uyar
     if (gn !== "—" && gn !== mk) tdS.append(el("div", "lg-alt", "genel: " + gn));
     tr.append(el("td", "lg-t", saatOf(l.zaman)),
       el("td", "", (l.kullanici || "?") + (isAdmin() && sm.get(l.user_id) ? " [" + sm.get(l.user_id) + "]" : "") + (l.user_id === myId() ? " (siz)" : "")),
