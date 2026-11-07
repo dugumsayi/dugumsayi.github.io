@@ -121,6 +121,17 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 #app h2{margin:0 0 10px}
 #profil,#admin{margin:0 0 14px}
 #logBox{margin:14px 0 0}
+#vardBox{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:10px 14px;margin:14px 0 0}
+#vardBox summary{cursor:pointer;font-size:16px}
+#vardBox .bar{margin:8px 0}
+.vard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:10px}
+table.vd{width:100%;font-size:14px}
+table.vd th{font-size:12px;letter-spacing:.04em;padding:8px 10px;text-align:left}
+table.vd td{padding:6px 10px;vertical-align:middle;height:auto;text-align:left}
+table.vd td.vd-n{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+table.vd tr.vd-top td{font-weight:800;border-top:2px solid var(--line)}
+table.vd .vd-bar{display:block;height:5px;border-radius:3px;background:var(--blue);margin-top:4px;min-width:2px}
+@media (max-width:600px){#vardBox{padding:12px}#vardBox .bar button{flex:1 1 120px}}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:0 0 14px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow)}
 .stat .k{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
@@ -255,7 +266,7 @@ table.lg tr.lg-ad td{opacity:.75}
   #logBox .bar select,#logBox .bar button{flex:1 1 140px}
   h2{font-size:16px}
   /* Giriş kayıtları: telefon ekranında sütunları ezmek yerine yatay kaydırma */
-  #logTbl{display:block;width:100%;max-width:100%;overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;overscroll-behavior-x:contain}
+  #logTbl{display:block;width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;touch-action:pan-x}
   #logTbl table.lg{width:760px;min-width:760px;max-width:none;table-layout:auto}
   #logTbl table.lg th,#logTbl table.lg td{font-size:12px;padding:7px 7px;white-space:normal}
   #logTbl table.lg th:nth-child(1),#logTbl table.lg td:nth-child(1){min-width:82px;white-space:nowrap}
@@ -400,6 +411,7 @@ table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
 
 <section class="panel" id="gunPanel">
   <div class="sec-head"><h2>Kullanıcıların tabloları</h2><div class="bar"><input type="date" id="tarih"><button id="bugunBtn" class="alt">Bugün</button><span id="gunAd"></span></div></div>
+  <div class="bar" id="vnoSekme"></div>
   <p id="genel" class="mut"></p>
   <div class="ugrid">
     <div class="ucard gen" id="genCard">
@@ -438,6 +450,15 @@ table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
   <div id="logTbl" class="scroll"></div>
 </details>
 
+<details id="vardBox" class="hide" open>
+  <summary><strong>Vardiya tabloları (10 dk dilimleri)</strong> <span id="vardSayi" class="mut"></span></summary>
+  <p class="mut">Her vardiya başında (00:00, 08:00, 16:00) yeni bir tablo açılır. Tablo, seçili günde o vardiya saatleri içinde girilen sayılardan oluşur. 10 dakikalık dilimler vardiyanın başlangıç saatinden itibaren sayılır.</p>
+  <div class="bar" id="vardSekme"></div>
+  <div id="vardOzet"></div>
+  <div class="vard-grid"><div id="vardTbl" class="scroll"></div><div id="vardDilim" class="scroll"></div></div>
+  <label class="mut"><input type="checkbox" id="vardBos"> Boş dilimleri de göster</label>
+</details>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 const SUPABASE_URL = "https://pgaqufqkxptoxrgtlrxv.supabase.co";
@@ -453,6 +474,12 @@ const todayStr = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europ
 let N = N0, sb, me = null, rows = [], myInputs = [], myTot = [], myTr = [], timer = null;
 const OTO_MS = 700, otoTimer = {}, kirli = {}; let kayitZinciri = Promise.resolve();
 let bugun = todayStr(), secili = bugun;
+// Vardiya tabloları: her vardiya (00-08, 08-16, 16-24) için ayrı tablo (sayilar.vno = 0, 1, 2) — vardiya-tablo.sql gerekir
+const VNO_AD = ["00:00–08:00", "08:00–16:00", "16:00–24:00"];
+const vNoNow = () => Math.floor((((Date.now() + 10800000) % 86400000) + 86400000) % 86400000 / 28800000);   // İstanbul saatine göre
+let gv = vNoNow(), sonV = gv;   // gv: görüntülenen vardiya, sonV: son bilinen güncel vardiya
+const duzenlenir = () => secili === bugun && gv === vNoNow();   // yalnızca bugünün şu anki vardiyası düzenlenir
+const vnoHata = m => /vno/i.test(m || "") ? " — Supabase'de vardiya-tablo.sql çalıştırılmalı." : "";
 let profil = null, adminList = [], sonBan = "", cikisYapiliyor = false;
 
 const num = v => { const x = parseFloat(String(v ?? "").replace(",", ".")); return isNaN(x) ? 0 : x; };
@@ -594,7 +621,18 @@ $("pSifre").onclick = async () => {
 
 $("tarih").max = bugun; $("tarih").value = secili;
 $("tarih").onchange = () => { secili = $("tarih").value || bugun; if (secili > bugun) secili = bugun; hazirla(); };
-$("bugunBtn").onclick = () => { secili = bugun; hazirla(); };
+$("bugunBtn").onclick = () => { secili = bugun; gv = vNoNow(); vardSecim = null; hazirla(); };
+function vnoCiz() {
+  const sk = $("vnoSekme"); if (!sk) return;
+  sk.textContent = "";
+  const simdi = secili === bugun ? vNoNow() : -1;
+  VNO_AD.forEach((a, i) => {
+    const b = el("button", "alt sm" + (i === gv ? " sel" : ""), a + (i === simdi ? " · şimdi" : ""));
+    b.type = "button";
+    b.onclick = () => { gv = i; vardSecim = (secili === bugun && i === vNoNow()) ? null : i; hazirla(); };
+    sk.append(b);
+  });
+}
 
 function buildMine() {
   const body = $("mine"); body.textContent = ""; myInputs = []; myTot = []; myTr = [];
@@ -647,13 +685,13 @@ const satirDolu = r => {
   return !!row && (!!(row.name || "").trim() || COLS.some(k => row[k] != null && String(row[k]).trim() !== ""));
 };
 async function tabloDoluKontrol(zorla) {
-  if (satirEkleniyor || !me || secili !== bugun) return;
+  if (satirEkleniyor || !me || !duzenlenir()) return;
   if (N >= NMAX) { if (zorla) msg("En fazla " + NMAX + " satır eklenebilir."); return; }
   if (!zorla) for (let r = 0; r < N; r++) if (!satirDolu(r)) return;
   satirEkleniyor = true;
   const r = N; N++; satirEkle(r);
   try {
-    const { error } = await sb.from("sayilar").upsert([{ satir: r, tarih: bugun, kullanici: userName() }], { onConflict: "user_id,tarih,satir", ignoreDuplicates: true });
+    const { error } = await sb.from("sayilar").upsert([{ satir: r, tarih: bugun, vno: gv, kullanici: userName() }], { onConflict: "user_id,tarih,vno,satir", ignoreDuplicates: true });
     if (error) {
       N--; myTr.pop().remove(); myInputs.pop(); myTot.pop();
       msg("Yeni satır eklenemedi: " + error.message +
@@ -685,14 +723,14 @@ $("satirBtn").onclick = () => tabloDoluKontrol(true);
 
 // Son eklenen satırı siler (en az N0 satır kalır). Boşluk kalmasın diye yalnızca en yüksek numaralı satır silinir.
 async function satirSil() {
-  if (satirEkleniyor || !me || secili !== bugun) return;
+  if (satirEkleniyor || !me || !duzenlenir()) return;
   if (N <= N0) { msg("En az " + N0 + " satır kalmalı, daha fazla silinemez."); return; }
   const r = N - 1, row = rows.find(x => x.user_id === myId() && x.satir === r);
   if (satirDolu(r) && !confirm('"' + ((row && row.name) || "adsız") + '" satırı ve içindeki sayılar silinecek. Emin misiniz?')) return;
   satirEkleniyor = true;
   try {
     clearTimeout(otoTimer[r]); kirli[r] = false;
-    const { error } = await sb.from("sayilar").delete().eq("user_id", myId()).eq("tarih", bugun).eq("satir", r);
+    const { error } = await sb.from("sayilar").delete().eq("user_id", myId()).eq("tarih", bugun).eq("vno", gv).eq("satir", r);
     if (error) { msg("Satır silinemedi: " + error.message + " — Supabase'de satir-sil.sql çalıştırılmalı (silme izni)."); }
     else {
       N--; myTr.pop().remove(); myInputs.pop(); myTot.pop();
@@ -809,16 +847,16 @@ async function kaydet(r) {
   msg("Kaydediliyor…");
   const body = { name: row.name || "", kullanici: userName() };
   COLS.forEach(k => { const v = String(row[k] ?? "").trim(); body[k] = v === "" ? null : num(v); });
-  const { error } = await sb.from("sayilar").update(body).eq("user_id", myId()).eq("tarih", bugun).eq("satir", r);
+  const { error } = await sb.from("sayilar").update(body).eq("user_id", myId()).eq("tarih", bugun).eq("vno", gv).eq("satir", r);
   if (error) kirli[r] = true;
   msg(error ? "Kaydedilemedi: " + error.message : "Otomatik kaydedildi. Değişiklikler herkeste görünür.");
   if (!error) logYukle();
 }
 
 async function load() {
-  const { data, error } = await sb.from("sayilar").select("*").eq("tarih", secili);
-  if (error) { msg("Veriler yüklenemedi: " + error.message); return; }
-  rows = data; if (me && secili === bugun) fillMine(); renderShared();
+  const { data, error } = await sb.from("sayilar").select("*").eq("tarih", secili).eq("vno", gv);
+  if (error) { msg("Veriler yüklenemedi: " + error.message + vnoHata(error.message)); return; }
+  rows = data; if (me && duzenlenir()) fillMine(); renderShared();
   logYukle();
   haftaPlanla();
 }
@@ -827,6 +865,7 @@ async function hazirla() {
   $("tarih").value = secili;
   $("gunAd").textContent = new Date(secili + "T12:00:00").toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   $("tGun").textContent = $("gunAd").textContent;
+  vnoCiz();
   if (me) {
     await profilYukle();
     if (profil && profil.banli) { await banliCikis(); return; }
@@ -838,24 +877,34 @@ async function hazirla() {
   $("adminBtn").classList.toggle("hide", !isAdmin());
   if (!isAdmin()) $("admin").classList.add("hide");
   else if (!$("admin").classList.contains("hide")) adminYukle();
-  const duzenle = !!me && secili === bugun;
+  const duzenle = !!me && duzenlenir();
   $("app").classList.toggle("hide", !duzenle);
+  const ah = $("app").querySelector("h2"); if (ah) ah.textContent = "Benim girişlerim (bugün · " + VNO_AD[gv] + ")";
   if (me) kimYaz();
   await gorYukle();
   await kalpAt();
   await vardiyaYukle();
   if (duzenle) {
     N = N0;
-    const mx = await sb.from("sayilar").select("satir").eq("user_id", myId()).eq("tarih", bugun).order("satir", { ascending: false }).limit(1);
-    if (!mx.error && mx.data && mx.data.length) N = Math.min(NMAX, Math.max(N0, mx.data[0].satir + 1));
+    const mx = await sb.from("sayilar").select("satir").eq("user_id", myId()).eq("tarih", bugun).eq("vno", gv).order("satir", { ascending: false }).limit(1);
+    if (mx.error) { msg("Tablo okunamadı: " + mx.error.message + vnoHata(mx.error.message)); return; }
+    const adlar = new Map();
+    if (mx.data && mx.data.length) N = Math.min(NMAX, Math.max(N0, mx.data[0].satir + 1));
+    else {   // Vardiya tablosu yeni açılıyor: önceki vardiyadaki makine adları taşınır, sayılar sıfırdan başlar
+      const pv = gv > 0 ? gv - 1 : 2, pt = gv > 0 ? bugun : tarihStr(new Date(new Date(bugun + "T12:00:00").getTime() - 86400000));
+      const pr = await sb.from("sayilar").select("satir,name").eq("user_id", myId()).eq("tarih", pt).eq("vno", pv).order("satir");
+      if (!pr.error && pr.data) pr.data.forEach(x => { if ((x.name || "").trim() && x.satir < NMAX) adlar.set(x.satir, x.name); });
+      if (adlar.size) N = Math.min(NMAX, Math.max(N0, Math.max(...adlar.keys()) + 1));
+    }
     buildMine();
-    const seed = Array.from({length: N}, (_, i) => ({ satir: i, tarih: bugun, kullanici: userName() }));
-    const ins = await sb.from("sayilar").upsert(seed, { onConflict: "user_id,tarih,satir", ignoreDuplicates: true });
-    if (ins.error) { msg("Satırlar oluşturulamadı: " + ins.error.message); return; }
+    const seed = Array.from({length: N}, (_, i) => { const o = { satir: i, tarih: bugun, vno: gv, kullanici: userName() }; if (adlar.has(i)) o.name = adlar.get(i); return o; });
+    const ins = await sb.from("sayilar").upsert(seed, { onConflict: "user_id,tarih,vno,satir", ignoreDuplicates: true });
+    if (ins.error) { msg("Satırlar oluşturulamadı: " + ins.error.message + vnoHata(ins.error.message)); return; }
   }
   await load();
   if (duzenle) tabloDoluKontrol();
-  msg(duzenle ? "Hücreye yazın, otomatik kaydedilir. Her gün yeni bir tablo açılır." :
+  msg(duzenle ? "Hücreye yazın, otomatik kaydedilir. Her vardiya başında (00:00, 08:00, 16:00) yeni bir tablo açılır." :
+      me && secili === bugun ? "Bu vardiya şu an aktif değil, yalnızca görüntülenir. Düzenlemek için \"Bugün\"e basın." :
       me ? "Geçmiş günler yalnızca görüntülenir. Düzenlemek için \"Bugün\"e basın." :
       (sonBan || ""));
 }
@@ -1157,7 +1206,8 @@ const GOR = [
   ["tablolar", "Kullanıcıların tabloları", ["users"]],
   ["hafta", "Haftalık ortalama", ["haftaPanel"]],
   ["ay", "Aylık ortalama", ["ayPanel"]],
-  ["log", "Giriş kayıtları ve süre farkı", ["logBox"]]
+  ["log", "Giriş kayıtları ve süre farkı", ["logBox"]],
+  ["vardtablo", "Vardiya tabloları (10 dk dilimleri)", ["vardBox"]]
 ];
 // misafir: giriş yapmadan (kayıt yoksa gizli) · uye: giriş yapınca (kayıt yoksa görünür)
 let gorAyar = { misafir: {}, uye: {} };
@@ -1248,11 +1298,11 @@ onayli($("tumSayiSil"), tumSayilariTemizle);
 
 // Kendi tablom: yalnızca bugünün sayılarını sil, makine adları kalsın
 async function benimSayilarimiSil() {
-  if (!me || secili !== bugun) { msg("Yalnızca bugünün tablosundaki sayılar silinebilir."); return; }
+  if (!me || !duzenlenir()) { msg("Yalnızca şu anki vardiyanın tablosundaki sayılar silinebilir."); return; }
   msg("Sayılarınız siliniyor…");
   Object.keys(kirli).forEach(r => { kirli[r] = false; clearTimeout(otoTimer[r]); });
   const { error } = await sb.from("sayilar").update({ n1: null, n2: null, n3: null, n4: null, n5: null, n6: null })
-    .eq("user_id", myId()).eq("tarih", bugun);
+    .eq("user_id", myId()).eq("tarih", bugun).eq("vno", gv);
   if (error) { msg("Sayılar silinemedi: " + error.message); return; }
   rows.forEach(r => { if (r.user_id === myId()) COLS.forEach(k => { r[k] = null; }); });
   myInputs.forEach(f => { f[1].value = ""; });
@@ -1322,6 +1372,7 @@ function logGorunen() {
 }
 
 function logCiz() {
+  vardCiz();
   const box = $("logBox");
   if (!logOk) { box.classList.add("hide"); return; }
   box.classList.remove("hide");
@@ -1462,6 +1513,102 @@ async function logSil(idler) {
 onayli($("logSil"), () => logSil(logGorunen().map(x => x.id)));
 $("logKul").onchange = logCiz; $("logSira").onchange = logCiz;
 $("logCsv").onclick = logCsv;
+
+
+// ================= VARDİYA TABLOLARI (00-08, 08-16, 16-24) + 10 dk DİLİMLERİ =================
+// Her vardiya başında yeni tablo: seçili günün giriş kayıtlarından (sayi_log), vardiya saatlerine göre türetilir.
+const VSAAT = [[0, 8], [8, 16], [16, 24]], DILIM_DK = 10, TR_OFS = 3 * 3600000, H8MS = 8 * 3600000;
+let vardSecim = null;   // null = otomatik (bugünse şu anki vardiya)
+const pad2 = n => String(n).padStart(2, "0");
+const vardAd = i => pad2(VSAAT[i][0]) + ":00 – " + pad2(VSAAT[i][1]) + ":00";
+const gunMs = ms => ((ms + TR_OFS) % 86400000 + 86400000) % 86400000;   // İstanbul saatiyle günün kaçıncı milisaniyesi
+const vardIdx = ms => Math.floor(gunMs(ms) / H8MS);
+const dkYaz = dk => pad2(Math.floor(dk / 60)) + ":" + pad2(dk % 60);
+function vardCiz() {
+  const box = $("vardBox");
+  if (!box) return;
+  if (!logOk) { box.classList.add("hide"); return; }
+  box.classList.remove("hide");
+  const now = Date.now(), bugunMu = secili === bugun, simdiV = vardIdx(now);
+  const girisler = logs.filter(l => l.sutun !== "makine" && l.zaman);
+  const adet = [0, 0, 0];
+  girisler.forEach(l => adet[vardIdx(new Date(l.zaman).getTime())]++);
+  const sec = vardSecim != null ? vardSecim : (bugunMu ? simdiV : (adet[2] ? 2 : adet[1] ? 1 : 0));
+  $("vardSayi").textContent = "(" + vardAd(sec) + ")";
+
+  const sk = $("vardSekme"); sk.textContent = "";
+  VSAAT.forEach((_, i) => {
+    const b = el("button", "alt sm" + (i === sec ? " sel" : ""), vardAd(i) + (bugunMu && i === simdiV ? " · şimdi" : "") + " (" + adet[i] + ")");
+    b.type = "button";
+    b.onclick = () => { vardSecim = (bugunMu && i === simdiV) ? null : i; vardCiz(); };
+    sk.append(b);
+  });
+
+  const ent = girisler.filter(l => vardIdx(new Date(l.zaman).getTime()) === sec);
+  const bas = sec * 480;   // vardiya başı (günün dakikası)
+  // --- Vardiya tablosu: makine başına toplam
+  const mk = new Map();
+  ent.forEach(l => {
+    const ad = (l.makine || "").trim() || "(adsız)", k = ad.toLocaleLowerCase("tr");
+    if (!mk.has(k)) mk.set(k, { ad, top: 0, n: 0 });
+    const g = mk.get(k); g.top += logFark(l) || 0; g.n++;
+  });
+  const liste = [...mk.values()].sort((a, b) => adKar(a.ad, b.ad));
+  const genelTop = liste.reduce((a, g) => a + g.top, 0);
+  const t1 = $("vardTbl"); t1.textContent = "";
+  if (!liste.length) t1.append(el("p", "mut", "Bu vardiyada henüz giriş yok."));
+  else {
+    const tbl = el("table", "at vd"), hd = el("thead"), hr = el("tr"), bd = el("tbody");
+    ["MAKİNE", "TOPLAM", "GİRİŞ"].forEach(h => hr.append(el("th", "", h))); hd.append(hr); tbl.append(hd);
+    liste.forEach(g => { const tr = el("tr"); tr.append(el("td", "", g.ad), el("td", "vd-n", fmt(Math.round(g.top * 100) / 100)), el("td", "vd-n", String(g.n))); bd.append(tr); });
+    const tt = el("tr", "vd-top"); tt.append(el("td", "", "TOPLAM"), el("td", "vd-n", fmt(Math.round(genelTop * 100) / 100)), el("td", "vd-n", String(ent.length))); bd.append(tt);
+    tbl.append(bd); t1.append(tbl);
+  }
+
+  // --- 10 dakikalık dilimler (vardiya başlangıcından itibaren)
+  const DS = 480 / DILIM_DK, dl = Array.from({ length: DS }, () => ({ top: 0, n: 0 }));
+  ent.forEach(l => {
+    const dk = (gunMs(new Date(l.zaman).getTime()) / 60000) - bas, i = Math.min(DS - 1, Math.max(0, Math.floor(dk / DILIM_DK)));
+    dl[i].top += logFark(l) || 0; dl[i].n++;
+  });
+  const gecenDk = bugunMu && sec === simdiV ? Math.max(0, gunMs(now) / 60000 - bas) : (bugunMu && sec > simdiV ? 0 : 480);
+  const son = bugunMu && sec === simdiV ? Math.min(DS - 1, Math.floor(gecenDk / DILIM_DK)) : (gecenDk === 0 ? -1 : DS - 1);
+  const bosGoster = $("vardBos").checked;
+  const mx = Math.max(0, ...dl.map(d => d.top));
+  const t2 = $("vardDilim"); t2.textContent = "";
+  const tb2 = el("table", "at vd"), h2 = el("thead"), r2 = el("tr"), b2 = el("tbody");
+  ["10 DK DİLİMİ", "EKLENEN", "GİRİŞ"].forEach(h => r2.append(el("th", "", h))); h2.append(r2); tb2.append(h2);
+  let satir = 0;
+  for (let i = 0; i <= son; i++) {
+    const d = dl[i]; if (!bosGoster && !d.n) continue;
+    const tr = el("tr"), a = bas + i * DILIM_DK, td0 = el("td", "", dkYaz(a) + " – " + (a + DILIM_DK >= 1440 ? "24:00" : dkYaz(a + DILIM_DK)));
+    const tdE = el("td", "vd-n", d.n ? (d.top > 0 ? "+" : "") + fmt(Math.round(d.top * 100) / 100) : "—");
+    if (mx > 0 && d.top > 0) { const br = el("span", "vd-bar"); br.style.width = Math.round(d.top / mx * 100) + "%"; tdE.append(br); }
+    tr.append(td0, tdE, el("td", "vd-n", String(d.n))); b2.append(tr); satir++;
+  }
+  tb2.append(b2);
+  if (!satir) t2.append(el("p", "mut", "Gösterilecek dilim yok."));
+  else t2.append(tb2);
+
+  // --- Özet
+  const oz = $("vardOzet"); oz.textContent = "";
+  if (ent.length) {
+    const chips = el("div", "oz-chips");
+    const chip = (k, v, vurgu) => { const c = el("div", "oz-chip" + (vurgu ? " vurgu" : "")); c.append(el("small", "", k), el("b", "", v)); chips.append(c); };
+    chip("Vardiya toplamı", fmt(Math.round(genelTop * 100) / 100) + " sayı", true);
+    chip("Giriş sayısı", String(ent.length));
+    const zs = ent.map(l => new Date(l.zaman).getTime()).sort((a, b) => a - b);
+    chip("İlk giriş", saatOf(zs[0])); chip("Son giriş", saatOf(zs[zs.length - 1]));
+    let en = -1; dl.forEach((d, i) => { if (d.n && (en < 0 || d.top > dl[en].top)) en = i; });
+    if (en >= 0) chip("En yoğun 10 dk", dkYaz(bas + en * DILIM_DK) + " – " + dkYaz(bas + (en + 1) * DILIM_DK) + " · " + fmt(Math.round(dl[en].top * 100) / 100), true);
+    const calDk = gecenDk - MOLA_DK;   // geçen süreden 35 dk mola düşülür
+    if (calDk >= 1) chip("Ortalama (saatte, mola hariç)", fmt(Math.round(genelTop / calDk * 60 * 10) / 10) + " sayı/saat", true);
+    oz.append(chips);
+  }
+}
+$("vardBos").onchange = vardCiz;
+// Vardiya değişince (00:00, 08:00, 16:00) otomatik olarak yeni vardiyanın tablosu açılır
+setInterval(() => { if (!document.hidden && vardSecim == null && secili === bugun) vardCiz(); }, 30000);
 
 // ================= HAFTALIK ORTALAMA (Pazartesi – Pazar) =================
 const GUN_KISA = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
@@ -1684,8 +1831,13 @@ setInterval(async () => {
 }, 30000);
 
 setInterval(() => {
-  const yeni = todayStr();
-  if (yeni !== bugun) { const bugunduydu = secili === bugun; bugun = yeni; $("tarih").max = bugun; if (bugunduydu) secili = bugun; if (sb) hazirla(); }
+  const yeni = todayStr(), yv = vNoNow();
+  if (yeni !== bugun || yv !== sonV) {   // gün ya da vardiya değişti: yeni vardiyanın tablosu açılır
+    const bugunduydu = secili === bugun, vduydu = gv === sonV;
+    bugun = yeni; sonV = yv; $("tarih").max = bugun;
+    if (bugunduydu) { secili = bugun; if (vduydu) { gv = yv; vardSecim = null; } }
+    if (sb) hazirla();
+  }
 }, 60000);
 
 // Ziyaretçi sayacı: tarayıcıya rastgele kimlik yazılır; aynı kişi günde bir kez sayılır (giriş yapmasa da)
