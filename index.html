@@ -462,10 +462,13 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 .u-ozet .oz-chips{margin-top:0}
 @media (max-width:600px){.ugrid{grid-template-columns:minmax(0,1fr)}.u-sol{flex:1 1 100%}}
 
-/* Şu an içinde bulunulan vardiya butonu yanıp söner */
-@keyframes vYan{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(46,204,64,.75)}50%{opacity:.45;box-shadow:0 0 0 6px rgba(46,204,64,0)}}
-#vnoSekme button.simdi{animation:vYan 1.2s ease-in-out infinite}
-@media (prefers-reduced-motion:reduce){#vnoSekme button.simdi{animation:none}}
+/* Şu an içinde bulunulan vardiya butonu: belirgin neon yanıp sönme */
+@keyframes vYan{
+  0%,100%{background:#39ff14;color:#041a06;box-shadow:0 0 6px #fff,0 0 14px #39ff14,0 0 30px #39ff14,0 0 55px #39ff14,0 0 90px #0aff6a;transform:scale(1.06)}
+  50%{background:#0b3d12;color:#7dff6a;box-shadow:0 0 3px #39ff14,0 0 8px #39ff14,0 0 16px rgba(57,255,20,.6);transform:scale(1)}
+}
+#vnoSekme button.simdi{border:2px solid #b6ff9e!important;font-weight:900;letter-spacing:.4px;animation:vYan .9s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){#vnoSekme button.simdi{animation:none;background:#39ff14!important;color:#041a06!important;box-shadow:0 0 14px #39ff14,0 0 30px #39ff14}}
 </style>
 </head>
 <body>
