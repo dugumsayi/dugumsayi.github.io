@@ -131,6 +131,12 @@ table.vd td{padding:6px 10px;vertical-align:middle;height:auto;text-align:left}
 table.vd td.vd-n{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
 table.vd tr.vd-top td{font-weight:800;border-top:2px solid var(--line)}
 table.vd .vd-bar{display:block;height:5px;border-radius:3px;background:var(--blue);margin-top:4px;min-width:2px}
+table.vd tr.vd-min td{animation:vdMinBlink 1s ease-in-out infinite;background:rgba(255,59,48,.12)}
+table.vd tr.vd-min td:first-child{border-left:3px solid #ff3b30}
+table.vd tr.vd-min td:last-child{border-right:3px solid #ff3b30}
+table.vd tr.vd-min td{border-top:3px solid #ff3b30;border-bottom:3px solid #ff3b30}
+@keyframes vdMinBlink{0%,100%{border-color:#ff3b30;background:rgba(255,59,48,.22)}50%{border-color:transparent;background:rgba(255,59,48,0)}}
+@media (prefers-reduced-motion:reduce){table.vd tr.vd-min td{animation:none}}
 @media (max-width:600px){#vardBox{padding:12px}#vardBox .bar button{flex:1 1 120px}}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:0 0 14px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow)}
@@ -1578,12 +1584,17 @@ function vardCiz() {
   const t2 = $("vardDilim"); t2.textContent = "";
   const tb2 = el("table", "at vd"), h2 = el("thead"), r2 = el("tr"), b2 = el("tbody");
   ["30 DK DİLİMİ", "EKLENEN", "GİRİŞ"].forEach(h => r2.append(el("th", "", h))); h2.append(r2); tb2.append(h2);
+  // En az sayı eklenen dilim: girişi olan dilimler arasında en düşük EKLENEN (devam eden dilim hariç); eşitlikte hepsi işaretlenir
+  const aday = [];
+  for (let i = 0; i <= son; i++) { if (dl[i].n && !(bugunMu && sec === simdiV && i === son)) aday.push(i); }
+  const mnTop = aday.length > 1 ? Math.min(...aday.map(i => dl[i].top)) : null;
   let satir = 0;
   for (let i = 0; i <= son; i++) {
     const d = dl[i]; if (!bosGoster && !d.n) continue;
     const tr = el("tr"), a = bas + i * DILIM_DK, td0 = el("td", "", dkYaz(a) + " – " + (a + DILIM_DK >= 1440 ? "24:00" : dkYaz(a + DILIM_DK)));
     const tdE = el("td", "vd-n", d.n ? (d.top > 0 ? "+" : "") + fmt(Math.round(d.top * 100) / 100) : "—");
     if (mx > 0 && d.top > 0) { const br = el("span", "vd-bar"); br.style.width = Math.round(d.top / mx * 100) + "%"; tdE.append(br); }
+    if (mnTop != null && d.n && aday.includes(i) && d.top === mnTop) { tr.classList.add("vd-min"); tr.title = "Bu vardiyada en az sayı eklenen dilim"; }
     tr.append(td0, tdE, el("td", "vd-n", String(d.n))); b2.append(tr); satir++;
   }
   tb2.append(b2);
