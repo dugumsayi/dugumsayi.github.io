@@ -1577,12 +1577,14 @@ function ozetChipListesi(g) {
   const c = [];
   g.t.sort((a, b) => a - b);
   const n = g.t.length, ilk = g.t[0], son = g.t[n - 1], top = (son - ilk) / 1000, saat = top / 3600,
-    H8 = 8 * 3600000, vBas = ilk - ((ilk + 3 * 3600000) % H8), vSaat = (son - vBas) / 3600000, calDk = vSaat * 60 - MOLA_DK;   // calDk: vardiya başından beri net çalışma dakikası (35 dk mola düşülmüş)
+    H8 = 8 * 3600000, vBas = ilk - ((ilk + 3 * 3600000) % H8),
+    simdi = Date.now(), canli = secili === bugun && simdi >= ilk && simdi < vBas + H8,   // bugünün vardiyası sürüyorsa referans an = şimdi (canlı tahmin)
+    ref = canli ? simdi : son, vSaat = (ref - vBas) / 3600000, calDk = vSaat * 60 - MOLA_DK;   // calDk: vardiya başından beri net çalışma dakikası (35 dk mola düşülmüş)
   c.push(["Atılan toplam sayı", fmt(Math.round(g.net * 100) / 100), true]);
   c.push(["İlk giriş", saatOf(ilk)]);
   c.push(["Son giriş", saatOf(son)]);
   c.push(["İlk girişten sona", n > 1 ? sure(top) + " (" + fmt(Math.round(saat * 100) / 100) + " saat)" : "tek giriş", true]);
-  if (calDk >= 1) c.push(["8 saatlik baz (35 dk mola düşülmüş, tahmini)", fmt(Math.round(g.net / calDk * NET_DK * 10) / 10) + " sayı"]);
+  if (calDk >= 1) c.push(["8 saatlik baz (35 dk mola düşülmüş, tahmini" + (canli ? ", canlı" : "") + ")", fmt(Math.round(g.net / calDk * NET_DK * 10) / 10) + " sayı", canli]);
   if (calDk >= 1) c.push(["Ortalama (saatte, mola hariç)", fmt(Math.round(g.net / calDk * 60 * 10) / 10) + " sayı/saat", true]);
   if (calDk >= 1 && g.net > 0) {
     const dkHiz = g.net / calDk;
@@ -1617,6 +1619,23 @@ function ozetKartlar() {
   });
 }
 
+function logOzetCiz(list, sm) {
+  const oz = $("logOzet"); if (!oz) return;
+  oz.textContent = "";
+  ozetGrupla(list, sm).forEach(g => {
+    if (!g.t.length) return;
+    const card = el("div", "oz-card"), chips = el("div", "oz-chips");
+    card.append(el("strong", "", g.ad));
+    ozetChipListesi(g).forEach(c => chips.append(ozChip(c)));
+    card.append(chips); oz.append(card);
+  });
+}
+// Canlı tahmin: saat geçtikçe özet kutuları (baz/saatlik hız/hedefe kalan süre) kendiliğinden güncellenir
+setInterval(() => {
+  if (document.hidden || secili !== bugun) return;
+  try { if (logOk) logOzetCiz(logGorunen(), sicilHarita()); ozetKartlar(); } catch (e) {}
+}, 10000);
+
 function logCiz() {
   const box = $("logBox");
   if (!logOk) { box.classList.add("hide"); ozetKartlar(); return; }
@@ -1638,14 +1657,7 @@ function logCiz() {
   $("logSil").classList.toggle("hide", !isAdmin() || !list.length);
 
   // Özet: kullanıcı başına toplam sayı, ilk/son giriş, ilk girişten sona geçen süre
-  const oz = $("logOzet"); oz.textContent = "";
-  ozetGrupla(list, sm).forEach(g => {
-    if (!g.t.length) return;
-    const card = el("div", "oz-card"), chips = el("div", "oz-chips");
-    card.append(el("strong", "", g.ad));
-    ozetChipListesi(g).forEach(c => chips.append(ozChip(c)));
-    card.append(chips); oz.append(card);
-  });
+  logOzetCiz(list, sm);
   ozetKartlar();
 
   const box2 = $("logTbl"); box2.textContent = "";
