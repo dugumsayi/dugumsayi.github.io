@@ -452,6 +452,15 @@ details[open]>summary::before{transform:rotate(45deg)}
 #hizliBilgi.ok{color:var(--ok);font-weight:650}
 #hizliBilgi.hata{color:var(--bad);font-weight:650}
 html.hz-kilit,html.hz-kilit body{overflow:hidden}
+
+/* ===== Kullanıcı kartı: tablo solda, giriş özeti (chip'ler) yanında ===== */
+.ugrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,640px),1fr))}
+.u-row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.u-sol{flex:0 0 300px;max-width:100%;min-width:0}
+.u-sol>button{margin-top:10px}
+.u-ozet{flex:1 1 260px;min-width:0}
+.u-ozet .oz-chips{margin-top:0}
+@media (max-width:600px){.ugrid{grid-template-columns:minmax(0,1fr)}.u-sol{flex:1 1 100%}}
 </style>
 </head>
 <body>
@@ -956,12 +965,15 @@ function renderShared() {
     });
     const ft = el("tr", "tot");
     ft.append(el("td", "", "TOPLAM"), el("td", "", fmt(total))); body.append(ft);
-    tbl.append(body); wrap.append(tbl); card.append(wrap);
+    tbl.append(body); wrap.append(tbl);
     const rb = el("button", "alt sm", "Resim olarak kaydet"); rb.type = "button";
     rb.onclick = () => tabloResim(tbl, "", "makine-tablosu");
-    card.append(rb); box.append(card);
+    const satirKutu = el("div", "u-row"), sol = el("div", "u-sol"), sag = el("div", "u-ozet hide");
+    sag.dataset.uid = uid;
+    sol.append(wrap, rb); satirKutu.append(sol, sag); card.append(satirKutu); box.append(card);
     grand += total;
   });
+  try { ozetKartlar(); } catch (e) {}
   const ab = $("agg"); ab.textContent = "";
   if (agg.size) {
     const tbl = el("table"), head = el("thead"), hr = el("tr"), body = el("tbody");
@@ -1383,6 +1395,7 @@ const GOR = [
   ["vardiya", "Vardiya listesi (A, B, C, D kartları)", ["vardiyaHead", "vardiyaGrid"]],
   ["genel", "Genel toplam tablosu", ["genCard", "genel"]],
   ["tablolar", "Kullanıcıların tabloları", ["users"]],
+  ["ozetyan", "Tabloların yanındaki giriş özeti (ilk/son giriş, ortalama, hedefler)", []],
   ["hafta", "Haftalık ortalama", ["haftaPanel"]],
   ["ay", "Aylık ortalama", ["ayPanel"]],
   ["log", "Giriş kayıtları ve süre farkı", ["logBox"]]
@@ -1396,6 +1409,7 @@ function gorUygula() {
   $("vardiyaBox").classList.toggle("gz", !(gorunur("ozet") || gorunur("vardiya")));
   $("gunPanel").classList.toggle("gz", !(gorunur("genel") || gorunur("tablolar")));
   if (typeof ortUygula === "function") ortUygula();
+  try { ozetKartlar(); } catch (e) {}
 }
 function gorCiz() {
   const box = $("gList"); box.textContent = "";
@@ -1549,9 +1563,63 @@ function logGorunen() {
   return v ? logs.filter(l => l.user_id === v) : logs;
 }
 
+function ozetGrupla(list, sm) {
+  const grp = new Map();
+  list.filter(l => l.sutun !== "makine").forEach(l => {
+    if (!grp.has(l.user_id)) grp.set(l.user_id, { uid: l.user_id, ad: logAd(l, sm) + (l.user_id === myId() ? " (siz)" : ""), t: [], net: 0 });
+    const g = grp.get(l.user_id);
+    g.net += logFark(l) || 0;                                     // girilen toplam (silinenler düşer)
+    if (l.yeni != null) g.t.push(new Date(l.zaman).getTime());   // giriş zamanları
+  });
+  return [...grp.values()].sort((a, b) => a.ad.localeCompare(b.ad, "tr"));
+}
+function ozetChipListesi(g) {
+  const c = [];
+  g.t.sort((a, b) => a - b);
+  const n = g.t.length, ilk = g.t[0], son = g.t[n - 1], top = (son - ilk) / 1000, saat = top / 3600,
+    H8 = 8 * 3600000, vBas = ilk - ((ilk + 3 * 3600000) % H8), vSaat = (son - vBas) / 3600000, calDk = vSaat * 60 - MOLA_DK;   // calDk: vardiya başından beri net çalışma dakikası (35 dk mola düşülmüş)
+  c.push(["Atılan toplam sayı", fmt(Math.round(g.net * 100) / 100), true]);
+  c.push(["İlk giriş", saatOf(ilk)]);
+  c.push(["Son giriş", saatOf(son)]);
+  c.push(["İlk girişten sona", n > 1 ? sure(top) + " (" + fmt(Math.round(saat * 100) / 100) + " saat)" : "tek giriş", true]);
+  if (calDk >= 1) c.push(["8 saatlik baz (35 dk mola düşülmüş, tahmini)", fmt(Math.round(g.net / calDk * NET_DK * 10) / 10) + " sayı"]);
+  if (calDk >= 1) c.push(["Ortalama (saatte, mola hariç)", fmt(Math.round(g.net / calDk * 60 * 10) / 10) + " sayı/saat", true]);
+  if (calDk >= 1 && g.net > 0) {
+    const dkHiz = g.net / calDk;
+    [504, 552].forEach(hd => {
+      const kalan = hd - g.net;
+      if (kalan <= 0) { c.push([hd + " hedefi", "tamamlandı (+" + fmt(Math.round(-kalan * 100) / 100) + ")", true]); return; }
+      const dk = kalan / dkHiz;
+      let bitis = "";
+      if (secili === bugun) bitis = " · bitiş " + new Date(Date.now() + dk * 60000).toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit" });
+      c.push([hd + " için kalan", fmt(Math.round(kalan * 100) / 100) + " sayı · " + Math.ceil(dk) + " dk" + bitis, true]);
+    });
+  }
+  c.push(["Giriş sayısı", String(n)]);
+  if (n > 1) c.push(["Ort. aralık", sure(top / (n - 1))]);
+  return c;
+}
+const ozChip = ([k, v, vurgu]) => { const e = el("span", "oz-chip" + (vurgu ? " vurgu" : "")); e.append(el("small", "", k), el("b", "", v)); return e; };
+// Kullanıcı tablolarının yanındaki özet kutuları (log özetiyle aynı veri)
+function ozetKartlar() {
+  const kutular = document.querySelectorAll("#users .u-ozet");
+  if (!kutular.length) return;
+  const goster = logOk && gorunur("ozetyan"), harita = new Map();
+  if (goster) ozetGrupla(logs, sicilHarita()).forEach(g => harita.set(g.uid, g));
+  kutular.forEach(k => {
+    k.textContent = "";
+    const g = harita.get(k.dataset.uid);
+    if (!g || !g.t.length) { k.classList.add("hide"); return; }
+    k.classList.remove("hide");
+    const chips = el("div", "oz-chips");
+    ozetChipListesi(g).forEach(c => chips.append(ozChip(c)));
+    k.append(chips);
+  });
+}
+
 function logCiz() {
   const box = $("logBox");
-  if (!logOk) { box.classList.add("hide"); return; }
+  if (!logOk) { box.classList.add("hide"); ozetKartlar(); return; }
   box.classList.remove("hide");
   const sm = sicilHarita(), sel = $("logKul");
   sel.classList.remove("hide");
@@ -1571,43 +1639,14 @@ function logCiz() {
 
   // Özet: kullanıcı başına toplam sayı, ilk/son giriş, ilk girişten sona geçen süre
   const oz = $("logOzet"); oz.textContent = "";
-  const grp = new Map();
-  list.filter(l => l.sutun !== "makine").forEach(l => {
-    if (!grp.has(l.user_id)) grp.set(l.user_id, { ad: logAd(l, sm) + (l.user_id === myId() ? " (siz)" : ""), t: [], net: 0 });
-    const g = grp.get(l.user_id);
-    g.net += logFark(l) || 0;                                     // girilen toplam (silinenler düşer)
-    if (l.yeni != null) g.t.push(new Date(l.zaman).getTime());   // giriş zamanları
-  });
-  [...grp.values()].sort((a, b) => a.ad.localeCompare(b.ad, "tr")).forEach(g => {
+  ozetGrupla(list, sm).forEach(g => {
     if (!g.t.length) return;
-    g.t.sort((a, b) => a - b);
-    const n = g.t.length, ilk = g.t[0], son = g.t[n - 1], top = (son - ilk) / 1000, saat = top / 3600,
-      H8 = 8 * 3600000, vBas = ilk - ((ilk + 3 * 3600000) % H8), vSaat = (son - vBas) / 3600000, calDk = vSaat * 60 - MOLA_DK;   // calDk: vardiya başından beri geçen süreden 35 dk mola düşülmüş net çalışma dakikası   // vardiya başlangıcı: ilk girişin düştüğü 8 saatlik blok (00/08/16, İstanbul)
-    const card = el("div", "oz-card");
+    const card = el("div", "oz-card"), chips = el("div", "oz-chips");
     card.append(el("strong", "", g.ad));
-    const chips = el("div", "oz-chips");
-    const chip = (k, v, vurgu) => { const c = el("span", "oz-chip" + (vurgu ? " vurgu" : "")); c.append(el("small", "", k), el("b", "", v)); chips.append(c); };
-    chip("Atılan toplam sayı", fmt(Math.round(g.net * 100) / 100), true);
-    chip("İlk giriş", saatOf(ilk));
-    chip("Son giriş", saatOf(son));
-    chip("İlk girişten sona", n > 1 ? sure(top) + " (" + fmt(Math.round(saat * 100) / 100) + " saat)" : "tek giriş", true);
-    if (calDk >= 1) chip("8 saatlik baz (35 dk mola düşülmüş, tahmini)", fmt(Math.round(g.net / calDk * NET_DK * 10) / 10) + " sayı");
-    if (calDk >= 1) chip("Ortalama (saatte, mola hariç)", fmt(Math.round(g.net / calDk * 60 * 10) / 10) + " sayı/saat", true);
-    if (calDk >= 1 && g.net > 0) {
-      const dkHiz = g.net / calDk;   // net çalışma dakikasında atılan sayı (mola hariç)
-      [504, 552].forEach(hd => {
-        const kalan = hd - g.net;
-        if (kalan <= 0) { chip(hd + " hedefi", "tamamlandı (+" + fmt(Math.round(-kalan * 100) / 100) + ")", true); return; }
-        const dk = kalan / dkHiz;
-        let bitis = "";
-        if (secili === bugun) bitis = " · bitiş " + new Date(Date.now() + dk * 60000).toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit" });
-        chip(hd + " için kalan", fmt(Math.round(kalan * 100) / 100) + " sayı · " + Math.ceil(dk) + " dk" + bitis, true);
-      });
-    }
-    chip("Giriş sayısı", String(n));
-    if (n > 1) chip("Ort. aralık", sure(top / (n - 1)));
+    ozetChipListesi(g).forEach(c => chips.append(ozChip(c)));
     card.append(chips); oz.append(card);
   });
+  ozetKartlar();
 
   const box2 = $("logTbl"); box2.textContent = "";
   if (!list.length) { box2.append(el("p", "mut", "Bu tarihte kayıt yok.")); return; }
