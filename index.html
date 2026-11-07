@@ -297,22 +297,24 @@ table.hc-tbl td.hc-s{font-weight:700}
 table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
 
 
-/* ===== Kurumsal renk paleti: koyu lacivert/slate zemin + tek mavi-indigo vurgu, yumuşatılmış durum renkleri ===== */
+/* ===== Göz yormayan, daha belirgin açık/gece tema paleti ===== */
 :root{
-  --bg:#f3f5f9;--fg:#0f172a;--mut:#64748b;--card:#fff;--line:#dbe1ea;
-  --blue:#2f5fe3;--btn:#2f5fe3;--blue-sel:#1e3fae;
-  --head:#1e2a44;--headfg:#fff;--mcell:#e6ecfa;--mfg:#1e2a44;
-  --row:#f1f5fb;--cell:#fff;--tot:#e2e8f4;--totfg:#0f172a;
-  --ok:#17a672;--bad:#e0484f;--warn:#d9922b;
-  --shadow:0 1px 2px rgba(15,23,42,.05),0 6px 18px rgba(15,23,42,.06);--r:12px;
+  color-scheme:light;
+  --bg:#e9edf4;--fg:#202b3d;--mut:#59677c;--card:#f8f9fc;--line:#c5cedb;
+  --blue:#3159b7;--btn:#3159b7;--blue-sel:#24458f;
+  --head:#263650;--headfg:#f7f9fd;--mcell:#dce5f2;--mfg:#23334d;
+  --row:#e8edf5;--cell:#f7f9fc;--tot:#d7e0ed;--totfg:#1e2b40;
+  --ok:#167b5b;--bad:#bd3f49;--warn:#a96b16;
+  --shadow:0 1px 2px rgba(25,39,61,.07),0 5px 16px rgba(25,39,61,.07);--r:12px;
 }
 @media (prefers-color-scheme:dark){:root{
-  color-scheme:dark;--bg:#0a0e16;--fg:#e6eaf2;--mut:#8b97ad;--card:#111826;--line:#232d42;
-  --blue:#5b8cff;--btn:#3b6cf0;--blue-sel:#a3bcff;
-  --head:#1a2744;--headfg:#e9efff;--mcell:#17233d;--mfg:#e6eefc;
-  --row:#141d30;--cell:#101725;--tot:#1e2b49;--totfg:#f1f5ff;
-  --ok:#34d399;--bad:#f0646b;--warn:#f0b04a;
-  --shadow:0 1px 2px rgba(0,0,0,.45),0 8px 22px rgba(0,0,0,.35);
+  color-scheme:dark;
+  --bg:#141c29;--fg:#e5eaf2;--mut:#a5b1c3;--card:#202b3b;--line:#3b4a60;
+  --blue:#83a4e8;--btn:#496ebd;--blue-sel:#b4c9f5;
+  --head:#2b3b55;--headfg:#f2f5fb;--mcell:#2a3a52;--mfg:#e8eef8;
+  --row:#263448;--cell:#1e2a3a;--tot:#30415a;--totfg:#f0f4fb;
+  --ok:#55c49b;--bad:#f08087;--warn:#e7b765;
+  --shadow:0 1px 2px rgba(0,0,0,.28),0 7px 20px rgba(0,0,0,.22);
 }}
 button{background:var(--btn)}
 button.alt{background:transparent}
