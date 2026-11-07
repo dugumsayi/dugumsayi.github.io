@@ -468,7 +468,12 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
   50%{background:#0b3d12;color:#7dff6a;box-shadow:0 0 3px #39ff14,0 0 8px #39ff14,0 0 16px rgba(57,255,20,.6);transform:scale(1)}
 }
 #vnoSekme button.simdi{border:2px solid #b6ff9e!important;font-weight:900;letter-spacing:.4px;animation:vYan .9s ease-in-out infinite}
-@media (prefers-reduced-motion:reduce){#vnoSekme button.simdi{animation:none;background:#39ff14!important;color:#041a06!important;box-shadow:0 0 14px #39ff14,0 0 30px #39ff14}}
+/* Telefonda "hareketi azalt" açık olsa bile yanıp sönme çalışsın: sadece büyüme efekti kapanır, renk/ışık yanıp sönmesi sürer */
+@keyframes vYanSade{
+  0%,100%{background:#39ff14;color:#041a06;box-shadow:0 0 6px #fff,0 0 14px #39ff14,0 0 30px #39ff14,0 0 55px #39ff14}
+  50%{background:#0b3d12;color:#7dff6a;box-shadow:0 0 3px #39ff14,0 0 8px #39ff14}
+}
+@media (prefers-reduced-motion:reduce){#vnoSekme button.simdi{animation:vYanSade .9s ease-in-out infinite}}
 </style>
 </head>
 <body>
