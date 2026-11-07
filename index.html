@@ -451,8 +451,8 @@ table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
 </details>
 
 <details id="vardBox" class="hide" open>
-  <summary><strong>Vardiya tabloları (10 dk dilimleri)</strong> <span id="vardSayi" class="mut"></span></summary>
-  <p class="mut">Her vardiya başında (00:00, 08:00, 16:00) yeni bir tablo açılır. Tablo, seçili günde o vardiya saatleri içinde girilen sayılardan oluşur. 10 dakikalık dilimler vardiyanın başlangıç saatinden itibaren sayılır.</p>
+  <summary><strong>Vardiya tabloları (1 SAATLİK DÜĞÜM MİKTARI</strong> <span id="vardSayi" class="mut"></span></summary>
+  <p class="mut">Her vardiya başında (00:00, 08:00, 16:00) yeni bir tablo açılır. Tablo, seçili günde o vardiya saatleri içinde girilen sayılardan oluşur. 10 dakikalık düğüm milktarı vardiyanın başlangıç saatinden itibaren sayılır.</p>
   <div class="bar" id="vardSekme"></div>
   <div id="vardOzet"></div>
   <div class="vard-grid"><div id="vardTbl" class="scroll"></div><div id="vardDilim" class="scroll"></div></div>
@@ -1565,7 +1565,7 @@ function vardCiz() {
     tbl.append(bd); t1.append(tbl);
   }
 
-  // --- 10 dakikalık dilimler (vardiya başlangıcından itibaren)
+  // --- 1 saatlik düğüm miktarı (vardiya başlangıcından itibaren)
   const DS = 480 / DILIM_DK, dl = Array.from({ length: DS }, () => ({ top: 0, n: 0 }));
   ent.forEach(l => {
     const dk = (gunMs(new Date(l.zaman).getTime()) / 60000) - bas, i = Math.min(DS - 1, Math.max(0, Math.floor(dk / DILIM_DK)));
@@ -1577,7 +1577,7 @@ function vardCiz() {
   const mx = Math.max(0, ...dl.map(d => d.top));
   const t2 = $("vardDilim"); t2.textContent = "";
   const tb2 = el("table", "at vd"), h2 = el("thead"), r2 = el("tr"), b2 = el("tbody");
-  ["10 DK DİLİMİ", "EKLENEN", "GİRİŞ"].forEach(h => r2.append(el("th", "", h))); h2.append(r2); tb2.append(h2);
+  ["1 SAATLİK DÜĞÜM MİKTARI", "EKLENEN", "GİRİŞ"].forEach(h => r2.append(el("th", "", h))); h2.append(r2); tb2.append(h2);
   let satir = 0;
   for (let i = 0; i <= son; i++) {
     const d = dl[i]; if (!bosGoster && !d.n) continue;
