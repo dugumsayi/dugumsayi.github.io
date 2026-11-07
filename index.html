@@ -300,6 +300,60 @@ table.hc-tbl td.hc-k{white-space:nowrap;font-weight:600}
 table.hc-tbl td.hc-s{font-weight:700}
 table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
 
+
+/* ===== Kurumsal renk paleti: koyu lacivert/slate zemin + tek mavi-indigo vurgu, yumuşatılmış durum renkleri ===== */
+:root{
+  --bg:#f3f5f9;--fg:#0f172a;--mut:#64748b;--card:#fff;--line:#dbe1ea;
+  --blue:#2f5fe3;--btn:#2f5fe3;--blue-sel:#1e3fae;
+  --head:#1e2a44;--headfg:#fff;--mcell:#e6ecfa;--mfg:#1e2a44;
+  --row:#f1f5fb;--cell:#fff;--tot:#e2e8f4;--totfg:#0f172a;
+  --ok:#17a672;--bad:#e0484f;--warn:#d9922b;
+  --shadow:0 1px 2px rgba(15,23,42,.05),0 6px 18px rgba(15,23,42,.06);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0a0e16;--fg:#e6eaf2;--mut:#8b97ad;--card:#111826;--line:#232d42;
+  --blue:#5b8cff;--btn:#3b6cf0;--blue-sel:#a3bcff;
+  --head:#1a2744;--headfg:#e9efff;--mcell:#17233d;--mfg:#e6eefc;
+  --row:#141d30;--cell:#101725;--tot:#1e2b49;--totfg:#f1f5ff;
+  --ok:#34d399;--bad:#f0646b;--warn:#f0b04a;
+  --shadow:0 1px 2px rgba(0,0,0,.45),0 8px 22px rgba(0,0,0,.35);
+}}
+button{background:var(--btn)}
+button.alt{background:transparent}
+button.alt.sel{background:var(--btn);border-color:var(--btn);color:#fff}
+button.alt:hover{background:var(--row)}
+button.red{background:var(--bad)}
+button.grn{background:var(--ok)}
+#auth button#giris,#auth button#kayit{background:var(--btn)}
+.auth-tabs button{background:transparent}
+.auth-tabs button.on{background:var(--card)}
+.logo{background:linear-gradient(135deg,#3b6cf0,#6d4fe0)}
+h2::before{background:linear-gradient(180deg,var(--blue),#7c5cf0)}
+input:focus,select:focus{outline-color:var(--blue)}
+td input:focus{outline-color:var(--blue)}
+th{background:var(--head);color:var(--headfg);letter-spacing:.03em;border-color:var(--line)}
+td{border-color:var(--line)}
+td.m{background:var(--mcell)}
+td.m input{color:var(--mfg)}
+td.m input::placeholder{color:var(--mut);font-weight:400}
+td.sn{background:var(--mcell);color:var(--mfg)}
+tr.tot td{background:var(--tot)!important;color:var(--totfg);border-top:2px solid var(--blue)}
+.ucard.gen{border-top:3px solid var(--blue)}
+table.at tr.ban td{background:rgba(224,72,79,.12)}
+.badge.ok{background:var(--ok)}.badge.ban{background:var(--bad)}.badge.adm{background:#6d4fe0}
+.dot{background:var(--bad);color:var(--bad);box-shadow:0 0 7px 1px currentColor}
+.dot.on{background:var(--ok);color:var(--ok)}
+@media (max-width:600px){.dot{box-shadow:0 0 5px 1px currentColor}}
+#tumKullanicilar .kisi .durum.on{background:rgba(23,166,114,.15);color:var(--ok)}
+#tumKullanicilar .kisi .durum.off{background:rgba(224,72,79,.13);color:var(--bad)}
+.stat.g .v{color:var(--ok)}
+.vcard.vA{--vc:#3b82f6}.vcard.vB{--vc:#8b5cf6}.vcard.vC{--vc:#e0a030}.vcard.vD{--vc:#14a898}
+.vcard li.vm.on{border-left-color:var(--ok)}
+.vcard li.vm.off{border-left-color:var(--bad)}
+.hc-bar.sel{fill:var(--blue-sel)}
+.hc-avg{stroke:var(--warn)}.hc-avgt{fill:var(--warn)}
+table.lg .lg-e .lg-art{color:var(--ok);border-color:rgba(23,166,114,.4)}
+table.lg .lg-e .lg-eks,table.lg .lg-e .lg-sil{color:var(--bad);border-color:rgba(224,72,79,.4)}
 </style>
 </head>
 <body>
@@ -1457,7 +1511,7 @@ function logCsv() {
 // Log silme: arayüz yalnızca yöneticiye gösterir; asıl yetki veritabanındaki admin_log_sil fonksiyonunda
 function logMesaj(t, hata) {
   const m = $("logMsg");
-  m.textContent = t; m.style.color = hata ? "#d33" : "";
+  m.textContent = t; m.style.color = hata ? "var(--bad)" : "";
   m.classList.toggle("hide", !t);
   msg(t);
 }
@@ -1534,7 +1588,7 @@ async function haftaYukle() {
   haftaCiz(gunler, kisi);
 }
 
-const HC_RENK = ["#009fe3", "#8b5cf6", "#f59e0b", "#14b8a6", "#ef4444", "#ec4899", "#84cc16", "#6366f1"];
+const HC_RENK = ["#3f6ef0", "#7c5cf0", "#e0a030", "#14a898", "#e0484f", "#d9468f", "#7fb539", "#5b6ee1"];
 
 function haftaCiz(gunler, kisi) {
   // Kişileri haftalık toplama göre büyükten küçüğe sırala; renk sırayla atanır
