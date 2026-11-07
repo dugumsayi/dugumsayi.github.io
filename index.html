@@ -262,6 +262,22 @@ table.lg tr.lg-ad td{opacity:.75}
   #logTbl table.lg th:nth-child(6),#logTbl table.lg td:nth-child(6){min-width:150px}
   #logTbl table.lg th:nth-child(7),#logTbl table.lg td:nth-child(7){min-width:65px}
 }
+
+/* ===== Açılır-kapanır pencereler ===== */
+.pen-bas{justify-content:flex-start}
+.pen-bas>h2{margin-right:auto;cursor:pointer;user-select:none}
+.pen-btn{width:32px;height:32px;padding:0;flex:none;display:inline-flex;align-items:center;justify-content:center;background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:8px;font-size:15px;line-height:1;cursor:pointer}
+.pen-btn::before{content:"\25BE";display:block;transition:transform .15s ease}
+.pen.kapali .pen-btn::before{transform:rotate(-90deg)}
+.pen.kapali>:not(.pen-bas){display:none!important}
+.pen.kapali>.pen-bas{margin-bottom:0}
+#appHead{margin:0 0 12px}
+#logBox summary{user-select:none}
+#pList{margin:8px 0;overflow-x:auto}
+#pList label{display:flex;gap:10px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:14px}
+#pList input{width:18px;height:18px;flex:none}
+@media (max-width:640px){.pen-bas{flex-direction:row;flex-wrap:wrap;align-items:center}.pen-bas .bar{flex:1 1 100%}}
+@media (prefers-reduced-motion:reduce){.pen-btn::before{transition:none}}
 .hide{display:none!important}
 .gz{display:none!important}
 .ort-gizli{display:none!important}
@@ -528,7 +544,10 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
   <strong>Ana sayfa görünürlüğü</strong>
   <p class="mut">Her pencere için iki ayrı seçim yapın: giriş yapmadan gelen ziyaretçiler ve giriş yapmış kullanıcılar ne görsün. Varsayılan: ziyaretçiye hiçbiri, kullanıcıya hepsi. Yöneticiler her zaman hepsini görür.</p>
   <div id="gList"></div>
-  <div class="row"><button id="gKaydet">Görünürlüğü kaydet</button></div>
+  <strong>Pencere açılış durumu</strong>
+  <p class="mut">Pencereler başlığındaki ok ile açılıp kapanır. Burada işaretlediğiniz pencereler, kullanıcı kendisi değiştirmedikçe <b>kapalı</b> açılır. Kullanıcının kendi açıp kapattığı pencere o cihazda hatırlanır.</p>
+  <div id="pList"></div>
+  <div class="row"><button id="gKaydet">Görünürlüğü ve açılış durumunu kaydet</button></div>
   <hr>
   <strong>Toplu silme (tüm kullanıcılar)</strong>
   <p class="mut">Aşağıdaki tarihte (<b id="tGun"></b>) tüm kullanıcıların girdiği makine adlarını ve sayıları siler. Kullanıcılar ve giriş kayıtları (log) silinmez. Geri alınamaz.</p>
@@ -567,7 +586,7 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 
 
 <div id="app" class="hide">
-  <h2>Benim girişlerim (bugün)</h2>
+  <div class="sec-head" id="appHead"><h2>Benim girişlerim (bugün)</h2></div>
   <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="satirSilBtn" type="button" class="alt sm">− Satır sil</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
   <div class="scroll"><table><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody></table></div>
 </div>
@@ -1414,15 +1433,71 @@ const GOR = [
   ["log", "Giriş kayıtları ve süre farkı", ["logBox"]]
 ];
 // misafir: giriş yapmadan (kayıt yoksa gizli) · uye: giriş yapınca (kayıt yoksa görünür)
-let gorAyar = { misafir: {}, uye: {} };
-const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {} } : { misafir: {}, uye: d || {} };
+let gorAyar = { misafir: {}, uye: {}, kapali: {} };
+const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {} } : { misafir: {}, uye: d || {}, kapali: {} };
 const gorunur = k => isAdmin() || (me ? gorAyar.uye[k] !== false : gorAyar.misafir[k] === true);
+
+// ================= AÇILIR-KAPANIR PENCERELER =================
+// Her pencerenin başlığında ok vardır. Kullanıcının seçimi bu cihazda hatırlanır;
+// seçim yoksa yöneticinin belirlediği açılış durumu (gorAyar.kapali) geçerlidir.
+const PEN = [
+  ["vardiya", "vardiyaBox", "vardiyaHead", "Vardiya listesi"],
+  ["benim", "app", "appHead", "Benim girişlerim"],
+  ["gun", "gunPanel", null, "Kullanıcıların tabloları"],
+  ["ort", "ortPanel", null, "Ortalama"],
+  ["log", "logBox", null, "Giriş kayıtları ve süre farkı"]
+];
+var penKul = {}, penIsleniyor = false;
+try { penKul = JSON.parse(localStorage.getItem("pen_durum") || "{}") || {}; } catch (e) { penKul = {}; }
+const penVars = k => (gorAyar.kapali && typeof gorAyar.kapali[k] === "boolean") ? gorAyar.kapali[k] : (k === "log");
+const penKapali = k => typeof penKul[k] === "boolean" ? penKul[k] : penVars(k);
+function penCiz(k, kapali) {
+  const p = PEN.find(x => x[0] === k), kutu = $(p[1]);
+  if (p[0] === "log") { penIsleniyor = true; kutu.open = !kapali; setTimeout(() => { penIsleniyor = false; }, 0); return; }
+  kutu.classList.toggle("kapali", kapali);
+  const b = kutu.querySelector(".pen-btn");
+  if (b) { b.setAttribute("aria-expanded", String(!kapali)); b.title = kapali ? "Aç" : "Kapat"; }
+}
+function penUygula() { PEN.forEach(([k]) => penCiz(k, penKapali(k))); }
+function penDegistir(k, kapali) {
+  penKul[k] = kapali;
+  try { localStorage.setItem("pen_durum", JSON.stringify(penKul)); } catch (e) {}
+  penCiz(k, kapali);
+}
+(function penKur() {
+  PEN.forEach(([k, id, basId, ad]) => {
+    const kutu = $(id);
+    if (k === "log") {
+      kutu.addEventListener("toggle", () => { if (!penIsleniyor) { penKul[k] = !kutu.open; try { localStorage.setItem("pen_durum", JSON.stringify(penKul)); } catch (e) {} } });
+      return;
+    }
+    const bas = basId ? $(basId) : kutu.querySelector(":scope > .sec-head");
+    if (!bas) return;
+    kutu.classList.add("pen"); bas.classList.add("pen-bas");
+    const b = el("button", "pen-btn"); b.type = "button"; b.setAttribute("aria-label", ad + " penceresini aç/kapat");
+    bas.insertBefore(b, bas.firstChild);
+    const gec = () => penDegistir(k, !kutu.classList.contains("kapali"));
+    b.onclick = gec;
+    const h = bas.querySelector("h2"); if (h) h.onclick = gec;
+  });
+  penUygula();
+})();
+function pCiz() {
+  const box = $("pList"); box.textContent = "";
+  PEN.forEach(([k, , , ad]) => {
+    const lb = el("label"), cb = el("input");
+    cb.type = "checkbox"; cb.dataset.k = k; cb.checked = penVars(k);
+    lb.append(cb, document.createTextNode("Açılışta kapalı gelsin: " + ad));
+    box.append(lb);
+  });
+}
 function gorUygula() {
   GOR.forEach(([k, , ids]) => ids.forEach(id => $(id).classList.toggle("gz", !gorunur(k))));
   $("vardiyaBox").classList.toggle("gz", !(gorunur("ozet") || gorunur("vardiya")));
   $("gunPanel").classList.toggle("gz", !(gorunur("genel") || gorunur("tablolar")));
   if (typeof ortUygula === "function") ortUygula();
   try { ozetKartlar(); } catch (e) {}
+  penUygula();
 }
 function gorCiz() {
   const box = $("gList"); box.textContent = "";
@@ -1439,6 +1514,7 @@ function gorCiz() {
     body.append(tr);
   });
   tbl.append(body); box.append(tbl);
+  pCiz();
 }
 async function gorYukle() {
   if (!sb) { gorUygula(); return; }
@@ -1451,8 +1527,9 @@ async function gorYukle() {
 }
 $("gKaydet").onclick = async () => {
   if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
-  const ayar = { misafir: {}, uye: {} };
+  const ayar = { misafir: {}, uye: {}, kapali: {} };
   document.querySelectorAll("#gList input").forEach(i => { ayar[i.dataset.g][i.dataset.k] = i.checked; });
+  document.querySelectorAll("#pList input").forEach(i => { ayar.kapali[i.dataset.k] = i.checked; });
   msg("Görünürlük kaydediliyor…");
   const { error } = await sb.rpc("admin_gorunurluk_kaydet", { ayar });
   if (error) {
@@ -1461,7 +1538,7 @@ $("gKaydet").onclick = async () => {
     return;
   }
   gorAyar = ayar; gorUygula();
-  msg("Görünürlük ayarları kaydedildi. Ziyaretçi ve kullanıcılarda en geç 45 sn içinde güncellenir.");
+  msg("Görünürlük ve pencere açılış ayarları kaydedildi. Ziyaretçi ve kullanıcılarda en geç 45 sn içinde güncellenir.");
 };
 gorUygula();   // sayfa açılır açılmaz varsayılan (misafir) görünümü uygula
 
