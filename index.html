@@ -1577,7 +1577,7 @@ function vardCiz() {
   const mx = Math.max(0, ...dl.map(d => d.top));
   const t2 = $("vardDilim"); t2.textContent = "";
   const tb2 = el("table", "at vd"), h2 = el("thead"), r2 = el("tr"), b2 = el("tbody");
-  ["SAATLİK DİLİM", "EKLENEN", "GİRİŞ"].forEach(h => r2.append(el("th", "", h))); h2.append(r2); tb2.append(h2);
+  ["SAATLİK DİLİM DÜĞÜM MİKTARI", "EKLENEN", "GİRİŞ"].forEach(h => r2.append(el("th", "", h))); h2.append(r2); tb2.append(h2);
   let satir = 0;
   for (let i = 0; i <= son; i++) {
     const d = dl[i]; if (!bosGoster && !d.n) continue;
