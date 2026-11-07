@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Makine Sayı Tablosu</title>
 <style>
-:root{--bg:#fff;--fg:#111;--blue:#00b0f0;--row:#ddebf7;--cell:#fff;--line:#111;--tot:#ff7c80;--mut:#555;--card:#f6f8fa}
-@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#16181c;--fg:#f2f2f2;--row:#22344a;--cell:#1d2026;--line:#8a8f98;--mut:#aab;--card:#1d2026}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px;max-width:1100px;margin-inline:auto}
 h1{font-size:20px;margin:0 0 4px}
@@ -94,8 +92,6 @@ button.grn{background:#2a9d4a}
 td.sy{min-width:200px;white-space:nowrap}
 td.sy input{width:calc(100% - 46px)}
 td.sy button.ekle{width:38px;height:30px;padding:0;margin:0 4px 0 0;font-size:20px;line-height:1;vertical-align:middle}
-:root{--bg:#f3f5f9;--fg:#171b24;--blue:#009fe3;--row:#eaf3fb;--cell:#fff;--line:#d3dae5;--tot:#ff8a8d;--mut:#677085;--card:#fff;--shadow:0 1px 2px rgba(16,24,40,.06),0 4px 14px rgba(16,24,40,.06);--r:12px}
-@media (prefers-color-scheme:dark){:root{--bg:#0e1015;--fg:#eceff5;--row:#1b2a3d;--cell:#151922;--line:#2b3140;--mut:#8f98ab;--card:#171b24;--shadow:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.35)}}
 body{max-width:1180px;padding:20px 16px 56px;line-height:1.35}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:0;background:none;border:none;border-radius:0;box-shadow:none;margin:0 0 14px}
 .brand{display:flex;gap:12px;align-items:center;min-width:0}
@@ -308,10 +304,10 @@ table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
   --head:#1e2a44;--headfg:#fff;--mcell:#e6ecfa;--mfg:#1e2a44;
   --row:#f1f5fb;--cell:#fff;--tot:#e2e8f4;--totfg:#0f172a;
   --ok:#17a672;--bad:#e0484f;--warn:#d9922b;
-  --shadow:0 1px 2px rgba(15,23,42,.05),0 6px 18px rgba(15,23,42,.06);
+  --shadow:0 1px 2px rgba(15,23,42,.05),0 6px 18px rgba(15,23,42,.06);--r:12px;
 }
 @media (prefers-color-scheme:dark){:root{
-  --bg:#0a0e16;--fg:#e6eaf2;--mut:#8b97ad;--card:#111826;--line:#232d42;
+  color-scheme:dark;--bg:#0a0e16;--fg:#e6eaf2;--mut:#8b97ad;--card:#111826;--line:#232d42;
   --blue:#5b8cff;--btn:#3b6cf0;--blue-sel:#a3bcff;
   --head:#1a2744;--headfg:#e9efff;--mcell:#17233d;--mfg:#e6eefc;
   --row:#141d30;--cell:#101725;--tot:#1e2b49;--totfg:#f1f5ff;
@@ -354,6 +350,69 @@ table.at tr.ban td{background:rgba(224,72,79,.12)}
 .hc-avg{stroke:var(--warn)}.hc-avgt{fill:var(--warn)}
 table.lg .lg-e .lg-art{color:var(--ok);border-color:rgba(23,166,114,.4)}
 table.lg .lg-e .lg-eks,table.lg .lg-e .lg-sil{color:var(--bad);border-color:rgba(224,72,79,.4)}
+
+/* ===== Genel cila: tüm sayfada tutarlı görünüm ===== */
+html{-webkit-text-size-adjust:100%}
+body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;background:var(--bg);color:var(--fg)}
+::selection{background:color-mix(in srgb,var(--blue) 30%,transparent)}
+*{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.scroll{border-radius:10px}
+.top h1{letter-spacing:-.01em;font-weight:750}
+#st,.mut{color:var(--mut)}
+/* kartlar */
+#auth,#profil,#admin,#logBox,#app,.stat,.vcard,.ucard,#tumKullanicilar{background:var(--card);border-color:var(--line);box-shadow:var(--shadow)}
+#app,#profil,#admin,#logBox,.ucard,#tumKullanicilar,.stat,.vcard{border-radius:14px}
+/* özet kutuları: solda ince vurgu şeridi */
+.stat{position:relative;overflow:hidden}
+.stat::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--blue);opacity:.9}
+.stat.g::before{background:var(--ok)}
+.stat .k{letter-spacing:.06em;font-weight:600}
+.stat .v{letter-spacing:-.02em}
+/* düğmeler */
+button{font-weight:600;letter-spacing:.005em}
+button:not(.alt):not(.red):not(.grn):not(.on){box-shadow:0 1px 2px rgba(15,23,42,.2),inset 0 1px 0 rgba(255,255,255,.12)}
+button:active{transform:translateY(1px);filter:brightness(.96)}
+button.alt{border-color:var(--line);color:var(--fg)}
+button.alt:hover{border-color:var(--blue)}
+button:disabled{opacity:.45;cursor:not-allowed;filter:none;transform:none}
+/* giriş alanları */
+#auth input,#auth select,#profil input:not([type=checkbox]),#profil select,#admin input:not([type=checkbox]),#admin select,#tarih,#logKul,#logSira,#vardiyaBox select{background:var(--bg);border-color:var(--line);color:var(--fg)}
+input:focus,select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 24%,transparent)}
+td input:focus{outline:2px solid var(--blue);outline-offset:-2px;box-shadow:none}
+td input::placeholder{color:var(--mut);opacity:.8}
+td.m input::placeholder{color:var(--mut)}
+td.sy input{color:var(--fg)}
+/* tablolar */
+th{font-weight:650;text-transform:uppercase;font-size:13px;letter-spacing:.05em}
+table.at th,table.lg th,table.hc-tbl th{font-size:12px}
+tbody tr:nth-child(odd) td:not(.m):not(.sn){background:var(--row)}
+tbody tr:nth-child(even) td:not(.m):not(.sn){background:var(--cell)}
+td.t,td.v{font-variant-numeric:tabular-nums;font-weight:600}
+td.m,td.sn{font-weight:650}
+table.at td{background:var(--cell)}
+table.at tr:hover td{background:var(--row)}
+/* açılır bölümler */
+details>summary{list-style:none;display:flex;align-items:center;gap:8px;cursor:pointer}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"";width:7px;height:7px;border-right:2px solid var(--mut);border-bottom:2px solid var(--mut);transform:rotate(-45deg);transition:transform .15s;flex:none}
+details[open]>summary::before{transform:rotate(45deg)}
+/* vardiya kartları */
+.vcard{border-top-width:3px}
+.vcard h4{color:var(--vc)}
+.vbadge{box-shadow:0 2px 6px color-mix(in srgb,var(--vc) 45%,transparent)}
+.vtot{letter-spacing:-.02em}
+.vcard li.vm{background:var(--bg);border:1px solid var(--line);border-left-width:3px}
+.vcard li.vm.on{border-left-color:var(--ok)}
+.vcard li.vm.off{border-left-color:var(--bad)}
+/* kullanıcı kartları */
+#tumKullanicilar .kisi{background:var(--bg);border-color:var(--line)}
+/* grafik */
+.hc-g{stroke:var(--line)}
+.hc-t{fill:var(--mut)}
+.hc-bar{rx:5}
+.oz-chip{background:var(--bg)}
+/* mesaj çubuğu */
+#logOzet .oz-card{background:var(--bg);border-color:var(--line)}
 </style>
 </head>
 <body>
