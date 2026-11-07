@@ -1615,6 +1615,14 @@ function logCiz() {
   ["SAAT", "KİM", "MAKİNE", "EKLENEN", "TOPLAM", "SÜRE"].concat(isAdmin() ? [""] : []).forEach(h => hr.append(el("th", "", h)));
   head.append(hr); tbl.append(head);
   const th = toplamHarita();
+  // "Aynı makineye daha önce girdin": kullanıcı bu makineye daha önce girmiş, bir önceki girişi başka makineyse ve şimdi geri dönmüşse
+  const tekrar = new Set(), kGor = new Map();
+  logs.filter(l => l.sutun !== "makine" && l.yeni != null).slice().sort((a, b) => new Date(a.zaman) - new Date(b.zaman)).forEach(l => {
+    const k = (l.makine || "").trim().toLocaleLowerCase("tr"); if (!k) return;
+    let u = kGor.get(l.user_id); if (!u) { u = { son: null, gor: new Set() }; kGor.set(l.user_id, u); }
+    if (u.son !== null && u.son !== k && u.gor.has(k)) tekrar.add(l.id);
+    u.gor.add(k); u.son = k;
+  });
   list.forEach(l => {
     const hs = th.get(l.id) || [], ad = l.sutun === "makine", d = logFark(l);
     const tr = el("tr", ad ? "lg-ad" : "");
@@ -1625,7 +1633,7 @@ function logCiz() {
     tdE.append(el("span", cls, eklenenYaz(l)));
     const tdS = el("td", "lg-s"), mk = sure(l.fark_makine_sn), gn = sure(l.fark_genel_sn);
     tdS.append(el("div", "", mk));
-    if (!ad && mk !== "—" && gn !== "—" && gn !== mk) tdMk.append(el("div", "lg-ayni", "↺ Aynı makineye daha önce girdin"));   // arada başka makineye girilmişse uyarı yalnızca makine adının altında görünür
+    if (!ad && tekrar.has(l.id)) tdS.append(el("div", "lg-ayni", "↺ Aynı makineye daha önce girdin"));   // SÜRE sütununda: aynı kullanıcı bu makineye daha önce girmiş, arada başka makineye geçip geri dönmüş
     if (gn !== "—" && gn !== mk) tdS.append(el("div", "lg-alt", "genel: " + gn));
     tr.append(el("td", "lg-t", saatOf(l.zaman)),
       el("td", "", (l.kullanici || "?") + (isAdmin() && sm.get(l.user_id) ? " [" + sm.get(l.user_id) + "]" : "") + (l.user_id === myId() ? " (siz)" : "")),
