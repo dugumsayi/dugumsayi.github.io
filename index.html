@@ -461,6 +461,11 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 .u-ozet{flex:1 1 260px;min-width:0}
 .u-ozet .oz-chips{margin-top:0}
 @media (max-width:600px){.ugrid{grid-template-columns:minmax(0,1fr)}.u-sol{flex:1 1 100%}}
+
+/* Şu an içinde bulunulan vardiya butonu yanıp söner */
+@keyframes vYan{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(46,204,64,.75)}50%{opacity:.45;box-shadow:0 0 0 6px rgba(46,204,64,0)}}
+#vnoSekme button.simdi{animation:vYan 1.2s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){#vnoSekme button.simdi{animation:none}}
 </style>
 </head>
 <body>
@@ -768,7 +773,7 @@ function vnoCiz() {
   sk.textContent = "";
   const simdi = secili === bugun ? vNoNow() : -1;
   VNO_AD.forEach((a, i) => {
-    const b = el("button", "alt sm" + (i === gv ? " sel" : ""), a + (i === simdi ? " · şimdi" : ""));
+    const b = el("button", "alt sm" + (i === gv ? " sel" : "") + (i === simdi ? " simdi" : ""), a + (i === simdi ? " · şimdi" : ""));
     b.type = "button";
     b.onclick = () => { gv = i; hazirla(); };
     sk.append(b);
