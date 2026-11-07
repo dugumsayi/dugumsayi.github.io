@@ -451,8 +451,8 @@ table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
 </details>
 
 <details id="vardBox" class="hide" open>
-  <summary><strong>Vardiya tabloları (1 SAATLİK DÜĞÜM MİKTARI</strong> <span id="vardSayi" class="mut"></span></summary>
-  <p class="mut">Her vardiya başında (00:00, 08:00, 16:00) yeni bir tablo açılır. Tablo, seçili günde o vardiya saatleri içinde girilen sayılardan oluşur. 10 dakikalık düğüm milktarı vardiyanın başlangıç saatinden itibaren sayılır.</p>
+  <summary><strong>Vardiya tabloları (saatlik dilimler)</strong> <span id="vardSayi" class="mut"></span></summary>
+  <p class="mut">Her vardiya başında (00:00, 08:00, 16:00) yeni bir tablo açılır. Tablo, seçili günde o vardiya saatleri içinde girilen sayılardan oluşur. 1 saatlik dilimler vardiyanın başlangıç saatinden itibaren sayılır.</p>
   <div class="bar" id="vardSekme"></div>
   <div id="vardOzet"></div>
   <div class="vard-grid"><div id="vardTbl" class="scroll"></div><div id="vardDilim" class="scroll"></div></div>
@@ -1207,7 +1207,7 @@ const GOR = [
   ["hafta", "Haftalık ortalama", ["haftaPanel"]],
   ["ay", "Aylık ortalama", ["ayPanel"]],
   ["log", "Giriş kayıtları ve süre farkı", ["logBox"]],
-  ["vardtablo", "Vardiya tabloları (10 dk dilimleri)", ["vardBox"]]
+  ["vardtablo", "Vardiya tabloları (saatlik dilimler)", ["vardBox"]]
 ];
 // misafir: giriş yapmadan (kayıt yoksa gizli) · uye: giriş yapınca (kayıt yoksa görünür)
 let gorAyar = { misafir: {}, uye: {} };
@@ -1515,9 +1515,9 @@ $("logKul").onchange = logCiz; $("logSira").onchange = logCiz;
 $("logCsv").onclick = logCsv;
 
 
-// ================= VARDİYA TABLOLARI (00-08, 08-16, 16-24) + 10 dk DİLİMLERİ =================
+// ================= VARDİYA TABLOLARI (00-08, 08-16, 16-24) + SAATLİK DİLİMLER =================
 // Her vardiya başında yeni tablo: seçili günün giriş kayıtlarından (sayi_log), vardiya saatlerine göre türetilir.
-const VSAAT = [[0, 8], [8, 16], [16, 24]], DILIM_DK = 10, TR_OFS = 3 * 3600000, H8MS = 8 * 3600000;
+const VSAAT = [[0, 8], [8, 16], [16, 24]], DILIM_DK = 60, TR_OFS = 3 * 3600000, H8MS = 8 * 3600000;
 let vardSecim = null;   // null = otomatik (bugünse şu anki vardiya)
 const pad2 = n => String(n).padStart(2, "0");
 const vardAd = i => pad2(VSAAT[i][0]) + ":00 – " + pad2(VSAAT[i][1]) + ":00";
@@ -1565,7 +1565,7 @@ function vardCiz() {
     tbl.append(bd); t1.append(tbl);
   }
 
-  // --- 1 saatlik düğüm miktarı (vardiya başlangıcından itibaren)
+  // --- saatlik dilimler (vardiya başlangıcından itibaren)
   const DS = 480 / DILIM_DK, dl = Array.from({ length: DS }, () => ({ top: 0, n: 0 }));
   ent.forEach(l => {
     const dk = (gunMs(new Date(l.zaman).getTime()) / 60000) - bas, i = Math.min(DS - 1, Math.max(0, Math.floor(dk / DILIM_DK)));
@@ -1577,7 +1577,7 @@ function vardCiz() {
   const mx = Math.max(0, ...dl.map(d => d.top));
   const t2 = $("vardDilim"); t2.textContent = "";
   const tb2 = el("table", "at vd"), h2 = el("thead"), r2 = el("tr"), b2 = el("tbody");
-  ["1 SAATLİK DÜĞÜM MİKTARI", "EKLENEN", "GİRİŞ"].forEach(h => r2.append(el("th", "", h))); h2.append(r2); tb2.append(h2);
+  ["SAATLİK DİLİM", "EKLENEN", "GİRİŞ"].forEach(h => r2.append(el("th", "", h))); h2.append(r2); tb2.append(h2);
   let satir = 0;
   for (let i = 0; i <= son; i++) {
     const d = dl[i]; if (!bosGoster && !d.n) continue;
@@ -1600,7 +1600,7 @@ function vardCiz() {
     const zs = ent.map(l => new Date(l.zaman).getTime()).sort((a, b) => a - b);
     chip("İlk giriş", saatOf(zs[0])); chip("Son giriş", saatOf(zs[zs.length - 1]));
     let en = -1; dl.forEach((d, i) => { if (d.n && (en < 0 || d.top > dl[en].top)) en = i; });
-    if (en >= 0) chip("En yoğun 10 dk", dkYaz(bas + en * DILIM_DK) + " – " + dkYaz(bas + (en + 1) * DILIM_DK) + " · " + fmt(Math.round(dl[en].top * 100) / 100), true);
+    if (en >= 0) chip("En yoğun saat", dkYaz(bas + en * DILIM_DK) + " – " + dkYaz(bas + (en + 1) * DILIM_DK) + " · " + fmt(Math.round(dl[en].top * 100) / 100), true);
     const calDk = gecenDk - MOLA_DK;   // geçen süreden 35 dk mola düşülür
     if (calDk >= 1) chip("Ortalama (saatte, mola hariç)", fmt(Math.round(genelTop / calDk * 60 * 10) / 10) + " sayı/saat", true);
     oz.append(chips);
