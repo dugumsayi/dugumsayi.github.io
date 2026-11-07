@@ -675,6 +675,50 @@ const adKar = (a, b) => {
   return a.localeCompare(b, "tr", { numeric: true, sensitivity: "base" });
 };
 
+
+// ================= ÇEVRİMDIŞI GİRİŞ =================
+// Daha önce internetle giriş yapılmış cihazda, internet yokken de giriş yapılabilir.
+// Cihazda şifre saklanmaz; yalnızca doğrulama için tuzlu PBKDF2 özeti tutulur.
+const OTURUM_KEY = "dugum-oturum-v1", PROFIL_KEY = "dugum-profil-v1", CRED_KEY = "dugum-cred-v1", GOR_KEY = "dugum-gor-v1", N_KEY = "dugum-n-v1";
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const lsDel = k => { try { localStorage.removeItem(k); } catch (e) {} };
+let cevrimdisiOturum = false, bellekSifre = null;
+const agHatasi = m => /fetch|network|load failed|timeout|offline|çevrimdışı|failed to/i.test(m || "");
+const hex = buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+async function kimlikHash(sicil, sifre, salt) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(sicil + "\u0000" + sifre), "PBKDF2", false, ["deriveBits"]);
+  return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", salt: enc.encode(salt), iterations: 100000, hash: "SHA-256" }, key, 256));
+}
+async function kimlikKaydet(sicil, sifre, user) {
+  try {
+    if (!(window.crypto && crypto.subtle)) return;
+    const salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+    const m = lsGet(CRED_KEY, {});
+    m[sicil] = { salt, hash: await kimlikHash(sicil, sifre, salt), user: { id: user.id, email: user.email, user_metadata: user.user_metadata || {} } };
+    lsSet(CRED_KEY, m);
+  } catch (e) {}
+}
+async function cevrimdisiGiris(sicil, sifre) {
+  try {
+    if (!(window.crypto && crypto.subtle)) return false;
+    const e = lsGet(CRED_KEY, {})[sicil]; if (!e || !e.user) return false;
+    if (await kimlikHash(sicil, sifre, e.salt) !== e.hash) return "yanlis";
+    const pr = lsGet(PROFIL_KEY + ":" + e.user.id, null);
+    if (pr && pr.banli) return "ban";
+    me = e.user; cevrimdisiOturum = true; bellekSifre = sifre; sonBan = "";
+    lsSet(OTURUM_KEY, { uid: me.id });
+    return true;
+  } catch (e) { return false; }
+}
+function cevrimdisiSb() {   // Supabase kütüphanesi (CDN) yüklenemediyse çökmesin
+  const sonuc = { data: null, error: { message: "Çevrimdışı: sunucuya ulaşılamıyor" } };
+  const zincir = () => new Proxy(function () {}, { get: (t, p) => p === "then" ? (res) => res(sonuc) : zincir(), apply: () => zincir() });
+  return { from: zincir, rpc: zincir, removeChannel: () => {}, channel: () => { const c = { on: () => c, subscribe: () => c }; return c; },
+    auth: { signInWithPassword: async () => ({ data: null, error: { message: "Failed to fetch" } }), signOut: async () => ({ error: null }), onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }), updateUser: async () => sonuc, signUp: async () => sonuc } };
+}
+
 const mailOf = s => "makine.sicil." + s + "@gmail.com";
 function sicilAl() {
   const s = $("sicil").value.trim().toLowerCase();
@@ -699,9 +743,25 @@ $("giris").onclick = async () => {
   const s = sicilAl(); if (!s) return;
   sonBan = "";
   msg("Giriş yapılıyor…");
-  const { error } = await sb.auth.signInWithPassword({ email: mailOf(s), password: sifreHazirla($("sifre").value) });
-  if (error) msg(/banned/i.test(error.message) ? "Bu hesap yasaklanmış. Yönetici ile iletişime geçin." :
-                 /invalid/i.test(error.message) ? "Sicil numarası veya şifre hatalı." : "Giriş yapılamadı: " + error.message);
+  const sifre = $("sifre").value;
+  const cdGiris = async () => {
+    const r = await cevrimdisiGiris(s, sifre);
+    if (r === true) { msg("Çevrimdışı giriş yapıldı. Girdiğiniz veriler cihazda saklanır, internet gelince gönderilir."); await hazirla(); return; }
+    msg(r === "yanlis" ? "Sicil numarası veya şifre hatalı." : r === "ban" ? "Bu hesap yasaklanmış. Yönetici ile iletişime geçin." :
+        "İnternet yok. Çevrimdışı giriş için bu cihazda bu sicil ile daha önce internetle bir kez giriş yapılmış olmalı.");
+  };
+  if (!navigator.onLine) { await cdGiris(); return; }
+  let res;
+  try { res = await sb.auth.signInWithPassword({ email: mailOf(s), password: sifreHazirla(sifre) }); }
+  catch (e) { res = { error: { message: "Failed to fetch" } }; }
+  const { data, error } = res;
+  if (error) {
+    if (agHatasi(error.message) || error.name === "AuthRetryableFetchError") { await cdGiris(); return; }
+    msg(/banned/i.test(error.message) ? "Bu hesap yasaklanmış. Yönetici ile iletişime geçin." :
+        /invalid/i.test(error.message) ? "Sicil numarası veya şifre hatalı." : "Giriş yapılamadı: " + error.message);
+    return;
+  }
+  if (data && data.user) kimlikKaydet(s, sifre, data.user);
 };
 $("kayit").onclick = async () => {
   const kayitAcik = await kayitDurumuYukle();
@@ -731,12 +791,14 @@ $("cikis").onclick = async () => {
   try { await Promise.race([sb.auth.signOut(), bekle(2500)]); } catch (e) {}
   try { await Promise.race([sb.auth.signOut({ scope: "local" }), bekle(1500)]); } catch (e) {}
   try { [localStorage, sessionStorage].forEach(st0 => Object.keys(st0).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => st0.removeItem(k))); } catch (e) {}
+  lsDel(OTURUM_KEY); cevrimdisiOturum = false; bellekSifre = null;
   me = null; profil = null; sonBan = ""; btn.disabled = false;
   $("profil").classList.add("hide"); $("admin").classList.add("hide");
   hazirla();
 };
 
 function kimYaz() {
+  if (!cevrimdisiOturum && me) { lsSet(OTURUM_KEY, { uid: me.id }); const m = lsGet(CRED_KEY, {}), k = sicilOf(); if (m[k]) { m[k].user = { id: me.id, email: me.email, user_metadata: me.user_metadata || {} }; lsSet(CRED_KEY, m); } }
   $("kim").textContent = tamAd() + " olarak giriş yaptınız" + (gizli() ? " (sicil diğerlerinden gizli)" : "");
 }
 function profilDoldur() {
@@ -810,6 +872,7 @@ function vnoCiz() {
 function buildMine() {
   const body = $("mine"); body.textContent = ""; myInputs = []; myTot = []; myTr = [];
   for (let r = 0; r < N; r++) satirEkle(r);
+  if (me) lsSet(N_KEY + ":" + myId() + ":" + bugun + ":" + gv, N);
 }
 
 // Tabloya tek satır (r numaralı) çizer ve en alta ekler
@@ -1077,6 +1140,7 @@ async function load() {
   } catch (error) {
     try { rows = JSON.parse(localStorage.getItem(cacheAnahtar()) || "[]"); } catch (_) { rows = []; }
     if (!rows.some(x => x.user_id === myId() && x.satir === 0) && me && secili === bugun && gv === vNoNow()) rows.push({ user_id: myId(), tarih: bugun, vno: gv, satir: 0, name: "", n1: null, n2: null, n3: null, n4: null, n5: null, n6: null, kullanici: userName() });
+    if (me && secili === bugun && gv === vNoNow()) for (let r = 0; r < N; r++) if (!rows.some(x => x.user_id === myId() && x.satir === r)) rows.push({ user_id: myId(), tarih: bugun, vno: gv, satir: r, name: "", n1: null, n2: null, n3: null, n4: null, n5: null, n6: null, kullanici: userName() });
     msg(navigator.onLine ? "Veriler yüklenemedi; cihazdaki son kayıtlar gösteriliyor." : "Çevrimdışı mod: cihazdaki kayıtlar gösteriliyor. İnternet gelince eşitlenecek.");
   }
   if (me && duzenlenir()) fillMine(); renderShared();
@@ -1109,20 +1173,34 @@ async function hazirla() {
   await vardiyaYukle();
   if (duzenle) {
     N = N0;
-    const mx = await sb.from("sayilar").select("satir").eq("user_id", myId()).eq("tarih", bugun).eq("vno", gv).order("satir", { ascending: false }).limit(1);
-    if (mx.error) { msg("Tablo okunamadı: " + mx.error.message + vnoHata(mx.error.message)); return; }
-    const adlar = new Map();
-    if (mx.data && mx.data.length) N = Math.min(NMAX, Math.max(N0, mx.data[0].satir + 1));
-    else {   // Vardiya tablosu yeni açılıyor: önceki vardiyadaki makine adları taşınır, sayılar sıfırdan başlar
-      const pv = gv > 0 ? gv - 1 : 2, pt = gv > 0 ? bugun : tarihStr(new Date(new Date(bugun + "T12:00:00").getTime() - 86400000));
-      const pr = await sb.from("sayilar").select("satir,name").eq("user_id", myId()).eq("tarih", pt).eq("vno", pv).order("satir");
-      if (!pr.error && pr.data) pr.data.forEach(x => { if ((x.name || "").trim() && x.satir < NMAX) adlar.set(x.satir, x.name); });
-      if (adlar.size) N = Math.min(NMAX, Math.max(N0, Math.max(...adlar.keys()) + 1));
+    const nAnahtar = N_KEY + ":" + myId() + ":" + bugun + ":" + gv;
+    let ag = !navigator.onLine || cevrimdisiOturum;
+    if (!ag) {
+      const mx = await sb.from("sayilar").select("satir").eq("user_id", myId()).eq("tarih", bugun).eq("vno", gv).order("satir", { ascending: false }).limit(1);
+      if (mx.error && agHatasi(mx.error.message)) ag = true;
+      else {
+        if (mx.error) { msg("Tablo okunamadı: " + mx.error.message + vnoHata(mx.error.message)); return; }
+        const adlar = new Map();
+        if (mx.data && mx.data.length) N = Math.min(NMAX, Math.max(N0, mx.data[0].satir + 1));
+        else {   // Vardiya tablosu yeni açılıyor: önceki vardiyadaki makine adları taşınır, sayılar sıfırdan başlar
+          const pv = gv > 0 ? gv - 1 : 2, pt = gv > 0 ? bugun : tarihStr(new Date(new Date(bugun + "T12:00:00").getTime() - 86400000));
+          const pr = await sb.from("sayilar").select("satir,name").eq("user_id", myId()).eq("tarih", pt).eq("vno", pv).order("satir");
+          if (!pr.error && pr.data) pr.data.forEach(x => { if ((x.name || "").trim() && x.satir < NMAX) adlar.set(x.satir, x.name); });
+          if (adlar.size) N = Math.min(NMAX, Math.max(N0, Math.max(...adlar.keys()) + 1));
+        }
+        buildMine();
+        const seed = Array.from({length: N}, (_, i) => { return { satir: i, tarih: bugun, vno: gv, kullanici: userName(), name: adlar.get(i) || "" }; });
+        const ins = await sb.from("sayilar").upsert(seed, { onConflict: "user_id,tarih,vno,satir", ignoreDuplicates: true });
+        if (ins.error) {
+          if (agHatasi(ins.error.message)) ag = true;
+          else { msg("Satırlar oluşturulamadı: " + ins.error.message + vnoHata(ins.error.message)); return; }
+        }
+      }
     }
-    buildMine();
-    const seed = Array.from({length: N}, (_, i) => { return { satir: i, tarih: bugun, vno: gv, kullanici: userName(), name: adlar.get(i) || "" }; });
-    const ins = await sb.from("sayilar").upsert(seed, { onConflict: "user_id,tarih,vno,satir", ignoreDuplicates: true });
-    if (ins.error) { msg("Satırlar oluşturulamadı: " + ins.error.message + vnoHata(ins.error.message)); return; }
+    if (ag) {   // internet yok: son bilinen satır sayısıyla cihazdaki verilerle devam
+      N = Math.min(NMAX, Math.max(N0, parseInt(lsGet(nAnahtar, N0), 10) || N0));
+      buildMine();
+    }
   }
   await load();
   if (duzenle) tabloDoluKontrol();
@@ -1183,7 +1261,8 @@ $("kayitAcKapat").onclick = async () => {
 async function profilYukle() {
   if (!me) { profil = null; return; }
   const { data, error } = await sb.from("profiles").select("rol,banli,ban_sebep,yonetici_gizli").eq("id", myId()).maybeSingle();
-  profil = error ? null : data;   // tablo yoksa/hata olursa normal kullanıcı gibi devam
+  if (!error) { profil = data; if (data) lsSet(PROFIL_KEY + ":" + myId(), data); }
+  else profil = (!navigator.onLine || cevrimdisiOturum || agHatasi(error.message)) ? lsGet(PROFIL_KEY + ":" + myId(), null) : null;   // tablo yoksa/hata olursa normal kullanıcı gibi devam
 }
 const isAdmin = () => !!profil && profil.rol === "admin" && !profil.banli;
 
@@ -1520,7 +1599,8 @@ async function gorYukle() {
   if (!sb) { gorUygula(); return; }
   try {
     const { data, error } = await sb.from("site_ayar").select("deger").eq("anahtar", "gorunurluk").maybeSingle();
-    if (!error && data && data.deger && typeof data.deger === "object") gorAyar = gorNorm(data.deger);
+    if (!error && data && data.deger && typeof data.deger === "object") { gorAyar = gorNorm(data.deger); lsSet(GOR_KEY, data.deger); }
+    else if (error) { const c = lsGet(GOR_KEY, null); if (c) gorAyar = gorNorm(c); }
   } catch (e) {}
   gorUygula();
   if (isAdmin() && !$("gList").children.length) gorCiz();   // yönetici düzenlerken yeniden çizilmez
@@ -2090,15 +2170,29 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) ziya
 
 (async function () {
   if (SUPABASE_URL.includes("PROJE-KODUNUZ") || SUPABASE_KEY.includes("ANAHTARINIZ")) { msg("Önce dosyanın başındaki SUPABASE_URL ve SUPABASE_KEY değerlerini girin."); return; }
-  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  sb = (typeof supabase !== "undefined") ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : cevrimdisiSb();
   ziyaretKaydet();
   sb.channel("sayilar-canli").on("postgres_changes", { event: "*", schema: "public", table: "sayilar" }, () => {
     clearTimeout(timer); timer = setTimeout(load, 300);
   }).subscribe();
   let started = false;
   sb.auth.onAuthStateChange((ev, session) => {
-    if (session) { me = session.user; if (!started) { started = true; setTimeout(hazirla, 0); } }
-    else if (!session && (ev === "SIGNED_OUT" || ev === "INITIAL_SESSION")) { started = false; me = null; setTimeout(hazirla, 0); }
+    if (session) { me = session.user; cevrimdisiOturum = false; bellekSifre = null; if (!started) { started = true; setTimeout(hazirla, 0); } }
+    else if (!session && (ev === "SIGNED_OUT" || ev === "INITIAL_SESSION")) {
+      if (ev === "SIGNED_OUT") lsDel(OTURUM_KEY);
+      // İnternet yokken sayfa açıldı ve daha önce giriş yapılmışsa: cihazdaki oturumla devam et
+      const o = lsGet(OTURUM_KEY, null), e = o && Object.values(lsGet(CRED_KEY, {})).find(x => x.user && x.user.id === o.uid);
+      if (ev === "INITIAL_SESSION" && !navigator.onLine && e) { me = e.user; cevrimdisiOturum = true; started = false; setTimeout(hazirla, 0); return; }
+      started = false; me = null; setTimeout(hazirla, 0);
+    }
+  });
+  // İnternet geri gelince, çevrimdışı girilen oturum için sunucu oturumunu sessizce yenile
+  window.addEventListener("online", async () => {
+    if (!me || !cevrimdisiOturum) return;
+    if (bellekSifre) {
+      try { const r = await sb.auth.signInWithPassword({ email: me.email, password: sifreHazirla(bellekSifre) }); if (!r.error) return; } catch (e) {}
+    }
+    msg("İnternet geldi. Bekleyen kayıtların gönderilmesi için çıkış yapıp tekrar giriş yapın.");
   });
 })();
 </script>
