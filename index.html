@@ -785,6 +785,10 @@ async function tabloDoluKontrol(zorla) {
   if (!zorla) for (let r = 0; r < N; r++) if (!satirDolu(r)) return;
   satirEkleniyor = true;
   const r = N; N++; satirEkle(r);
+  if (!navigator.onLine) {
+    rows.push({ user_id: myId(), tarih: bugun, vno: gv, satir: r, name: "", n1: null, n2: null, n3: null, n4: null, n5: null, n6: null, kullanici: userName() });
+    cacheYaz(); satirEkleniyor = false; msg("İnternet yok. Yeni satır cihazda açıldı; girdiğinizde bağlantı gelince gönderilecek."); return;
+  }
   try {
     const { error } = await sb.from("sayilar").upsert([{ satir: r, tarih: bugun, vno: gv, kullanici: userName() }], { onConflict: "user_id,tarih,vno,satir", ignoreDuplicates: true });
     if (error) {
@@ -934,25 +938,68 @@ function renderShared() {
   $("genel").textContent = users.length ? (users.length + " kullanıcı, günün genel toplamı: " + fmt(grand)) : "Bu tarihte kayıtlı giriş yok.";
 }
 
+// Offline kayıt kuyruğu: internet yokken kayıtlar bu cihazda tutulur ve bağlantı gelince gönderilir.
+const OFFLINE_QUEUE_KEY = "dugum-offline-kuyruk-v1";
+const OFFLINE_CACHE_KEY = "dugum-offline-cache-v1";
+function queueOku() { try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || "[]"); } catch (_) { return []; } }
+function queueYaz(q) { try { localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q)); } catch (_) { msg("Cihazda kayıt alanı dolu; internet bağlantısını açıp senkronize edin."); } }
+function cacheAnahtar() { return OFFLINE_CACHE_KEY + ":" + (myId() || "anon") + ":" + secili + ":" + gv; }
+function cacheYaz() { try { localStorage.setItem(cacheAnahtar(), JSON.stringify(rows)); } catch (_) {} }
+function offlineSatirKaydet(row) {
+  const item = { user_id: myId(), tarih: bugun, vno: gv, satir: row.satir, name: row.name || "", kullanici: userName() };
+  COLS.forEach(k => { const v = String(row[k] ?? "").trim(); item[k] = v === "" ? null : num(v); });
+  const q = queueOku(), key = x => [x.user_id,x.tarih,x.vno,x.satir].join("|");
+  const i = q.findIndex(x => key(x) === key(item)); if (i >= 0) q[i] = item; else q.push(item);
+  queueYaz(q); kirli[row.satir] = false; cacheYaz();
+}
+async function offlineKuyrukGonder() {
+  if (!navigator.onLine || !sb || !me) return;
+  let q = queueOku(); if (!q.length) return;
+  msg("İnternet geldi. " + q.length + " bekleyen kayıt gönderiliyor…");
+  const kalan = [];
+  for (const item of q) {
+    if (item.user_id !== myId()) { kalan.push(item); continue; }
+    try {
+      const { error } = await sb.from("sayilar").upsert([item], { onConflict: "user_id,tarih,vno,satir" });
+      if (error) kalan.push(item);
+    } catch (_) { kalan.push(item); }
+  }
+  queueYaz(kalan);
+  if (kalan.length) msg("Senkronizasyon kısmi: " + kalan.length + " kayıt cihazda bekliyor. Tekrar denenecek.");
+  else { msg("Tüm çevrimdışı kayıtlar sunucuya gönderildi."); await load(); logYukle(); }
+}
+window.addEventListener("online", offlineKuyrukGonder);
+window.addEventListener("offline", () => msg("İnternet bağlantısı kesildi. Girdiğiniz veriler bu cihazda saklanacak."));
+setInterval(() => { if (navigator.onLine) offlineKuyrukGonder(); }, 15000);
+
 function save(r) { kayitZinciri = kayitZinciri.then(() => kaydet(r)).catch(() => {}); return kayitZinciri; }
 async function kaydet(r) {
-  if (!kirli[r]) return; // değişiklik yoksa tekrar kaydetme (log şişmesin)
-  kirli[r] = false;
+  if (!kirli[r]) return;
   const row = rows.find(x => x.user_id === myId() && x.satir === r); if (!row) return;
+  if (!navigator.onLine) { offlineSatirKaydet(row); msg("İnternet yok. Kayıt bu cihazda saklandı; bağlantı gelince gönderilecek."); return; }
   msg("Kaydediliyor…");
-  const body = { name: row.name || "", kullanici: userName() };
+  const body = { user_id: myId(), tarih: bugun, vno: gv, satir: r, name: row.name || "", kullanici: userName() };
   COLS.forEach(k => { const v = String(row[k] ?? "").trim(); body[k] = v === "" ? null : num(v); });
-  const { error } = await sb.from("sayilar").update(body).eq("user_id", myId()).eq("tarih", bugun).eq("vno", gv).eq("satir", r);
-  if (error) kirli[r] = true;
-  msg(error ? "Kaydedilemedi: " + error.message : "Otomatik kaydedildi. Değişiklikler herkeste görünür.");
-  if (!error) logYukle();
+  try {
+    const { error } = await sb.from("sayilar").upsert([body], { onConflict: "user_id,tarih,vno,satir" });
+    if (error) { kirli[r] = true; offlineSatirKaydet(row); msg("Sunucuya ulaşılamadı. Kayıt cihazda bekletildi: " + error.message); }
+    else { kirli[r] = false; msg("Otomatik kaydedildi. Değişiklikler herkeste görünür."); cacheYaz(); logYukle(); }
+  } catch (_) { kirli[r] = true; offlineSatirKaydet(row); msg("Bağlantı kesildi. Kayıt cihazda saklandı; internet gelince gönderilecek."); }
 }
 
 async function load() {
-  const { data, error } = await sb.from("sayilar").select("*").eq("tarih", secili).eq("vno", gv);
-  if (error) { msg("Veriler yüklenemedi: " + error.message + vnoHata(error.message)); return; }
-  rows = data; if (me && duzenlenir()) fillMine(); renderShared();
-  logYukle();
+  try {
+    if (!navigator.onLine) throw new Error("offline");
+    const { data, error } = await sb.from("sayilar").select("*").eq("tarih", secili).eq("vno", gv);
+    if (error) throw error;
+    rows = data || []; cacheYaz();
+  } catch (error) {
+    try { rows = JSON.parse(localStorage.getItem(cacheAnahtar()) || "[]"); } catch (_) { rows = []; }
+    if (!rows.some(x => x.user_id === myId() && x.satir === 0) && me && secili === bugun && gv === vNoNow()) rows.push({ user_id: myId(), tarih: bugun, vno: gv, satir: 0, name: "", n1: null, n2: null, n3: null, n4: null, n5: null, n6: null, kullanici: userName() });
+    msg(navigator.onLine ? "Veriler yüklenemedi; cihazdaki son kayıtlar gösteriliyor." : "Çevrimdışı mod: cihazdaki kayıtlar gösteriliyor. İnternet gelince eşitlenecek.");
+  }
+  if (me && duzenlenir()) fillMine(); renderShared();
+  if (navigator.onLine) { offlineKuyrukGonder(); logYukle(); }
   haftaPlanla();
 }
 
