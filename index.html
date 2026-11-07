@@ -897,7 +897,7 @@ async function hazirla() {
       if (adlar.size) N = Math.min(NMAX, Math.max(N0, Math.max(...adlar.keys()) + 1));
     }
     buildMine();
-    const seed = Array.from({length: N}, (_, i) => { return { satir: i, tarih: bugun, vno: gv, kullanici: userName(), name: adlar.get(i) || "" }; });
+    const seed = Array.from({length: N}, (_, i) => { const o = { satir: i, tarih: bugun, vno: gv, kullanici: userName() }; if (adlar.has(i)) o.name = adlar.get(i); return o; });
     const ins = await sb.from("sayilar").upsert(seed, { onConflict: "user_id,tarih,vno,satir", ignoreDuplicates: true });
     if (ins.error) { msg("Satırlar oluşturulamadı: " + ins.error.message + vnoHata(ins.error.message)); return; }
   }
