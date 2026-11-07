@@ -1517,7 +1517,7 @@ $("logCsv").onclick = logCsv;
 
 // ================= VARDİYA TABLOLARI (00-08, 08-16, 16-24) + 10 dk DİLİMLERİ =================
 // Her vardiya başında yeni tablo: seçili günün giriş kayıtlarından (sayi_log), vardiya saatlerine göre türetilir.
-const VSAAT = [[0, 8], [8, 16], [16, 24]], DILIM_DK = 10, TR_OFS = 3 * 3600000, H8MS = 8 * 3600000;
+const VSAAT = [[0, 8], [8, 16], [16, 24]], DILIM_DK = 60, TR_OFS = 3 * 3600000, H8MS = 8 * 3600000;
 let vardSecim = null;   // null = otomatik (bugünse şu anki vardiya)
 const pad2 = n => String(n).padStart(2, "0");
 const vardAd = i => pad2(VSAAT[i][0]) + ":00 – " + pad2(VSAAT[i][1]) + ":00";
