@@ -1684,6 +1684,17 @@ function gorCiz() {
   tbl.append(body); box.append(tbl);
   pCiz();
 }
+var gorKanal = null;
+function gorCanliKur() {
+  if (!sb || gorKanal || typeof sb.channel !== "function") return;
+  try {
+    // Yönetici kaydedince yayın (broadcast) gönderir; tablo realtime'a açıksa veritabanı değişikliği de tetikler.
+    gorKanal = sb.channel("gorunurluk-canli", { config: { broadcast: { self: false } } })
+      .on("broadcast", { event: "guncelle" }, () => { gorYukle(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "site_ayar" }, () => { gorYukle(); })
+      .subscribe();
+  } catch (e) { gorKanal = null; }
+}
 async function gorYukle() {
   if (!sb) { gorUygula(); return; }
   try {
@@ -1707,7 +1718,8 @@ $("gKaydet").onclick = async () => {
     return;
   }
   gorAyar = ayar; gorUygula();
-  msg("Görünürlük ve pencere açılış ayarları kaydedildi. Ziyaretçi ve kullanıcılarda en geç 45 sn içinde güncellenir.");
+  try { if (gorKanal) gorKanal.send({ type: "broadcast", event: "guncelle", payload: { t: Date.now() } }); } catch (e) {}
+  msg("Görünürlük ve pencere açılış ayarları kaydedildi. Açık olan tüm ziyaretçi ve kullanıcılarda anında güncellenir.");
 };
 gorUygula();   // sayfa açılır açılmaz varsayılan (misafir) görünümü uygula
 
@@ -2329,6 +2341,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) ziya
   if (SUPABASE_URL.includes("PROJE-KODUNUZ") || SUPABASE_KEY.includes("ANAHTARINIZ")) { msg("Önce dosyanın başındaki SUPABASE_URL ve SUPABASE_KEY değerlerini girin."); return; }
   sb = (typeof supabase !== "undefined") ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : cevrimdisiSb();
   ziyaretKaydet();
+  gorCanliKur();
   sb.channel("sayilar-canli").on("postgres_changes", { event: "*", schema: "public", table: "sayilar" }, () => {
     clearTimeout(timer); timer = setTimeout(load, 300);
   }).subscribe();
