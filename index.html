@@ -316,6 +316,20 @@ table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
 table.cmp td.cmp-up{color:var(--ok);font-weight:700}
 table.cmp td.cmp-dn{color:var(--bad);font-weight:700}
 table.cmp td.cmp-eq{color:var(--mut)}
+table.cmp{width:100%}
+.cmp-baslik+.cmp-alt+.bar select,#hGrafik .bar select{max-width:100%}
+@media (max-width:600px){
+  .scroll:has(table.cmp){overflow-x:visible}
+  table.cmp{table-layout:fixed;width:100%}
+  table.cmp th{white-space:normal;font-size:10.5px;letter-spacing:0;padding:6px 3px;line-height:1.2;height:auto}
+  table.cmp td,table.cmp tr.tot td{font-size:12.5px;padding:6px 3px;height:auto}
+  table.cmp td.hc-k{white-space:normal;line-height:1.25}
+  table.cmp th:nth-child(1),table.cmp td:nth-child(1){width:27%}
+  table.cmp th:nth-child(2),table.cmp td:nth-child(2){width:19%}
+  table.cmp th:nth-child(3),table.cmp td:nth-child(3){width:19%}
+  table.cmp th:nth-child(4),table.cmp td:nth-child(4){width:16%}
+  table.cmp th:nth-child(5),table.cmp td:nth-child(5){width:19%}
+}
 
 
 /* ===== Göz yormayan, daha belirgin açık/gece tema paleti ===== */
