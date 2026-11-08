@@ -415,6 +415,21 @@ details>summary::-webkit-details-marker{display:none}
 details>summary::before{content:"";width:7px;height:7px;border-right:2px solid var(--mut);border-bottom:2px solid var(--mut);transform:rotate(-45deg);transition:transform .15s;flex:none}
 details[open]>summary::before{transform:rotate(45deg)}
 /* vardiya kartları */
+/* aylık vardiya şampiyonu */
+#vardiyaSamp{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 12px;padding:12px 16px;border-radius:var(--r,10px);border:1px solid var(--line);background:linear-gradient(135deg,color-mix(in srgb,var(--vc,#f59e0b) 18%,var(--card)),var(--card));border-left:4px solid var(--vc,#f59e0b)}
+#vardiyaSamp.hide{display:none}
+#vardiyaSamp .sp-ikon{font-size:30px;line-height:1}
+#vardiyaSamp .sp-ana{flex:1;min-width:160px}
+#vardiyaSamp .sp-k{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+#vardiyaSamp .sp-ad{font-size:18px;font-weight:800;color:var(--vc,#f59e0b)}
+#vardiyaSamp .sp-s{font-size:12px;color:var(--mut)}
+#vardiyaSamp .sp-sira{display:flex;gap:6px;flex-wrap:wrap}
+#vardiyaSamp .sp-chip{display:flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border-radius:999px;background:var(--bg);border:1px solid var(--line);font-size:13px}
+#vardiyaSamp .sp-chip b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:12px;background:var(--c)}
+#vardiyaSamp .sp-chip.ilk{border-color:var(--c)}
+.vbadge{position:relative}
+.vbadge .tac{position:absolute;top:-11px;right:-8px;font-size:15px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+@media (max-width:820px){#vardiyaSamp{padding:8px 10px;gap:8px}#vardiyaSamp .sp-ad{font-size:15px}}
 .vcard{border-top-width:3px}
 .vcard h4{color:var(--vc)}
 .vbadge{box-shadow:0 2px 6px color-mix(in srgb,var(--vc) 45%,transparent)}
@@ -571,6 +586,7 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 <div id="vardiyaBox" class="hide">
   <div id="vardiyaStat" class="stats"></div>
   <div class="sec-head" id="vardiyaHead"><h2>Vardiya listesi</h2><button id="vardiyaYenile" type="button" class="alt sm">Yenile</button></div>
+  <div id="vardiyaSamp" class="hide"></div>
   <div id="vardiyaGrid"></div>
   <p id="vardiyaAtanmamis" class="mut"></p>
   <div id="tumKullanicilar">
@@ -1302,6 +1318,52 @@ async function vardiyaYukle() {
   if (me && isAdmin() && !$("admin").classList.contains("hide")) adminCiz();
   if (me && !$("profil").classList.contains("hide")) $("pVardiya").value = vardiyaOf(myId()) || "";
 }
+
+// ---- Aylık vardiya şampiyonu: ayYukle() ay verisinden her vardiyanın toplamını hesaplar ----
+let ayVardiya = null;   // { ay: "Kasım 2026", top: {A,B,C,D}, say: {A,B,C,D} }
+const VARD_RENK = { A: "#00a7e8", B: "#8b5cf6", C: "#f59e0b", D: "#14b8a6" };
+function ayVardiyaHesapla(kisi, ayAdi, gl) {
+  const top = {}, say = {};
+  VARDIYALAR.forEach(v => { top[v] = 0; say[v] = 0; });
+  kisi.forEach((u, id) => {
+    const v = vardiyaOf(id);   // gizli/listede olmayan hesaplar sayılmaz
+    if (!v || !(v in top)) return;
+    top[v] += gl.reduce((a, g) => a + (u.g[g] || 0), 0);
+  });
+  vardiyaList.forEach(u => { if (u.vardiya in say) say[u.vardiya]++; });
+  ayVardiya = { ay: ayAdi, top, say };
+  sampiyonCiz();
+}
+function sampiyonCiz() {
+  const box = $("vardiyaSamp"); if (!box) return;
+  const grid = $("vardiyaGrid");
+  grid.querySelectorAll(".vbadge .tac").forEach(x => x.remove());
+  box.textContent = "";
+  if (!ayVardiya || !vardiyaListeHazir) { box.classList.add("hide"); return; }
+  const sira = VARDIYALAR.map(v => ({ v, t: yuv(ayVardiya.top[v]) })).sort((a, b) => b.t - a.t);
+  const en = sira[0].t;
+  if (!(en > 0)) { box.classList.add("hide"); return; }
+  const sampler = sira.filter(x => x.t === en).map(x => x.v);   // beraberlikte hepsi şampiyon
+  box.classList.remove("hide");
+  box.style.setProperty("--vc", VARD_RENK[sampler[0]]);
+  const ana = el("div", "sp-ana"), ikon = el("div", "sp-ikon", "🏆");
+  const fark = sampler.length === 1 && sira[1] ? en - sira[1].t : 0;
+  ana.append(el("div", "sp-k", ayVardiya.ay + " vardiya şampiyonu"),
+    el("div", "sp-ad", sampler.map(v => v + " vardiyası").join(" & ")),
+    el("div", "sp-s", fmt(en) + " toplam" + (sampler.length > 1 ? " · berabere" : fark ? " · ikincinin " + fmt(yuv(fark)) + " önünde" : "")));
+  box.append(ikon, ana);
+  const ch = el("div", "sp-sira");
+  sira.forEach(x => {
+    const c = el("div", "sp-chip" + (sampler.includes(x.v) ? " ilk" : "")); c.style.setProperty("--c", VARD_RENK[x.v]);
+    c.append(el("b", "", x.v), document.createTextNode(fmt(x.t))); ch.append(c);
+  });
+  box.append(ch);
+  VARDIYALAR.forEach((v, i) => {
+    if (!sampler.includes(v)) return;
+    const b = grid.children[i] && grid.children[i].querySelector(".vbadge");
+    if (b) b.append(el("span", "tac", "👑"));
+  });
+}
 function vardiyaCiz() {
   const grid = $("vardiyaGrid"); grid.textContent = "";
   const bugunMu = secili === bugun, num = u => parseFloat(u.toplam) || 0;
@@ -1355,6 +1417,7 @@ function vardiyaCiz() {
   tile(bugunMu ? "Aktif kullanıcı" : "Kullanıcı", bugunMu ? aktif + " / " + n : String(n), bugunMu ? "şu an sitede" : "kayıtlı", bugunMu ? "g" : "");
   if (girisSayi != null) tile("Sayfaya giren kişi", String(girisSayi), bugunMu ? "bugün" : $("gunAd").textContent);
   $("vardiyaAtanmamis").textContent = "";
+  sampiyonCiz();
 }
 // Kullanıcı kendi vardiyasını seçer
 $("pVardiya").onchange = async () => {
@@ -2091,6 +2154,7 @@ async function ayYukle() {
   $("aEtiket").textContent = d0.toLocaleDateString("tr-TR", { month: "long", year: "numeric" }) + (say ? " · ortalama, sayı girilen " + say + " günün ortalamasıdır" : "");
   $("aSonra").disabled = ayBaslangic(tarihStr(new Date(d0.getFullYear(), d0.getMonth() + 1, 1))) > bugun;
   $("aBu").disabled = ayBaslangic(bugun) === bas;
+  ayVardiyaHesapla(kisi, d0.toLocaleDateString("tr-TR", { month: "long", year: "numeric" }), gl);
   const hs = $("aStat"); hs.textContent = "";
   const stat = (k, v, sub, cls) => { const c = el("div", "stat" + (cls ? " " + cls : "")); c.append(el("div", "k", k), el("div", "v", v), el("div", "s", sub || "")); hs.append(c); };
   stat("Günlük ortalama", fmt(ort), "sayı girilen günlere göre", "g");
