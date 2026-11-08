@@ -1965,7 +1965,7 @@ function logCiz() {
     tdS.append(el("div", "", mk));
     if (!ad && tekrar.has(l.id)) tdS.append(el("div", "lg-ayni", "↺ Aynı makineye daha önce girdin"));   // SÜRE sütununda: aynı kullanıcı bu makineye daha önce girmiş, arada başka makineye geçip geri dönmüş
     const molaDk = !ad ? (molalar.get(l.id) || 0) : 0;
-    if (molaDk > 0) { const r = el("div", "lg-mola", "☕ Mola dahil (" + molaDk + " dk) · " + saatOf(new Date(l.zaman).getTime() - molaDk * 60000).slice(0, 5) + " → " + saatOf(l.zaman).slice(0, 5)); r.title = "Mola başlangıcı (dönüşten mola süresi kadar önce) → dönüş (bu giriş)"; tdS.append(r); }
+    if (molaDk > 0) { const r = el("div", "lg-mola", "☕ Mola dahil (" + molaDk + " dk) · " + saatOf(new Date(l.zaman).getTime() - l.fark_genel_sn * 1000).slice(0, 5) + " - " + saatOf(new Date(l.zaman).getTime() - molaDk * 60000).slice(0, 5)); r.title = "Mola aralığı: önceki giriş → dönüşten mola süresi kadar önce"; tdS.append(r); }
     if (gn !== "—" && gn !== mk) tdS.append(el("div", "lg-alt", "genel: " + gn + (molaDk ? " · mola hariç: " + sure(l.fark_genel_sn - molaDk * 60) : "")));
     const tdKontrol = el("td", "lg-s");
     const supheli = supheliler.get(l.id);
