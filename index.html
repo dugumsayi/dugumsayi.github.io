@@ -641,7 +641,7 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 
 <details id="logBox" class="hide">
   <summary><strong>Giriş kayıtları ve süre farkı</strong> <span id="logSayi" class="mut"></span></summary>
-  <p class="mut">Seçili günde girilen her sayı saat bilgisiyle kaydedilir. Her satırda kimin girdiği ve makinenin toplamının girişten önceki ve sonraki değeri görünür. Süre farkı, aynı makinedeki ve aynı kullanıcının bir önceki girişinden bu yana geçen süredir.</p>
+  <p class="mut">Seçili günde girilen her sayı saat bilgisiyle kaydedilir. Her satırda kimin girdiği ve makinenin toplamının girişten önceki ve sonraki değeri görünür. Süre farkı, aynı makinedeki ve aynı kullanıcının bir önceki girişinden bu yana geçen süredir. Şüpheli kontrolü makineye özel geçmiş giriş hızını ve değişken süre aralıklarını karşılaştırır; işaretlenen kayıt silinmez veya toplama eklenmesi engellenmez, yönetici incelemesine bırakılır.</p>
   <div class="bar"><select id="logKul" class="hide"></select><select id="logSira"><option value="">Saate göre</option><option value="kb">Makine adı: küçükten büyüğe</option></select><button id="logCsv" class="alt">CSV indir</button><button id="logSil" class="red hide">Görüntülenen kayıtları sil</button></div>
   <p id="logMsg" class="mut hide"></p>
   <div id="logOzet" class="mut"></div>
@@ -1740,7 +1740,7 @@ async function benimSayilarimiSil() {
 onayli($("sayiSil"), benimSayilarimiSil);
 
 // ================= GİRİŞ LOGU + SÜRE FARKI =================
-let logs = [], logOk = true;
+let logs = [], logHistory = [], logOk = true;
 const sure = sn => {
   if (sn == null) return "—";
   sn = Math.round(sn);
@@ -1782,9 +1782,9 @@ const logAd = (l, sm) => (l.kullanici || "?") + (isAdmin() && sm.get(l.user_id) 
 
 async function logYukle() {
   if (!sb) { logs = []; logCiz(); return; }
-  const { data, error } = await sb.from("sayi_log").select("*").eq("tarih", secili).order("zaman", { ascending: false }).limit(2000);
+  const { data, error } = await sb.from("sayi_log").select("*").lte("tarih", secili).order("zaman", { ascending: false }).limit(5000);
   if (error) { logOk = false; logCiz(); return; }   // tablo kurulmamışsa bölüm gizli kalır
-  logOk = true; logs = data || [];
+  logOk = true; logHistory = data || []; logs = logHistory.filter(l => l.tarih === secili);
   if (isAdmin() && !adminList.length) {
     const r = await sb.rpc("admin_kullanicilar");
     if (!r.error) adminList = r.data || [];
@@ -1870,6 +1870,43 @@ setInterval(() => {
   try { if (logOk) logOzetCiz(logGorunen(), sicilHarita()); ozetKartlar(); } catch (e) {}
 }, 10000);
 
+// Şüpheli sayı kontrolü:
+// - Sabit dakika aralığı kullanılmaz; her makinenin iki girişi arasındaki gerçek süre hesaplanır.
+// - Makineye özel geçmiş hızları öğrenilir. En az 3 önceki aralık oluşmadan karar verilmez.
+// - Yeni giriş, o makinenin daha önce görülen en yüksek giriş hızını aşarsa incelemeye işaretlenir.
+// - Bu ayar engelleme yapmaz; kayıt korunur ve inceleme etiketi gösterilir.
+function supheliGirisHaritasi() {
+  const sonuc = new Map(), sirali = logHistory
+    .filter(l => l.sutun !== "makine" && l.yeni != null)
+    .slice()
+    .sort((a, b) => new Date(a.zaman) - new Date(b.zaman));
+  const makineDurum = new Map();
+  sirali.forEach(l => {
+    const anahtar = (l.makine || "").trim().toLocaleLowerCase("tr");
+    if (!anahtar) return;
+    const zaman = new Date(l.zaman).getTime();
+    const onceki = makineDurum.get(anahtar) || { zaman: null, hizlar: [] };
+    const eklenen = Math.max(0, logFark(l) || 0);
+    if (onceki.zaman != null) {
+      const dakika = (zaman - onceki.zaman) / 60000;
+      if (dakika > 0 && onceki.hizlar.length >= 3) {
+        const enYuksekHiz = Math.max(...onceki.hizlar);
+        const makulUstSinir = enYuksekHiz * dakika;
+        if (eklenen > makulUstSinir) {
+          sonuc.set(l.id, {
+            durum: "inceleme",
+            aciklama: "Bu makinenin geçmiş giriş hızını aşıyor"
+          });
+        }
+      }
+      if (dakika > 0 && eklenen > 0) onceki.hizlar.push(eklenen / dakika);
+    }
+    onceki.zaman = zaman;
+    makineDurum.set(anahtar, onceki);
+  });
+  return sonuc;
+}
+
 function logCiz() {
   const box = $("logBox");
   if (!logOk) { box.classList.add("hide"); ozetKartlar(); return; }
@@ -1897,9 +1934,9 @@ function logCiz() {
   const box2 = $("logTbl"); box2.textContent = "";
   if (!list.length) { box2.append(el("p", "mut", "Bu tarihte kayıt yok.")); return; }
   const tbl = el("table", "at lg"), head = el("thead"), hr = el("tr"), body = el("tbody");
-  ["SAAT", "KİM", "MAKİNE", "EKLENEN", "TOPLAM", "SÜRE"].concat(isAdmin() ? [""] : []).forEach(h => hr.append(el("th", "", h)));
+  ["SAAT", "KİM", "MAKİNE", "EKLENEN", "TOPLAM", "SÜRE", "KONTROL"].concat(isAdmin() ? [""] : []).forEach(h => hr.append(el("th", "", h)));
   head.append(hr); tbl.append(head);
-  const th = toplamHarita();
+  const th = toplamHarita(), supheliler = supheliGirisHaritasi();
   // "Aynı makineye daha önce girdin": kullanıcı bu makineye daha önce girmiş, bir önceki girişi başka makineyse ve şimdi geri dönmüşse
   const tekrar = new Set(), kGor = new Map();
   logs.filter(l => l.sutun !== "makine" && l.yeni != null).slice().sort((a, b) => new Date(a.zaman) - new Date(b.zaman)).forEach(l => {
@@ -1920,9 +1957,20 @@ function logCiz() {
     tdS.append(el("div", "", mk));
     if (!ad && tekrar.has(l.id)) tdS.append(el("div", "lg-ayni", "↺ Aynı makineye daha önce girdin"));   // SÜRE sütununda: aynı kullanıcı bu makineye daha önce girmiş, arada başka makineye geçip geri dönmüş
     if (gn !== "—" && gn !== mk) tdS.append(el("div", "lg-alt", "genel: " + gn));
+    const tdKontrol = el("td", "lg-s");
+    const supheli = supheliler.get(l.id);
+    if (supheli) {
+      const etiket = el("span", "lg-ayni", "⚠ İnceleme");
+      etiket.title = supheli.aciklama;
+      tdKontrol.append(etiket);
+    } else if (!ad) {
+      tdKontrol.append(el("span", "lg-alt", "Normal"));
+    } else {
+      tdKontrol.textContent = "—";
+    }
     tr.append(el("td", "lg-t", saatOf(l.zaman)),
       el("td", "", (l.kullanici || "?") + (isAdmin() && sm.get(l.user_id) ? " [" + sm.get(l.user_id) + "]" : "") + (l.user_id === myId() ? " (siz)" : "")),
-      tdMk, tdE, el("td", "lg-tp", toplamOkYaz(l, hs)), tdS);
+      tdMk, tdE, el("td", "lg-tp", toplamOkYaz(l, hs)), tdS, tdKontrol);
     if (isAdmin()) {
       const td = el("td", "act"), b = el("button", "sm red", "Sil");
       onayli(b, () => logSil([l.id]));
@@ -1937,11 +1985,11 @@ function logCsv() {
   const list = logGorunen(), sm = sicilHarita();
   if (!list.length) { msg("İndirilecek kayıt yok."); return; }
   const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-  const baslik = ["Tarih", "Saat", "Kullanıcı"].concat(isAdmin() ? ["Sicil"] : [], ["Makine", "İşlem", "Eklenen", "Önceki toplam", "Sonraki toplam", "Makinede önceki girişten (sn)", "Genel önceki girişten (sn)"]);
+  const baslik = ["Tarih", "Saat", "Kullanıcı"].concat(isAdmin() ? ["Sicil"] : [], ["Makine", "İşlem", "Eklenen", "Önceki toplam", "Sonraki toplam", "Makinede önceki girişten (sn)", "Genel önceki girişten (sn)", "Şüpheli kontrol"]);
   const satirlar = [baslik.map(q).join(";")];
-  const dv = v => v == null ? "" : toplamYaz(v), th = toplamHarita();
+  const dv = v => v == null ? "" : toplamYaz(v), th = toplamHarita(), supheliler = supheliGirisHaritasi();
   list.slice().reverse().forEach(l => satirlar.push([secili, saatOf(l.zaman), l.kullanici].concat(isAdmin() ? [sm.get(l.user_id) || ""] : [],
-    [makineYaz(l), l.islem, eklenenYaz(l), dv(l.toplam_once ?? (th.get(l.id) || [])[0]), dv(l.toplam_sonra ?? (th.get(l.id) || [])[1]), l.fark_makine_sn, l.fark_genel_sn]).map(q).join(";")));
+    [makineYaz(l), l.islem, eklenenYaz(l), dv(l.toplam_once ?? (th.get(l.id) || [])[0]), dv(l.toplam_sonra ?? (th.get(l.id) || [])[1]), l.fark_makine_sn, l.fark_genel_sn, supheliler.has(l.id) ? "İNCELEME" : "Normal"]).map(q).join(";")));
   const blob = new Blob(["\ufeff" + satirlar.join("\r\n")], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "giris-kayitlari-" + secili + ".csv";
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
