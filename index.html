@@ -1965,7 +1965,7 @@ function logCiz() {
     tdS.append(el("div", "", mk));
     if (!ad && tekrar.has(l.id)) tdS.append(el("div", "lg-ayni", "↺ Aynı makineye daha önce girdin"));   // SÜRE sütununda: aynı kullanıcı bu makineye daha önce girmiş, arada başka makineye geçip geri dönmüş
     const molaDk = !ad ? (molalar.get(l.id) || 0) : 0;
-    if (molaDk > 0) { const r = el("div", "lg-mola", "☕ Mola dahil (" + molaDk + " dk)"); r.title = "Genel süre, mola aralığıyla çakışıyor"; tdS.append(r); }
+    if (molaDk > 0) { const r = el("div", "lg-mola", "☕ Mola dahil (" + molaDk + " dk) · " + saatOf(new Date(l.zaman).getTime() - l.fark_genel_sn * 1000).slice(0, 5) + " → " + saatOf(l.zaman).slice(0, 5)); r.title = "Molaya çıkış (önceki giriş) → dönüş (bu giriş)"; tdS.append(r); }
     if (gn !== "—" && gn !== mk) tdS.append(el("div", "lg-alt", "genel: " + gn + (molaDk ? " · mola hariç: " + sure(l.fark_genel_sn - molaDk * 60) : "")));
     const tdKontrol = el("td", "lg-s");
     const supheli = supheliler.get(l.id);
@@ -1999,7 +1999,7 @@ function molaHaritasi() {
   const m = new Map(), gorulen = new Set(), dk = x => { const [h, mi] = x.split(":").map(Number); return h * 60 + mi; };
   logs.filter(l => l.sutun !== "makine" && l.yeni != null && l.fark_genel_sn >= MOLA_DK * 60)
     .slice().sort((x, y) => new Date(x.zaman) - new Date(y.zaman)).forEach(l => {
-      const bit = new Date(l.zaman).getTime(), bas = bit - l.fark_genel_sn * 1000, g0 = new Date(bas); g0.setHours(0, 0, 0, 0);
+      const bit = new Date(l.zaman).getTime(), bas = bit - l.fark_genel_sn * 1000, g0 = new Date(Math.floor((bas + 3 * 3600000) / 86400000) * 86400000 - 3 * 3600000);   // gün başlangıcı: İstanbul saati (saatOf ile aynı)
       let top = 0;
       for (let g = 0; g <= 1; g++) MOLA_PENCERELERI.forEach(([a, b], i) => {   // g: gece yarısını geçen aralıklar için 2 gün
         const k = l.user_id + "|" + (g0.getTime() + g * 86400000) + "|" + i;
