@@ -1046,7 +1046,8 @@ function renderShared() {
       .sort((a, b) => adKar(a.name, b.name) || a.satir - b.satir); // makine adı küçükten büyüğe
     const card = el("div", "ucard");
     card.append(el("h3", "", u.ad + (uid === myId() ? " (siz)" : "")));
-    if (!list.length) return;   // girişi olmayan kullanıcının kartı gösterilmez
+    // Hiç sayı girilmemiş tablo (yalnızca makine adı olan veya boş) diğer kişilere gösterilmez.
+    if (!list.length || !list.some(r => COLS.some(k => r[k] != null && String(r[k]).trim() !== ""))) return;
     const wrap = el("div", "scroll"), tbl = el("table"), head = el("thead"), hr = el("tr");
     ["MAKİNE","SAYI"].forEach(h => hr.append(el("th", "", h)));
     head.append(hr); tbl.append(head);
