@@ -179,6 +179,8 @@ table.lg .lg-mk{font-weight:600}
 table.lg .lg-alt{font-size:11px;font-weight:400;color:var(--mut)}
 table.lg .lg-ayni{display:inline-block;margin-top:3px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;color:#b45309;background:rgba(245,158,11,.18);border:1px solid rgba(245,158,11,.55)}
 @media (prefers-color-scheme:dark){table.lg .lg-ayni{color:#fbbf24;background:rgba(251,191,36,.14);border-color:rgba(251,191,36,.5)}}
+table.lg .lg-mola{display:inline-block;margin-top:3px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;color:#0369a1;background:rgba(14,165,233,.15);border:1px solid rgba(14,165,233,.5)}
+@media (prefers-color-scheme:dark){table.lg .lg-mola{color:#7dd3fc;background:rgba(56,189,248,.14);border-color:rgba(56,189,248,.5)}}
 table.lg .lg-e span{display:inline-block;min-width:44px;text-align:center;font-weight:700;border-radius:999px;padding:1px 10px;background:var(--bg);border:1px solid var(--line)}
 table.lg .lg-e .lg-art{color:#2ecc40;border-color:#2ecc4066}
 table.lg .lg-e .lg-eks,table.lg .lg-e .lg-sil{color:#e5484d;border-color:#e5484d66}
@@ -1942,7 +1944,7 @@ function logCiz() {
   const tbl = el("table", "at lg"), head = el("thead"), hr = el("tr"), body = el("tbody");
   ["SAAT", "KİM", "MAKİNE", "EKLENEN", "TOPLAM", "SÜRE", "KONTROL"].concat(isAdmin() ? [""] : []).forEach(h => hr.append(el("th", "", h)));
   head.append(hr); tbl.append(head);
-  const th = toplamHarita(), supheliler = supheliGirisHaritasi();
+  const th = toplamHarita(), supheliler = supheliGirisHaritasi(), molalar = molaHaritasi();
   // "Aynı makineye daha önce girdin": kullanıcı bu makineye daha önce girmiş, bir önceki girişi başka makineyse ve şimdi geri dönmüşse
   const tekrar = new Set(), kGor = new Map();
   logs.filter(l => l.sutun !== "makine" && l.yeni != null).slice().sort((a, b) => new Date(a.zaman) - new Date(b.zaman)).forEach(l => {
@@ -1962,7 +1964,9 @@ function logCiz() {
     const tdS = el("td", "lg-s"), mk = sure(l.fark_makine_sn), gn = sure(l.fark_genel_sn);
     tdS.append(el("div", "", mk));
     if (!ad && tekrar.has(l.id)) tdS.append(el("div", "lg-ayni", "↺ Aynı makineye daha önce girdin"));   // SÜRE sütununda: aynı kullanıcı bu makineye daha önce girmiş, arada başka makineye geçip geri dönmüş
-    if (gn !== "—" && gn !== mk) tdS.append(el("div", "lg-alt", "genel: " + gn));
+    const molaDk = !ad ? (molalar.get(l.id) || 0) : 0;
+    if (molaDk > 0) { const r = el("div", "lg-mola", "☕ Mola dahil (" + molaDk + " dk)"); r.title = "Genel süre, mola aralığıyla çakışıyor"; tdS.append(r); }
+    if (gn !== "—" && gn !== mk) tdS.append(el("div", "lg-alt", "genel: " + gn + (molaDk ? " · mola hariç: " + sure(l.fark_genel_sn - molaDk * 60) : "")));
     const tdKontrol = el("td", "lg-s");
     const supheli = supheliler.get(l.id);
     if (supheli) {
@@ -1987,15 +1991,27 @@ function logCiz() {
   tbl.append(body); box2.append(tbl);
 }
 
+// Mola: her kullanıcının her 8 saatlik vardiyasında, genel süresi MOLA_DK (35 dk) veya daha uzun olan İLK giriş molalı sayılır ve 35 dk düşülür.
+function molaHaritasi() {
+  const m = new Map(), gorulen = new Set(), H8 = 8 * 3600000;
+  logs.filter(l => l.sutun !== "makine" && l.yeni != null && l.fark_genel_sn >= MOLA_DK * 60)
+    .slice().sort((x, y) => new Date(x.zaman) - new Date(y.zaman)).forEach(l => {
+      const k = l.user_id + "|" + Math.floor((new Date(l.zaman).getTime() + 3 * 3600000) / H8);   // vardiya sınırları vardiya hesabıyla aynı
+      if (gorulen.has(k)) return;
+      gorulen.add(k); m.set(l.id, MOLA_DK);
+    });
+  return m;
+}
+
 function logCsv() {
   const list = logGorunen(), sm = sicilHarita();
   if (!list.length) { msg("İndirilecek kayıt yok."); return; }
   const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-  const baslik = ["Tarih", "Saat", "Kullanıcı"].concat(isAdmin() ? ["Sicil"] : [], ["Makine", "İşlem", "Eklenen", "Önceki toplam", "Sonraki toplam", "Makinede önceki girişten (sn)", "Genel önceki girişten (sn)", "Şüpheli kontrol"]);
+  const baslik = ["Tarih", "Saat", "Kullanıcı"].concat(isAdmin() ? ["Sicil"] : [], ["Makine", "İşlem", "Eklenen", "Önceki toplam", "Sonraki toplam", "Makinede önceki girişten (sn)", "Genel önceki girişten (sn)", "Mola (dk)", "Şüpheli kontrol"]);
   const satirlar = [baslik.map(q).join(";")];
-  const dv = v => v == null ? "" : toplamYaz(v), th = toplamHarita(), supheliler = supheliGirisHaritasi();
+  const dv = v => v == null ? "" : toplamYaz(v), th = toplamHarita(), supheliler = supheliGirisHaritasi(); const molalar = molaHaritasi();
   list.slice().reverse().forEach(l => satirlar.push([secili, saatOf(l.zaman), l.kullanici].concat(isAdmin() ? [sm.get(l.user_id) || ""] : [],
-    [makineYaz(l), l.islem, eklenenYaz(l), dv(l.toplam_once ?? (th.get(l.id) || [])[0]), dv(l.toplam_sonra ?? (th.get(l.id) || [])[1]), l.fark_makine_sn, l.fark_genel_sn, supheliler.has(l.id) ? "İNCELEME" : "Normal"]).map(q).join(";")));
+    [makineYaz(l), l.islem, eklenenYaz(l), dv(l.toplam_once ?? (th.get(l.id) || [])[0]), dv(l.toplam_sonra ?? (th.get(l.id) || [])[1]), l.fark_makine_sn, l.fark_genel_sn, molalar.get(l.id) || 0, supheliler.has(l.id) ? "İNCELEME" : "Normal"]).map(q).join(";")));
   const blob = new Blob(["\ufeff" + satirlar.join("\r\n")], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "giris-kayitlari-" + secili + ".csv";
   document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
