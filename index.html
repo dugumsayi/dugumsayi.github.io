@@ -189,6 +189,8 @@ table.lg .lg-e .lg-eks,table.lg .lg-e .lg-sil{color:#e5484d;border-color:#e5484d
 table.lg .lg-tp{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
 table.lg tr.lg-ad td{opacity:.75}
 /* Şüpheli giriş: kırmızı */
+td.sup,tr.tot td.sup{color:#fff!important;background:#d33!important;font-weight:800}
+.ucard h3 .supb{display:inline-block;margin-left:8px;padding:1px 9px;border-radius:999px;font-size:12px;font-weight:700;color:#fff;background:#d33;vertical-align:middle}
 table.lg tr.lg-sup td{background:rgba(229,72,77,.12)!important}
 table.lg .lg-e .lg-supn{color:#fff!important;background:#d33!important;border-color:#d33!important}
 table.lg .lg-supt{display:inline-block;margin-top:3px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;color:#d33;background:rgba(229,72,77,.15);border:1px solid rgba(229,72,77,.6)}
@@ -1086,11 +1088,22 @@ function renderShared() {
     (a[0] === myId() ? -1 : 0) - (b[0] === myId() ? -1 : 0) || a[1].ad.localeCompare(b[1].ad, "tr"));
   let grand = 0;
   const agg = new Map();
+  // Şüpheli girişi olan (kullanıcı + makine) çiftleri ve kullanıcılar: ilgili sayılar kırmızı gösterilir
+  const supM = new Set(), supU = new Map(), supAgg = new Set();
+  try {
+    logs.forEach(l => {
+      if (!supheNedeni(l)) return;
+      const k = (l.makine || "").trim().toLocaleLowerCase("tr") || "(adsız)";
+      supM.add(l.user_id + "|" + k); supAgg.add(k); supU.set(l.user_id, (supU.get(l.user_id) || 0) + 1);
+    });
+  } catch (e) {}
   users.forEach(([uid, u]) => {
     const list = u.list.filter(r => (r.name || "").trim() || COLS.some(k => r[k] != null && r[k] !== ""))
       .sort((a, b) => adKar(a.name, b.name) || a.satir - b.satir); // makine adı küçükten büyüğe
     const card = el("div", "ucard");
-    card.append(el("h3", "", u.ad + (uid === myId() ? " (siz)" : "")));
+    const h3 = el("h3", "", u.ad + (uid === myId() ? " (siz)" : ""));
+    if (supU.get(uid)) h3.append(el("span", "supb", "⚠ " + supU.get(uid) + " şüpheli giriş"));
+    card.append(h3);
     // Hiç sayı girilmemiş tablo (yalnızca makine adı olan veya boş) diğer kişilere gösterilmez.
     if (!list.length || !list.some(r => COLS.some(k => r[k] != null && String(r[k]).trim() !== ""))) return;
     const wrap = el("div", "scroll"), tbl = el("table"), head = el("thead"), hr = el("tr");
@@ -1102,10 +1115,10 @@ function renderShared() {
       const nm = (r.name || "").trim() || "(adsız)", key = nm.toLocaleLowerCase("tr");
       const cur = agg.get(key) || { nm, s: 0 }; cur.s += s; agg.set(key, cur);
       tr.append(el("td", "sn", r.name || ""));
-      tr.append(el("td", "t", fmt(s))); body.append(tr);
+      tr.append(el("td", "t" + (supM.has(uid + "|" + key) ? " sup" : ""), fmt(s))); body.append(tr);
     });
     const ft = el("tr", "tot");
-    ft.append(el("td", "", "TOPLAM"), el("td", "", fmt(total))); body.append(ft);
+    ft.append(el("td", "", "TOPLAM"), el("td", supU.get(uid) ? "sup" : "", fmt(total))); body.append(ft);
     tbl.append(body); wrap.append(tbl);
     const rb = el("button", "alt sm", "Resim olarak kaydet"); rb.type = "button";
     rb.onclick = () => tabloResim(tbl, "", "makine-tablosu");
@@ -1120,7 +1133,7 @@ function renderShared() {
     const tbl = el("table"), head = el("thead"), hr = el("tr"), body = el("tbody");
     ["MAKİNE","SAYI"].forEach(h => hr.append(el("th", "", h))); head.append(hr); tbl.append(head);
     [...agg.values()].sort((a, b) => adKar(a.nm === "(adsız)" ? "" : a.nm, b.nm === "(adsız)" ? "" : b.nm)).forEach(x => {
-      const tr = el("tr"); tr.append(el("td", "sn", x.nm), el("td", "t", fmt(x.s))); body.append(tr);
+      const tr = el("tr"); tr.append(el("td", "sn", x.nm), el("td", "t" + (supAgg.has(x.nm.toLocaleLowerCase("tr")) ? " sup" : ""), fmt(x.s))); body.append(tr);
     });
     const ft = el("tr", "tot"); ft.append(el("td", "", "GENEL TOPLAM"), el("td", "", fmt(grand))); body.append(ft);
     tbl.append(body); ab.append(tbl);
@@ -1955,6 +1968,7 @@ setInterval(() => {
 }, 10000);
 
 function logCiz() {
+  try { renderShared(); } catch (e) {}   // kırmızı işaretler ana tablolarda da görünsün
   const box = $("logBox");
   if (!logOk) { box.classList.add("hide"); ozetKartlar(); return; }
   box.classList.remove("hide");
