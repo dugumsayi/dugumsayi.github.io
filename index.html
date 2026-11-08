@@ -311,6 +311,11 @@ table.hc-tbl td.hc-n,table.hc-tbl th{text-align:center}
 table.hc-tbl td.hc-k{white-space:nowrap;font-weight:600}
 table.hc-tbl td.hc-s{font-weight:700}
 table.hc-tbl tr.tot td{font-size:14px;padding:4px 10px}
+.cmp-baslik{margin:16px 0 6px;font-size:15px;font-weight:700}
+.cmp-alt{margin:0 0 8px;font-size:12px}
+table.cmp td.cmp-up{color:var(--ok);font-weight:700}
+table.cmp td.cmp-dn{color:var(--bad);font-weight:700}
+table.cmp td.cmp-eq{color:var(--mut)}
 
 
 /* ===== Göz yormayan, daha belirgin açık/gece tema paleti ===== */
@@ -2023,7 +2028,28 @@ async function haftaYukle() {
     else haftaGiris = null;
   } catch (e) { haftaGiris = null; }
   if (seq !== haftaSeq) return;
+  haftaOnceki = await oncekiHaftaYukle(gunler);
+  if (seq !== haftaSeq) return;
   haftaCiz(gunler, kisi);
+}
+
+// Karşılaştırma için bir önceki haftanın günlük toplamları (tarih -> toplam; kayıt yoksa anahtar yok)
+let haftaOnceki = {};
+async function oncekiHaftaYukle(gunler) {
+  const onc = gunler.map(g => tarihStr(gunEkle(new Date(g + "T12:00:00"), -7))), sonuc = { gunler: onc, g: {} };
+  try {
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await sb.from("sayilar").select("tarih,n1,n2,n3,n4,n5,n6")
+        .gte("tarih", onc[0]).lte("tarih", onc[6]).order("tarih").range(from, from + 999);
+      if (error) return sonuc;
+      data.forEach(r => {
+        if (!COLS.some(k => r[k] != null && r[k] !== "")) return;
+        sonuc.g[r.tarih] = (sonuc.g[r.tarih] || 0) + rsum(r);
+      });
+      if (data.length < 1000) break;
+    }
+  } catch (e) {}
+  return sonuc;
 }
 
 const HC_RENK = ["#3f6ef0", "#7c5cf0", "#e0a030", "#14a898", "#e0484f", "#d9468f", "#7fb539", "#5b6ee1"];
@@ -2120,6 +2146,32 @@ function haftaCiz(gunler, kisi) {
   gunTop.forEach((v, i) => ft.append(el("td", "", dolu[i] ? fmt(v) : "—")));
   ft.append(el("td", "", fmt(toplam))); body.append(ft);
   tbl.append(body); wrap.append(tbl); box.append(wrap);
+
+  // ---- Karşılaştırma tablosu: bu hafta ↔ geçen hafta (gün gün) ----
+  const onc = haftaOnceki && haftaOnceki.gunler ? haftaOnceki : { gunler: [], g: {} };
+  const farkHucre = (a, b) => {   // a: bu hafta, b: geçen hafta
+    if (a == null || b == null) return [el("td", "hc-n", "—"), el("td", "hc-n", "—")];
+    const f = yuv(a - b), cls = f > 0 ? "cmp-up" : f < 0 ? "cmp-dn" : "cmp-eq";
+    const yz = b ? (f > 0 ? "+" : "") + fmt(yuv(f / b * 100)) + "%" : "—";
+    return [el("td", "hc-n " + cls, (f > 0 ? "+" : "") + fmt(f)), el("td", "hc-n " + cls, yz)];
+  };
+  box.append(el("div", "cmp-baslik", "Karşılaştırma: bu hafta ↔ geçen hafta"));
+  box.append(el("div", "cmp-alt mut", kisa(gunler[0]) + " – " + kisa(gunler[6]) + "  ile  " + (onc.gunler[0] ? kisa(onc.gunler[0]) + " – " + kisa(onc.gunler[6]) : "geçen hafta") + " karşılaştırılıyor"));
+  const cw = el("div", "scroll"), ct = el("table", "at hc-tbl cmp"), ch = el("thead"), chr = el("tr"), cb = el("tbody");
+  ["GÜN", "BU HAFTA", "GEÇEN HAFTA", "FARK", "DEĞİŞİM"].forEach(h => chr.append(el("th", "", h))); ch.append(chr); ct.append(ch);
+  let tA = 0, tB = 0;
+  gunler.forEach((g, i) => {
+    const a = dolu[i] ? gunTop[i] : null, bv = onc.g[onc.gunler[i]], b = bv != null ? yuv(bv) : null;
+    const tr = el("tr"); tr.append(el("td", "hc-k", GUN_KISA[i]), el("td", "hc-n hc-s", a != null ? fmt(a) : "—"), el("td", "hc-n", b != null ? fmt(b) : "—"));
+    farkHucre(a, b).forEach(c => tr.append(c)); cb.append(tr);
+    if (a != null) { tA += a; tB += (b || 0); }
+  });
+  const onAktif = onc.gunler.filter(d => onc.g[d] != null), onTop = yuv(onAktif.reduce((x, d) => x + onc.g[d], 0)), onOrt = onAktif.length ? yuv(onTop / onAktif.length) : null;
+  const satir = (ad, a, b, cls) => { const tr = el("tr", cls); tr.append(el("td", "hc-k", ad), el("td", "hc-n hc-s", a != null ? fmt(a) : "—"), el("td", "hc-n", b != null ? fmt(b) : "—")); farkHucre(a, b).forEach(c => tr.append(c)); return tr; };
+  cb.append(satir("Günlük ortalama", ort, onOrt));
+  const tot = satir("TOPLAM (aynı günler)", yuv(tA), yuv(tB), "tot"); cb.append(tot);
+  ct.append(cb); cw.append(ct); box.append(cw);
+  box.append(el("p", "mut cmp-alt", "Toplam satırı, bu haftada sayı girilen günlerle geçen haftanın aynı günlerini kıyaslar. Günlük ortalama her haftanın kendi sayı girilen günlerine göredir."));
 }
 
 $("hOnce").onclick = () => { secili = tarihStr(gunEkle(haftaPzt(secili), -7)); hazirla(); };
