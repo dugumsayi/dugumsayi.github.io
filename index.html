@@ -188,14 +188,6 @@ table.lg .lg-e .lg-art{color:#2ecc40;border-color:#2ecc4066}
 table.lg .lg-e .lg-eks,table.lg .lg-e .lg-sil{color:#e5484d;border-color:#e5484d66}
 table.lg .lg-tp{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
 table.lg tr.lg-ad td{opacity:.75}
-/* Şüpheli giriş: kırmızı */
-td.sup,tr.tot td.sup{color:#fff!important;background:#d33!important;font-weight:800}
-.ucard h3 .supb{display:inline-block;margin-left:8px;padding:1px 9px;border-radius:999px;font-size:12px;font-weight:700;color:#fff;background:#d33;vertical-align:middle}
-table.lg tr.lg-sup td{background:rgba(229,72,77,.12)!important}
-table.lg .lg-e .lg-supn{color:#fff!important;background:#d33!important;border-color:#d33!important}
-table.lg .lg-supt{display:inline-block;margin-top:3px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;color:#d33;background:rgba(229,72,77,.15);border:1px solid rgba(229,72,77,.6)}
-.oz-chip.sup{border-color:#d33;background:rgba(229,72,77,.12)}
-.oz-chip.sup b,.oz-chip.sup small{color:#d33}
 /* Profil paneli: iki sütun + kapat düğmesi */
 #profil{display:block;max-width:none;padding:16px 18px}
 .p-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 12px}
@@ -1088,22 +1080,11 @@ function renderShared() {
     (a[0] === myId() ? -1 : 0) - (b[0] === myId() ? -1 : 0) || a[1].ad.localeCompare(b[1].ad, "tr"));
   let grand = 0;
   const agg = new Map();
-  // Şüpheli girişi olan (kullanıcı + makine) çiftleri ve kullanıcılar: ilgili sayılar kırmızı gösterilir
-  const supM = new Set(), supU = new Map(), supAgg = new Set();
-  try {
-    logs.forEach(l => {
-      if (!supheNedeni(l)) return;
-      const k = (l.makine || "").trim().toLocaleLowerCase("tr") || "(adsız)";
-      supM.add(l.user_id + "|" + k); supAgg.add(k); supU.set(l.user_id, (supU.get(l.user_id) || 0) + 1);
-    });
-  } catch (e) {}
   users.forEach(([uid, u]) => {
     const list = u.list.filter(r => (r.name || "").trim() || COLS.some(k => r[k] != null && r[k] !== ""))
       .sort((a, b) => adKar(a.name, b.name) || a.satir - b.satir); // makine adı küçükten büyüğe
     const card = el("div", "ucard");
-    const h3 = el("h3", "", u.ad + (uid === myId() ? " (siz)" : ""));
-    if (supU.get(uid)) h3.append(el("span", "supb", "⚠ " + supU.get(uid) + " şüpheli giriş"));
-    card.append(h3);
+    card.append(el("h3", "", u.ad + (uid === myId() ? " (siz)" : "")));
     // Hiç sayı girilmemiş tablo (yalnızca makine adı olan veya boş) diğer kişilere gösterilmez.
     if (!list.length || !list.some(r => COLS.some(k => r[k] != null && String(r[k]).trim() !== ""))) return;
     const wrap = el("div", "scroll"), tbl = el("table"), head = el("thead"), hr = el("tr");
@@ -1115,10 +1096,10 @@ function renderShared() {
       const nm = (r.name || "").trim() || "(adsız)", key = nm.toLocaleLowerCase("tr");
       const cur = agg.get(key) || { nm, s: 0 }; cur.s += s; agg.set(key, cur);
       tr.append(el("td", "sn", r.name || ""));
-      tr.append(el("td", "t" + (supM.has(uid + "|" + key) ? " sup" : ""), fmt(s))); body.append(tr);
+      tr.append(el("td", "t", fmt(s))); body.append(tr);
     });
     const ft = el("tr", "tot");
-    ft.append(el("td", "", "TOPLAM"), el("td", supU.get(uid) ? "sup" : "", fmt(total))); body.append(ft);
+    ft.append(el("td", "", "TOPLAM"), el("td", "", fmt(total))); body.append(ft);
     tbl.append(body); wrap.append(tbl);
     const rb = el("button", "alt sm", "Resim olarak kaydet"); rb.type = "button";
     rb.onclick = () => tabloResim(tbl, "", "makine-tablosu");
@@ -1133,7 +1114,7 @@ function renderShared() {
     const tbl = el("table"), head = el("thead"), hr = el("tr"), body = el("tbody");
     ["MAKİNE","SAYI"].forEach(h => hr.append(el("th", "", h))); head.append(hr); tbl.append(head);
     [...agg.values()].sort((a, b) => adKar(a.nm === "(adsız)" ? "" : a.nm, b.nm === "(adsız)" ? "" : b.nm)).forEach(x => {
-      const tr = el("tr"); tr.append(el("td", "sn", x.nm), el("td", "t" + (supAgg.has(x.nm.toLocaleLowerCase("tr")) ? " sup" : ""), fmt(x.s))); body.append(tr);
+      const tr = el("tr"); tr.append(el("td", "sn", x.nm), el("td", "t", fmt(x.s))); body.append(tr);
     });
     const ft = el("tr", "tot"); ft.append(el("td", "", "GENEL TOPLAM"), el("td", "", fmt(grand))); body.append(ft);
     tbl.append(body); ab.append(tbl);
@@ -1807,42 +1788,6 @@ const sure = sn => {
 };
 const saatOf = z => new Date(z).toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 const toplamYaz = v => v == null ? "—" : fmt(parseFloat(v));
-// ŞÜPHELİ SAYI KURALLARI (4 SAATLİK HIZA GÖRE; değerleri buradan değiştirebilirsiniz)
-const SUPHE_PENCERE_SA = 4;   // kayan pencere: bir kişinin herhangi bir 4 saatlik sürede girdiği toplam sayı
-const SUPHE_4SA = 450;        // 4 saatte bundan fazla sayı girildiyse şüpheli (hedef hızla 4 saat ≈ 298; 1,5 katı ≈ 450 → ≈112 sayı/saat)
-const SUPHE_TEK = 100;        // tek girişte bu sayıdan fazlası eklendiyse (süre ne olursa olsun) şüpheli
-let _shCache = { logs: null, m: new Map(), max: new Map() };
-// Her kullanıcı için giriş zamanına göre sıralayıp son 4 saatteki toplamı kayan pencereyle hesaplar
-function supheHarita() {
-  if (_shCache.logs === logs) return _shCache;
-  const m = new Map(), max = new Map(), per = new Map(), W = SUPHE_PENCERE_SA * 3600000;
-  logs.filter(l => l.sutun !== "makine" && l.yeni != null).forEach(l => {
-    if (!per.has(l.user_id)) per.set(l.user_id, []);
-    per.get(l.user_id).push(l);
-  });
-  per.forEach((arr, uid) => {
-    arr.sort((a, b) => new Date(a.zaman) - new Date(b.zaman));
-    let bas = 0, toplam = 0, en = 0; const t = arr.map(l => new Date(l.zaman).getTime()), d = arr.map(l => Math.max(logFark(l) || 0, 0));
-    for (let i = 0; i < arr.length; i++) {
-      toplam += d[i];
-      while (t[i] - t[bas] >= W) { toplam -= d[bas]; bas++; }
-      en = Math.max(en, toplam);
-      if (toplam > SUPHE_4SA && d[i] > 0)
-        m.set(arr[i].id, "son " + SUPHE_PENCERE_SA + " saatte " + fmt(Math.round(toplam * 10) / 10) + " sayı (" + fmt(Math.round(toplam / SUPHE_PENCERE_SA * 10) / 10) + "/saat)");
-    }
-    max.set(uid, en);
-  });
-  _shCache = { logs, m, max };
-  return _shCache;
-}
-// Bir log satırı şüpheliyse açıklama metnini, değilse null döndürür
-function supheNedeni(l) {
-  if (l.sutun === "makine") return null;
-  const d = logFark(l);
-  if (d == null || d <= 0 || (l.yeni == null && l.eski != null)) return null;
-  if (d > SUPHE_TEK) return "tek girişte çok yüksek (" + fmt(d) + ")";
-  return supheHarita().m.get(l.id) || null;
-}
 // Log: bu girişte toplama ne eklendi / çıkarıldı (+16, −10, silindi)
 const logFark = l => l.sutun === "makine" ? null : (parseFloat(l.yeni) || 0) - (parseFloat(l.eski) || 0);
 function eklenenYaz(l) {
@@ -1894,7 +1839,6 @@ function ozetGrupla(list, sm) {
   list.filter(l => l.sutun !== "makine").forEach(l => {
     if (!grp.has(l.user_id)) grp.set(l.user_id, { uid: l.user_id, ad: logAd(l, sm) + (l.user_id === myId() ? " (siz)" : ""), t: [], net: 0 });
     const g = grp.get(l.user_id);
-    if (supheNedeni(l)) g.sup = (g.sup || 0) + 1;
     g.net += logFark(l) || 0;                                     // girilen toplam (silinenler düşer)
     if (l.yeni != null) g.t.push(new Date(l.zaman).getTime());   // giriş zamanları
   });
@@ -1911,8 +1855,7 @@ function ozetChipListesi(g) {
   c.push(["İlk giriş", saatOf(ilk)]);
   c.push(["Son giriş", saatOf(son)]);
   c.push(["İlk girişten sona", n > 1 ? sure(top) + " (" + fmt(Math.round(saat * 100) / 100) + " saat)" : "tek giriş", true]);
-  const baz = calDk >= 1 ? g.net / calDk * NET_DK : 0;
-  if (calDk >= 1) c.push(["8 saatlik baz (35 dk mola düşülmüş, tahmini" + (canli ? ", canlı" : "") + ")", fmt(Math.round(baz * 10) / 10) + " sayı", canli]);
+  if (calDk >= 1) c.push(["8 saatlik baz (35 dk mola düşülmüş, tahmini" + (canli ? ", canlı" : "") + ")", fmt(Math.round(g.net / calDk * NET_DK * 10) / 10) + " sayı", canli]);
   if (calDk >= 1) c.push(["Ortalama (saatte, mola hariç)", fmt(Math.round(g.net / calDk * 60 * 10) / 10) + " sayı/saat", true]);
   if (calDk >= 1 && g.net > 0) {
     const dkHiz = g.net / calDk;
@@ -1925,14 +1868,11 @@ function ozetChipListesi(g) {
       c.push([hd + " için kalan", fmt(Math.round(kalan * 100) / 100) + " sayı · " + Math.ceil(dk) + " dk" + bitis, true]);
     });
   }
-  const mx4 = supheHarita().max.get(g.uid) || 0;
-  c.push(["4 saatlik en yüksek", fmt(Math.round(mx4 * 10) / 10) + " sayı", false, mx4 > SUPHE_4SA]);
-  if (g.sup) c.push(["⚠ Şüpheli giriş", g.sup + " adet", false, true]);
   c.push(["Giriş sayısı", String(n)]);
   if (n > 1) c.push(["Ort. aralık", sure(top / (n - 1))]);
   return c;
 }
-const ozChip = ([k, v, vurgu, sup]) => { const e = el("span", "oz-chip" + (sup ? " sup" : vurgu ? " vurgu" : "")); e.append(el("small", "", k), el("b", "", v)); return e; };
+const ozChip = ([k, v, vurgu]) => { const e = el("span", "oz-chip" + (vurgu ? " vurgu" : "")); e.append(el("small", "", k), el("b", "", v)); return e; };
 // Kullanıcı tablolarının yanındaki özet kutuları (log özetiyle aynı veri)
 function ozetKartlar() {
   const kutular = document.querySelectorAll("#users .u-ozet");
@@ -1968,7 +1908,6 @@ setInterval(() => {
 }, 10000);
 
 function logCiz() {
-  try { renderShared(); } catch (e) {}   // kırmızı işaretler ana tablolarda da görünsün
   const box = $("logBox");
   if (!logOk) { box.classList.add("hide"); ozetKartlar(); return; }
   box.classList.remove("hide");
@@ -2008,14 +1947,12 @@ function logCiz() {
   });
   list.forEach(l => {
     const hs = th.get(l.id) || [], ad = l.sutun === "makine", d = logFark(l);
-    const sup = supheNedeni(l);
-    const tr = el("tr", ad ? "lg-ad" : (sup ? "lg-sup" : ""));
+    const tr = el("tr", ad ? "lg-ad" : "");
     const tdMk = el("td", "lg-mk");
     tdMk.append(el("div", "", ad ? (l.eski || "(adsız)") + " → " + (l.yeni || "(adsız)") : (l.makine || "(adsız)")));
     if (ad) tdMk.append(el("div", "lg-alt", "makine adı değişti"));
     const tdE = el("td", "lg-e"), cls = d == null ? "" : (l.yeni == null && l.eski != null) ? "lg-sil" : d > 0 ? "lg-art" : d < 0 ? "lg-eks" : "";
-    tdE.append(el("span", sup ? "lg-supn" : cls, eklenenYaz(l)));
-    if (sup) tdE.append(el("div", "lg-supt", "⚠ şüpheli · " + sup));
+    tdE.append(el("span", cls, eklenenYaz(l)));
     const tdS = el("td", "lg-s"), mk = sure(l.fark_makine_sn), gn = sure(l.fark_genel_sn);
     tdS.append(el("div", "", mk));
     if (!ad && tekrar.has(l.id)) tdS.append(el("div", "lg-ayni", "↺ Aynı makineye daha önce girdin"));   // SÜRE sütununda: aynı kullanıcı bu makineye daha önce girmiş, arada başka makineye geçip geri dönmüş
