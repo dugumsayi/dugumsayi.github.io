@@ -1354,7 +1354,7 @@ function sampiyonCiz() {
   box.style.setProperty("--vc", VARD_RENK[sampler[0]]);
   const ana = el("div", "sp-ana"), ikon = el("div", "sp-ikon", "🏆");
   const fark = sampler.length === 1 && sira[1] ? en - sira[1].t : 0;
-  ana.append(el("div", "sp-k", ayVardiya.ay + " vardiya şampiyonu"),
+  ana.append(el("div", "sp-k", ayVardiya.ay + " en çok düğüm atan vardiya"),
     el("div", "sp-ad", sampler.map(v => v + " vardiyası").join(" & ")),
     el("div", "sp-s", fmt(en) + " toplam" + (sampler.length > 1 ? " · berabere" : fark ? " · ikincinin " + fmt(yuv(fark)) + " önünde" : "")));
   box.append(ikon, ana);
