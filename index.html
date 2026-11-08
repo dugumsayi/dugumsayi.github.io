@@ -55,6 +55,10 @@ button.grn{background:#2a9d4a}
 #vardiyaGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
 #tumKullanicilar{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;box-shadow:var(--shadow)}
 #tumKullanicilar h3{margin:0 0 8px;font-size:15px}
+#tumKullanicilar>.sec-head{margin:0 0 8px}
+#tumKullanicilar>.sec-head h3{margin:0}
+.pen-bas>h3{margin-right:auto;cursor:pointer;user-select:none}
+#tumKullanicilar.pen.kapali>.sec-head{margin-bottom:0}
 #tumKullanicilar .kisi-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
 #tumKullanicilar .kisi{display:flex;align-items:center;gap:9px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);min-width:0}
 #tumKullanicilar .kisi .kisi-ad{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
@@ -609,7 +613,7 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
   <div id="vardiyaGrid"></div>
   <p id="vardiyaAtanmamis" class="mut"></p>
   <div id="tumKullanicilar">
-    <h3>Tüm kullanıcılar <span id="kullaniciSayisi" class="mut"></span></h3>
+    <div class="sec-head" id="kullaniciHead"><h3>Tüm kullanıcılar <span id="kullaniciSayisi" class="mut"></span></h3></div>
     <div id="kullaniciListesi" class="kisi-list"></div>
   </div>
 </div>
@@ -1587,6 +1591,7 @@ $("aEkle").onclick = async () => {
 const GOR = [
   ["ozet", "Özet kutuları (siteye bakan, genel toplam, aktif kullanıcı…)", ["vardiyaStat"]],
   ["vardiya", "Vardiya listesi (A, B, C, D kartları)", ["vardiyaHead", "vardiyaGrid"]],
+  ["kul", "Tüm kullanıcılar listesi (çevrimiçi/çevrimdışı durumu)", ["tumKullanicilar"]],
   ["genel", "Genel toplam tablosu", ["genCard", "genel"]],
   ["tablolar", "Kullanıcıların tabloları", ["users"]],
   ["ozetyan", "Tabloların yanındaki giriş özeti (ilk/son giriş, ortalama, hedefler)", []],
@@ -1605,6 +1610,7 @@ const gorunur = k => isAdmin() || (me ? gorAyar.uye[k] !== false : gorAyar.misaf
 const PEN = [
   ["vardiya", "vardiyaBox", "vardiyaHead", "Vardiya listesi"],
   ["benim", "app", "appHead", "Benim girişlerim"],
+  ["kul", "tumKullanicilar", "kullaniciHead", "Tüm kullanıcılar"],
   ["gun", "gunPanel", null, "Kullanıcıların tabloları"],
   ["ort", "ortPanel", null, "Ortalama"],
   ["log", "logBox", null, "Giriş kayıtları ve süre farkı"]
@@ -1640,7 +1646,7 @@ function penDegistir(k, kapali) {
     bas.insertBefore(b, bas.firstChild);
     const gec = () => penDegistir(k, !kutu.classList.contains("kapali"));
     b.onclick = gec;
-    const h = bas.querySelector("h2"); if (h) h.onclick = gec;
+    const h = bas.querySelector("h2,h3"); if (h) h.onclick = gec;
   });
   penUygula();
 })();
@@ -1655,7 +1661,7 @@ function pCiz() {
 }
 function gorUygula() {
   GOR.forEach(([k, , ids]) => ids.forEach(id => $(id).classList.toggle("gz", !gorunur(k))));
-  $("vardiyaBox").classList.toggle("gz", !(gorunur("ozet") || gorunur("vardiya")));
+  $("vardiyaBox").classList.toggle("gz", !(gorunur("ozet") || gorunur("vardiya") || gorunur("kul")));
   $("gunPanel").classList.toggle("gz", !(gorunur("genel") || gorunur("tablolar")));
   if (typeof ortUygula === "function") ortUygula();
   try { ozetKartlar(); } catch (e) {}
