@@ -682,10 +682,7 @@ table.sp td.why{min-width:220px}
   <div class="bar"><select id="logKul" class="hide"></select><select id="logSira"><option value="">Saate göre</option><option value="kb">Makine adı: küçükten büyüğe</option></select><button id="logCsv" class="alt">CSV indir</button><button id="logSil" class="red hide">Görüntülenen kayıtları sil</button></div>
   <p id="logMsg" class="mut hide"></p>
   <div id="logOzet" class="mut"></div>
-  <div id="logTbl" class="scroll"></div>
-</details>
-
-<details id="suphelBox" class="hide">
+<details id="suphelBox" class="hide" open>
   <summary><strong>Şüpheli giriş analizi</strong> <span id="supheSayi" class="mut"></span></summary>
   <p class="mut">Seçili günün giriş kayıtlarını her kullanıcı ve vardiya için ayrı ayrı inceler. Sonuç bir <b>uyarıdır</b>, kanıt değildir: yüksek puanlı kayıtları makine sayacı veya amir ile yerinde doğrulayın.</p>
   <p class="mut"><b>Kurallar:</b> (1) tek girişin toplam içindeki payı ≥%40 (+1), ≥%60 (+2); (2) vardiyanın son 30 dakikasındaki giriş payı ≥%25 (+1), ≥%40 (+2) — yalnızca biten vardiyalarda; (3) ardışık girişler arasındaki en uzun boşluk ≥2 saat (+1), ≥3 saat (+2); (4) aşağıdaki azami hızı aşan giriş (+2). Toplamı 20'nin altındaki vardiyalar atlanır. Puan: 4+ yüksek, 2–3 orta, 1 düşük.</p>
@@ -696,6 +693,9 @@ table.sp td.why{min-width:220px}
   <div id="supheOzet" class="mut"></div>
   <div id="supheTbl" class="scroll"></div>
 </details>
+  <div id="logTbl" class="scroll"></div>
+</details>
+
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
@@ -1324,12 +1324,13 @@ $("kayitAcKapat").onclick = async () => {
 
 // ================= YÖNETİM / BAN =================
 // Not: Asıl yetki kontrolü veritabanında (RLS + admin_* fonksiyonları). Buradaki kontroller yalnızca arayüz içindir.
-async function profilYukle() {
+async function profilYukleAsil() {
   if (!me) { profil = null; return; }
   const { data, error } = await sb.from("profiles").select("rol,banli,ban_sebep,yonetici_gizli").eq("id", myId()).maybeSingle();
   if (!error) { profil = data; if (data) lsSet(PROFIL_KEY + ":" + myId(), data); }
   else profil = (!navigator.onLine || cevrimdisiOturum || agHatasi(error.message)) ? lsGet(PROFIL_KEY + ":" + myId(), null) : null;   // tablo yoksa/hata olursa normal kullanıcı gibi devam
 }
+async function profilYukle() { await profilYukleAsil(); try { suphelCiz(); } catch (e) {} }
 const isAdmin = () => !!profil && profil.rol === "admin" && !profil.banli;
 
 async function banliCikis() {
