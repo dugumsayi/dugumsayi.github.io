@@ -621,12 +621,6 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
     <div id="aStat" class="stats"></div>
     <div class="ucard"><div id="aTablo" class="scroll"></div></div>
   </div>
-
-  <div id="rekorBox">
-    <div class="sec-head"><h2>🏆 Tüm zamanların rekorları</h2><button id="rekorBtn" type="button" class="alt sm">Rekorları göster</button></div>
-    <p id="rekorEtiket" class="mut"></p>
-    <div id="rekorStat" class="stats"></div>
-  </div>
 </section>
 
 <details id="logBox" class="hide">
@@ -1992,13 +1986,6 @@ function haftaCiz(gunler, kisi) {
   const stat = (k, v, sub, cls) => { const c = el("div", "stat" + (cls ? " " + cls : "")); c.append(el("div", "k", k), el("div", "v", v), el("div", "s", sub || "")); hs.append(c); };
   stat("Günlük ortalama", fmt(ort), aktifSay ? "7 güne bölünürse: " + fmt(yuv(toplam / 7)) : "", "g");
   stat("Haftalık toplam", fmt(toplam), "");
-  // En başarılı: haftanın en yüksek günü ve en çok sayı atan kişi
-  let enGun = -1; gunTop.forEach((v, i) => { if (dolu[i] && v > 0 && (enGun < 0 || v > gunTop[enGun])) enGun = i; });
-  if (enGun >= 0) stat("🏆 En başarılı gün", fmt(gunTop[enGun]), GUN_KISA[enGun] + " · " + kisa(gunler[enGun]), "g");
-  if (us.length && us[0].top > 0) stat("🏆 En başarılı kişi", fmt(yuv(us[0].top)), us[0].ad + " (haftalık toplam)", "g");
-  const vtH = {}; kisi.forEach((u, id) => { const v = vardiyaOf(id); if (!v) return; vtH[v] = (vtH[v] || 0) + gunler.reduce((a, g) => a + (g <= bugun ? (u.g[g] || 0) : 0), 0); });
-  const enVH = Object.keys(vtH).sort((a, b) => vtH[b] - vtH[a])[0];
-  if (enVH && vtH[enVH] > 0) stat("🏆 En başarılı vardiya", fmt(yuv(vtH[enVH])), enVH + " vardiyası (haftalık toplam)", "g");
 
   const box = $("hGrafik"); box.textContent = "";
   if (!aktifSay) { box.append(el("p", "mut", "Bu haftada henüz sayı girilmemiş.")); return; }
@@ -2037,7 +2024,7 @@ function haftaCiz(gunler, kisi) {
     } else {
       grp.append(mk("text", { x: cx, y: y(0) - 6, "text-anchor": "middle", class: "hc-t" }, "—"));
     }
-    grp.append(mk("text", { x: cx, y: H - 12, "text-anchor": "middle", class: "hc-t", style: g === secili ? "font-weight:700;fill:var(--fg)" : "" }, (i === enGun ? "🏆 " : "") + GUN_KISA[i]));
+    grp.append(mk("text", { x: cx, y: H - 12, "text-anchor": "middle", class: "hc-t", style: g === secili ? "font-weight:700;fill:var(--fg)" : "" }, GUN_KISA[i]));
     if (!gelecek) grp.onclick = () => { secili = g; hazirla(); };
     svg.append(grp);
   });
@@ -2109,14 +2096,6 @@ async function ayYukle() {
   stat("Günlük ortalama", fmt(ort), "sayı girilen günlere göre", "g");
   stat("Aylık toplam", fmt(toplam), "");
   stat("Çalışılan gün", String(say), "");
-  // En başarılı: ayın en yüksek günü ve en çok sayı atan kişi
-  const enG = gl.reduce((b, g) => (b == null || gunTop[g] > gunTop[b]) ? g : b, null);
-  if (enG && gunTop[enG] > 0) stat("🏆 En başarılı gün", fmt(yuv(gunTop[enG])), new Date(enG + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "short" }), "g");
-  const enK = [...kisi.values()].map(u => ({ ad: u.ad, top: yuv(Object.keys(u.g).filter(x => x <= bugun).reduce((a, x) => a + u.g[x], 0)) })).sort((a, b) => b.top - a.top)[0];
-  if (enK && enK.top > 0) stat("🏆 En başarılı kişi", fmt(enK.top), enK.ad + " (aylık toplam)", "g");
-  const vtA = {}; kisi.forEach((u, id) => { const v = vardiyaOf(id); if (!v) return; vtA[v] = (vtA[v] || 0) + Object.keys(u.g).filter(x => x <= bugun).reduce((a, x) => a + u.g[x], 0); });
-  const enVA = Object.keys(vtA).sort((a, b) => vtA[b] - vtA[a])[0];
-  if (enVA && vtA[enVA] > 0) stat("🏆 En başarılı vardiya", fmt(yuv(vtA[enVA])), enVA + " vardiyası (aylık toplam)", "g");
   const box = $("aTablo"); box.textContent = "";
   if (!say) { box.append(el("p", "mut", "Bu ayda henüz sayı girilmemiş.")); return; }
   const tbl = el("table", "at hc-tbl"), head = el("thead"), hr = el("tr"), body = el("tbody");
@@ -2131,43 +2110,6 @@ async function ayYukle() {
 $("aOnce").onclick = () => { const d = new Date((ayBas || ayBaslangic(secili)) + "T12:00:00"); ayBas = ayBaslangic(tarihStr(new Date(d.getFullYear(), d.getMonth() - 1, 1))); ayYukle(); };
 $("aSonra").onclick = () => { const d = new Date((ayBas || ayBaslangic(secili)) + "T12:00:00"); ayBas = ayBaslangic(tarihStr(new Date(d.getFullYear(), d.getMonth() + 1, 1))); ayYukle(); };
 $("aBu").onclick = () => { ayBas = ayBaslangic(bugun); ayYukle(); };
-
-// ================= TÜM ZAMANLARIN REKORLARI =================
-// Tüm günler tek seferde taranır (sayfa sayfa), bu yüzden yalnızca butona basınca yüklenir.
-let rekorSeq = 0;
-async function rekorYukle() {
-  if (!sb) return;
-  const seq = ++rekorSeq, btn = $("rekorBtn"), box = $("rekorStat");
-  btn.disabled = true; btn.textContent = "Yükleniyor…"; $("rekorEtiket").textContent = "";
-  const gun = {}, kisiGun = {}, vGun = {};
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await sb.from("sayilar").select("tarih,user_id,kullanici,n1,n2,n3,n4,n5,n6")
-      .order("tarih").order("user_id").order("satir").range(from, from + 999);
-    if (seq !== rekorSeq) return;
-    if (error) { $("rekorEtiket").textContent = "Rekorlar yüklenemedi: " + error.message; btn.disabled = false; btn.textContent = "Tekrar dene"; return; }
-    data.forEach(r => {
-      if (!COLS.some(k => r[k] != null && r[k] !== "")) return;
-      const s = rsum(r), kk = r.tarih + "|" + r.user_id, v = vardiyaOf(r.user_id);
-      gun[r.tarih] = (gun[r.tarih] || 0) + s;
-      (kisiGun[kk] = kisiGun[kk] || { ad: r.kullanici || "?", tarih: r.tarih, top: 0 }).top += s;
-      if (r.kullanici) kisiGun[kk].ad = r.kullanici;
-      if (v) { const vk = r.tarih + "|" + v; (vGun[vk] = vGun[vk] || { v, tarih: r.tarih, top: 0 }).top += s; }
-    });
-    if (data.length < 1000) break;
-  }
-  const enBuyuk = obj => Object.values(obj).reduce((b, x) => (!b || x.top > b.top) ? x : b, null);
-  const gunler = Object.keys(gun).map(g => ({ tarih: g, top: gun[g] }));
-  const rG = enBuyuk(gunler), rK = enBuyuk(kisiGun), rV = enBuyuk(vGun);
-  const tr = d => new Date(d + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
-  box.textContent = "";
-  const stat = (k, v, sub) => { const c = el("div", "stat g"); c.append(el("div", "k", k), el("div", "v", v), el("div", "s", sub || "")); box.append(c); };
-  if (rG && rG.top > 0) stat("🏆 Rekor gün", fmt(yuv(rG.top)), tr(rG.tarih) + " · herkesin toplamı");
-  if (rK && rK.top > 0) stat("🏆 Rekor kişi (tek gün)", fmt(yuv(rK.top)), rK.ad + " · " + tr(rK.tarih));
-  if (rV && rV.top > 0) stat("🏆 Rekor vardiya (tek gün)", fmt(yuv(rV.top)), rV.v + " vardiyası · " + tr(rV.tarih));
-  $("rekorEtiket").textContent = gunler.length ? gunler.length + " günlük kayıt tarandı. Vardiya rekoru, kullanıcıların şu anki vardiya seçimine göre hesaplanır." : "Henüz kayıtlı sayı yok.";
-  btn.disabled = false; btn.textContent = "Rekorları yenile";
-}
-$("rekorBtn").onclick = rekorYukle;
 
 // Haftalık + aylık ortalama tek pencerede, sekmeli
 var ortSekme = "hafta";
