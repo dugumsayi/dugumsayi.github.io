@@ -1991,14 +1991,23 @@ function logCiz() {
   tbl.append(body); box2.append(tbl);
 }
 
-// Mola: her kullanıcının her 8 saatlik vardiyasında, genel süresi MOLA_DK (35 dk) veya daha uzun olan İLK giriş molalı sayılır ve 35 dk düşülür.
+// Mola pencereleri (yerel saat). Mola 35 dk (MOLA_DK); bu aralıklardan birinde yapılır.
+const MOLA_PENCERELERI = [["03:00", "04:30"], ["11:30", "13:00"], ["19:00", "20:30"]];
+// Genel süresi en az MOLA_DK olan ve bir mola penceresiyle çakışan ilk giriş (kullanıcı + gün + pencere başına) molalı sayılır;
+// düşülen süre = çakışan dakika, en fazla MOLA_DK (35 dk). Sonuç: Map(log id -> düşülen dakika)
 function molaHaritasi() {
-  const m = new Map(), gorulen = new Set(), H8 = 8 * 3600000;
+  const m = new Map(), gorulen = new Set(), dk = x => { const [h, mi] = x.split(":").map(Number); return h * 60 + mi; };
   logs.filter(l => l.sutun !== "makine" && l.yeni != null && l.fark_genel_sn >= MOLA_DK * 60)
     .slice().sort((x, y) => new Date(x.zaman) - new Date(y.zaman)).forEach(l => {
-      const k = l.user_id + "|" + Math.floor((new Date(l.zaman).getTime() + 3 * 3600000) / H8);   // vardiya sınırları vardiya hesabıyla aynı
-      if (gorulen.has(k)) return;
-      gorulen.add(k); m.set(l.id, MOLA_DK);
+      const bit = new Date(l.zaman).getTime(), bas = bit - l.fark_genel_sn * 1000, g0 = new Date(bas); g0.setHours(0, 0, 0, 0);
+      let top = 0;
+      for (let g = 0; g <= 1; g++) MOLA_PENCERELERI.forEach(([a, b], i) => {   // g: gece yarısını geçen aralıklar için 2 gün
+        const k = l.user_id + "|" + (g0.getTime() + g * 86400000) + "|" + i;
+        if (gorulen.has(k)) return;
+        const ov = Math.min(bit, g0.getTime() + (g * 1440 + dk(b)) * 60000) - Math.max(bas, g0.getTime() + (g * 1440 + dk(a)) * 60000);
+        if (ov > 0) { gorulen.add(k); top += Math.min(Math.round(ov / 60000), MOLA_DK); }
+      });
+      if (top > 0) m.set(l.id, Math.min(top, MOLA_DK));
     });
   return m;
 }
