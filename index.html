@@ -579,8 +579,8 @@ table.sp td.why{min-width:220px}
   <p class="mut">Kullanıcıları banlayabilir, silebilir, yönetici yapabilir veya yeni kullanıcı ekleyebilirsiniz.</p>
   <hr>
   <strong>Supabase API ayarları</strong>
-  <p class="mut">Publishable Key burada yönetilir ve bütün kullanıcılar için ortak kaydedilir. Project URL mevcut veritabanına bağlıdır; değiştirmek kullanıcı hesapları ve verilerin taşınmasını gerektirir. Buraya yalnızca Publishable / eski anon anahtarını girin. Secret veya service_role anahtarını kesinlikle girmeyin.</p>
-  <div class="row"><label for="sbProjectUrl">Project URL</label><input id="sbProjectUrl" type="url" readonly style="flex:1;min-width:240px"><span class="badge">Mevcut proje</span></div>
+  <p class="mut">Publishable Key burada yönetilir ve bütün kullanıcılar için ortak kaydedilir. Project URL'yi de değiştirebilirsiniz; ancak bu değişiklik yalnızca bu tarayıcıda geçerli olur ve yeni projede tabloların, SQL dosyalarının ve kullanıcıların hazır olması gerekir. Buraya yalnızca Publishable / eski anon anahtarını girin. Secret veya service_role anahtarını kesinlikle girmeyin.</p>
+  <div class="row"><label for="sbProjectUrl">Project URL</label><input id="sbProjectUrl" type="url" placeholder="https://PROJE-KODU.supabase.co" style="flex:1;min-width:240px"><span id="sbUrlRozet" class="badge">Mevcut proje</span></div>
   <div class="row"><label for="sbPublishableKey">Publishable Key</label><input id="sbPublishableKey" type="password" autocomplete="off" placeholder="sb_publishable_…" style="flex:1;min-width:240px"><button id="sbKeyGoster" type="button" class="alt">Göster</button></div>
   <div class="row"><span id="sbAyarDurum" class="badge">Ayarlar yükleniyor…</span></div>
   <div class="row"><button id="sbTestEt" type="button" class="alt">Bağlantıyı test et</button><button id="sbKaydet" type="button">Kaydet ve tüm kullanıcılarda etkinleştir</button></div>
@@ -710,8 +710,15 @@ table.sp td.why{min-width:220px}
 <script>
 // Başlangıç anahtarı: Admin panelinden ortak Publishable Key değiştirilebilir.
 // Bu anahtar yalnızca başlangıç yapılandırmasını okuyabilmek için yedek/başlangıç anahtarıdır.
-const SUPABASE_URL = "https://pgaqufqkxptoxrgtlrxv.supabase.co";
-const SUPABASE_KEY = "sb_publishable_hxb7BDh7sjAwoBDt4UjG1w_Tu6oAwO2";
+const VARSAYILAN_URL = "https://pgaqufqkxptoxrgtlrxv.supabase.co";
+const VARSAYILAN_KEY = "sb_publishable_hxb7BDh7sjAwoBDt4UjG1w_Tu6oAwO2";
+let SUPABASE_URL = VARSAYILAN_URL, SUPABASE_KEY = VARSAYILAN_KEY;
+// Admin panelinden değiştirilen bağlantı bu tarayıcıda saklanır. Sıfırlamak için adresin sonuna ?baglanti-sifirla ekleyin.
+try {
+  if (/baglanti-sifirla/.test(location.search)) localStorage.removeItem("sb_baglanti");
+  const o = JSON.parse(localStorage.getItem("sb_baglanti") || "null");
+  if (o && /^https:\/\//.test(o.url || "") && o.key) { SUPABASE_URL = o.url; SUPABASE_KEY = o.key; }
+} catch (e) {}
 let aktifSupabaseKey = SUPABASE_KEY;
 
 const N0 = 1, NMAX = 60, COLS = ["n1","n2","n3","n4","n5","n6"];
@@ -1534,7 +1541,7 @@ async function sbAyarlariniYukle() {
 async function sbAyarTestEt() {
   if (!isAdmin()) { msg("Bu işlem için yönetici olmalısınız."); return; }
   const url = $("sbProjectUrl").value.trim().replace(/\/$/, ""), key = $("sbPublishableKey").value.trim();
-  if (url !== SUPABASE_URL) { sbAyarRozet("Bu kurulumda Project URL sabittir", false); msg("Mevcut Supabase projesinin URL'si değiştirilemez. Başka projeye geçiş için veri ve kullanıcı taşıma işlemi gerekir."); return; }
+  if (!/^https:\/\/[^\s]+$/.test(url)) { sbAyarRozet("Geçersiz URL", false); msg("Project URL https:// ile başlamalı, örn. https://proje-kodu.supabase.co"); return; }
   if (!key || key.startsWith("sb_secret_") || key.includes("service_role")) { sbAyarRozet("Geçersiz / gizli anahtar", false); msg("Yalnızca Supabase Publishable Key veya eski anon anahtarını kullanın."); return; }
   sbAyarRozet("Bağlantı test ediliyor…");
   try {
@@ -1550,8 +1557,16 @@ async function sbAyarTestEt() {
 async function sbAyarKaydet() {
   if (!isAdmin()) { msg("Bu işlem için yönetici olmalısınız."); return; }
   const url = $("sbProjectUrl").value.trim().replace(/\/$/, ""), key = $("sbPublishableKey").value.trim();
-  if (url !== SUPABASE_URL) { msg("Project URL mevcut projeye sabittir. Proje değiştirmek için ayrı veri taşıma gerekir."); return; }
+  if (!/^https:\/\/[^\s]+$/.test(url)) { msg("Project URL https:// ile başlamalı, örn. https://proje-kodu.supabase.co"); return; }
   if (!key || key.startsWith("sb_secret_") || key.includes("service_role")) { msg("Geçerli bir Publishable Key veya eski anon anahtarı girin. Secret/service_role anahtarı kullanılamaz."); return; }
+  if (url !== SUPABASE_URL) {
+    if (!confirm("Project URL değiştirilecek. Bu yalnızca bu tarayıcıda geçerli olur; sayfa yeni projeye bağlanacak ve yeniden giriş yapmanız gerekecek. Devam edilsin mi?")) return;
+    try { localStorage.setItem("sb_baglanti", JSON.stringify({ url, key })); } catch (e) { msg("Tarayıcı depolaması kullanılamıyor, URL kaydedilemedi."); return; }
+    sbAyarRozet("Kaydedildi · yenileniyor", true);
+    msg("Yeni proje bağlantısı kaydedildi. Sayfa yenileniyor…");
+    setTimeout(() => location.reload(), 800);
+    return;
+  }
   if (!confirm("Bu Publishable Key tüm kullanıcılar için ortak olarak kaydedilsin mi?")) return;
   msg("Ortak Supabase ayarı kaydediliyor…");
   const { error } = await sb.rpc("admin_supabase_ayar_kaydet", { p_url: url, p_key: key });
