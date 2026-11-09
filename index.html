@@ -577,6 +577,15 @@ table.sp td.why{min-width:220px}
 <div id="admin" class="hide">
   <div class="p-head"><strong>Yönetim paneli</strong><button id="adminKapat" type="button" class="red sm">✕ Kapat</button></div>
   <p class="mut">Kullanıcıları banlayabilir, silebilir, yönetici yapabilir veya yeni kullanıcı ekleyebilirsiniz.</p>
+  <hr>
+  <strong>Supabase API ayarları</strong>
+  <p class="mut">Publishable Key burada yönetilir ve bütün kullanıcılar için ortak kaydedilir. Project URL mevcut veritabanına bağlıdır; değiştirmek kullanıcı hesapları ve verilerin taşınmasını gerektirir. Buraya yalnızca Publishable / eski anon anahtarını girin. Secret veya service_role anahtarını kesinlikle girmeyin.</p>
+  <div class="row"><label for="sbProjectUrl">Project URL</label><input id="sbProjectUrl" type="url" readonly style="flex:1;min-width:240px"><span class="badge">Mevcut proje</span></div>
+  <div class="row"><label for="sbPublishableKey">Publishable Key</label><input id="sbPublishableKey" type="password" autocomplete="off" placeholder="sb_publishable_…" style="flex:1;min-width:240px"><button id="sbKeyGoster" type="button" class="alt">Göster</button></div>
+  <div class="row"><span id="sbAyarDurum" class="badge">Ayarlar yükleniyor…</span></div>
+  <div class="row"><button id="sbTestEt" type="button" class="alt">Bağlantıyı test et</button><button id="sbKaydet" type="button">Kaydet ve tüm kullanıcılarda etkinleştir</button></div>
+  <p class="mut">Kaydettikten sonra yeni anahtarın tüm cihazlarda devreye girmesi için sayfa yenilenir. İlk kurulumda aşağıdaki SQL dosyasındaki kodun Supabase SQL Editor'de bir kez çalıştırılması gerekir.</p>
+  <hr>
   <strong>Kullanıcı kayıt ayarı</strong>
   <p class="mut">Yeni kullanıcıların kendi kendine kayıt olmasını buradan açıp kapatabilirsiniz. Kapatıldığında mevcut kullanıcıların girişi etkilenmez.</p>
   <div class="row">
@@ -699,8 +708,11 @@ table.sp td.why{min-width:220px}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
+// Başlangıç anahtarı: Admin panelinden ortak Publishable Key değiştirilebilir.
+// Bu anahtar yalnızca başlangıç yapılandırmasını okuyabilmek için yedek/başlangıç anahtarıdır.
 const SUPABASE_URL = "https://pgaqufqkxptoxrgtlrxv.supabase.co";
 const SUPABASE_KEY = "sb_publishable_hxb7BDh7sjAwoBDt4UjG1w_Tu6oAwO2";
+let aktifSupabaseKey = SUPABASE_KEY;
 
 const N0 = 1, NMAX = 60, COLS = ["n1","n2","n3","n4","n5","n6"];
 const $ = id => document.getElementById(id);
@@ -1500,7 +1512,67 @@ async function adminVardiya(u, v) {
 }
 $("vardiyaYenile").onclick = vardiyaYukle;
 
+// ================= SUPABASE ORTAK API AYARLARI =================
+function sbAyarRozet(yazi, iyi) {
+  const b = $("sbAyarDurum"); if (!b) return;
+  b.textContent = yazi; b.className = "badge " + (iyi === true ? "ok" : iyi === false ? "ban" : "");
+}
+async function sbAyarlariniYukle() {
+  if (!isAdmin()) return;
+  $("sbProjectUrl").value = SUPABASE_URL;
+  $("sbPublishableKey").value = aktifSupabaseKey || SUPABASE_KEY;
+  sbAyarRozet("Ortak ayarlar kontrol ediliyor…");
+  const { data, error } = await sb.rpc("app_config_get");
+  if (error) {
+    sbAyarRozet("SQL kurulumu gerekli", false);
+    msg("Supabase ayarları okunamadı: " + error.message + " — supabase-admin-ayar.sql dosyasını Supabase SQL Editor'de çalıştırın.");
+    return;
+  }
+  if (data && data.publishable_key) $("sbPublishableKey").value = data.publishable_key;
+  sbAyarRozet(data && data.publishable_key ? "Ortak ayarlar yüklendi" : "İlk kayıt bekleniyor", true);
+}
+async function sbAyarTestEt() {
+  if (!isAdmin()) { msg("Bu işlem için yönetici olmalısınız."); return; }
+  const url = $("sbProjectUrl").value.trim().replace(/\/$/, ""), key = $("sbPublishableKey").value.trim();
+  if (url !== SUPABASE_URL) { sbAyarRozet("Bu kurulumda Project URL sabittir", false); msg("Mevcut Supabase projesinin URL'si değiştirilemez. Başka projeye geçiş için veri ve kullanıcı taşıma işlemi gerekir."); return; }
+  if (!key || key.startsWith("sb_secret_") || key.includes("service_role")) { sbAyarRozet("Geçersiz / gizli anahtar", false); msg("Yalnızca Supabase Publishable Key veya eski anon anahtarını kullanın."); return; }
+  sbAyarRozet("Bağlantı test ediliyor…");
+  try {
+    const test = supabase.createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "supabase-ayar-test" } });
+    const { error } = await test.rpc("app_config_get");
+    if (error) throw error;
+    sbAyarRozet("Bağlantı başarılı", true); msg("Supabase bağlantısı başarılı. Anahtar kaydedilmeye hazır.");
+    await test.auth.signOut();
+  } catch (e) {
+    sbAyarRozet("Bağlantı başarısız", false); msg("Bağlantı testi başarısız: " + (e.message || e));
+  }
+}
+async function sbAyarKaydet() {
+  if (!isAdmin()) { msg("Bu işlem için yönetici olmalısınız."); return; }
+  const url = $("sbProjectUrl").value.trim().replace(/\/$/, ""), key = $("sbPublishableKey").value.trim();
+  if (url !== SUPABASE_URL) { msg("Project URL mevcut projeye sabittir. Proje değiştirmek için ayrı veri taşıma gerekir."); return; }
+  if (!key || key.startsWith("sb_secret_") || key.includes("service_role")) { msg("Geçerli bir Publishable Key veya eski anon anahtarı girin. Secret/service_role anahtarı kullanılamaz."); return; }
+  if (!confirm("Bu Publishable Key tüm kullanıcılar için ortak olarak kaydedilsin mi?")) return;
+  msg("Ortak Supabase ayarı kaydediliyor…");
+  const { error } = await sb.rpc("admin_supabase_ayar_kaydet", { p_url: url, p_key: key });
+  if (error) {
+    sbAyarRozet("Kaydedilemedi", false);
+    msg("Supabase ayarı kaydedilemedi: " + error.message + " — supabase-admin-ayar.sql kurulumunu kontrol edin."); return;
+  }
+  aktifSupabaseKey = key;
+  sbAyarRozet("Kaydedildi · yenileme bekleniyor", true);
+  msg("Yeni Publishable Key ortak olarak kaydedildi. Tüm kullanıcıların yeni anahtarı kullanması için sayfa şimdi yenilenecek.");
+  setTimeout(() => location.reload(), 1200);
+}
+$("sbTestEt").onclick = sbAyarTestEt;
+$("sbKaydet").onclick = sbAyarKaydet;
+$("sbKeyGoster").onclick = () => {
+  const i = $("sbPublishableKey"), acik = i.type === "password";
+  i.type = acik ? "text" : "password"; $("sbKeyGoster").textContent = acik ? "Gizle" : "Göster";
+};
+
 async function adminYukle() {
+  await sbAyarlariniYukle();
   await kayitDurumuYukle();
   const { data, error } = await sb.rpc("admin_kullanicilar");
   if (error) { msg("Kullanıcı listesi alınamadı: " + error.message); return; }
@@ -2454,7 +2526,16 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) ziya
 
 (async function () {
   if (SUPABASE_URL.includes("PROJE-KODUNUZ") || SUPABASE_KEY.includes("ANAHTARINIZ")) { msg("Önce dosyanın başındaki SUPABASE_URL ve SUPABASE_KEY değerlerini girin."); return; }
-  sb = (typeof supabase !== "undefined") ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : cevrimdisiSb();
+  if (typeof supabase === "undefined") { sb = cevrimdisiSb(); }
+  else {
+    // Önce sabit başlangıç bağlantısıyla ortak ayarı oku; varsa güncel Publishable Key ile asıl istemciyi başlat.
+    const ilk = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    try {
+      const ayar = await ilk.rpc("app_config_get");
+      if (!ayar.error && ayar.data && ayar.data.publishable_key) aktifSupabaseKey = ayar.data.publishable_key;
+    } catch (e) {}
+    sb = aktifSupabaseKey !== SUPABASE_KEY ? supabase.createClient(SUPABASE_URL, aktifSupabaseKey) : ilk;
+  }
   ziyaretKaydet();
   gorCanliKur();
   sb.channel("sayilar-canli").on("postgres_changes", { event: "*", schema: "public", table: "sayilar" }, () => {
