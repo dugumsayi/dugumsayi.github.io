@@ -59,11 +59,12 @@ button.grn{background:#2a9d4a}
 #tumKullanicilar>.sec-head h3{margin:0}
 .pen-bas>h3{margin-right:auto;cursor:pointer;user-select:none}
 #tumKullanicilar.pen.kapali>.sec-head{margin-bottom:0}
-#tumKullanicilar .kisi-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+#tumKullanicilar .kisi-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
 #tumKullanicilar .kisi{display:flex;align-items:center;gap:9px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);min-width:0}
 #tumKullanicilar .kisi .kisi-ad{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 #tumKullanicilar .kisi .kisi-alt{font-size:12px;color:var(--mut);margin-top:2px}
-#tumKullanicilar .kisi .durum{font-size:11px;font-weight:700;border-radius:999px;padding:3px 8px;white-space:nowrap}
+#tumKullanicilar .kisi .kisi-bilgi{flex:1 1 auto;min-width:0}
+#tumKullanicilar .kisi .durum{flex:none;margin-left:auto;font-size:11px;font-weight:700;border-radius:999px;padding:3px 8px;white-space:nowrap}
 #tumKullanicilar .kisi .durum.on{background:#2ecc4020;color:#23943a}
 #tumKullanicilar .kisi .durum.off{background:#e5484d18;color:#d33}
 .vcard{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 14px}
@@ -1477,14 +1478,15 @@ function vardiyaCiz() {
     const tum = sirala(vardiyaList);
     $("kullaniciSayisi").textContent = "(" + tum.length + ")";
     tum.forEach(u => {
-      const item = el("div", "kisi"), info = el("div", "", ""), aktifMi = !!u.aktif;
+      const item = el("div", "kisi"), info = el("div", "kisi-bilgi", ""), aktifMi = !!u.aktif;
       const adMetni = ad(u);
       info.append(el("div", "kisi-ad", adMetni));
       const alt = (u.vardiya ? u.vardiya + " vardiyası" : "Vardiya seçilmedi");
       const son = u.son_giris || u.last_sign_in_at || u.son_gorulme || u.last_seen_at || u.son_aktiflik || null;
       let sonMetin = "";
       if (son) { const dt = new Date(son); if (!isNaN(dt.getTime())) sonMetin = " · Son giriş: " + dt.toLocaleString("tr-TR"); }
-      info.append(el("div", "kisi-alt", alt + sonMetin));
+      info.append(el("div", "kisi-alt", alt));
+      if (sonMetin) info.append(el("div", "kisi-alt", sonMetin.replace(" · ", "")));
       item.append(el("span", "dot" + (aktifMi ? " on" : "")));
       item.append(info);
       item.append(el("span", "durum " + (aktifMi ? "on" : "off"), aktifMi ? "Çevrimiçi" : "Çevrimdışı"));
