@@ -427,6 +427,8 @@ details[open]>summary::before{transform:rotate(45deg)}
 /* aylık vardiya şampiyonu */
 #vardiyaSamp{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 12px;padding:12px 16px;border-radius:var(--r,10px);border:1px solid var(--line);background:linear-gradient(135deg,color-mix(in srgb,var(--vc,#f59e0b) 18%,var(--card)),var(--card));border-left:4px solid var(--vc,#f59e0b)}
 #vardiyaSamp.hide{display:none}
+#sampiyonBox{margin:0 0 20px}
+#sampiyonBox #vardiyaSamp{margin:0}
 #vardiyaSamp .sp-ikon{font-size:30px;line-height:1}
 #vardiyaSamp .sp-ana{flex:1;min-width:160px}
 #vardiyaSamp .sp-k{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
@@ -631,9 +633,13 @@ table.sp td.why{min-width:220px}
 <div id="vardiyaBox" class="hide">
   <div id="vardiyaStat" class="stats"></div>
   <div class="sec-head" id="vardiyaHead"><h2>Vardiya listesi</h2><button id="vardiyaYenile" type="button" class="alt sm">Yenile</button></div>
-  <div id="vardiyaSamp" class="hide"></div>
   <div id="vardiyaGrid"></div>
   <p id="vardiyaAtanmamis" class="mut"></p>
+</div>
+
+<div id="sampiyonBox" class="hide">
+  <div class="sec-head" id="sampiyonHead"><h2>Vardiya şampiyonu</h2></div>
+  <div id="vardiyaSamp" class="hide"></div>
 </div>
 
 
@@ -1467,6 +1473,11 @@ function ayVardiyaHesapla(kisi, ayAdi, gl) {
   sampiyonCiz();
 }
 function sampiyonCiz() {
+  sampiyonCizIc();
+  const kutu = $("sampiyonBox"), s = $("vardiyaSamp");
+  if (kutu && s) kutu.classList.toggle("hide", s.classList.contains("hide"));
+}
+function sampiyonCizIc() {
   const box = $("vardiyaSamp"); if (!box) return;
   const grid = $("vardiyaGrid");
   grid.querySelectorAll(".vbadge .tac").forEach(x => x.remove());
@@ -1724,6 +1735,7 @@ $("aEkle").onclick = async () => {
 const GOR = [
   ["ozet", "Özet kutuları (siteye bakan, genel toplam, aktif kullanıcı…)", ["vardiyaStat"]],
   ["vardiya", "Vardiya listesi (A, B, C, D kartları)", ["vardiyaHead", "vardiyaGrid"]],
+  ["sampiyon", "Aylık vardiya şampiyonu", ["sampiyonBox"]],
   ["genel", "Genel toplam tablosu", ["genCard", "genel"]],
   ["tablolar", "Kullanıcıların tabloları", ["users"]],
   ["ozetyan", "Tabloların yanındaki giriş özeti (ilk/son giriş, ortalama, hedefler)", []],
@@ -1741,6 +1753,7 @@ const gorunur = k => isAdmin() || (me ? gorAyar.uye[k] !== false : gorAyar.misaf
 // seçim yoksa yöneticinin belirlediği açılış durumu (gorAyar.kapali) geçerlidir.
 const PEN = [
   ["vardiya", "vardiyaBox", "vardiyaHead", "Vardiya listesi"],
+  ["sampiyon", "sampiyonBox", "sampiyonHead", "Vardiya şampiyonu"],
   ["benim", "app", "appHead", "Benim girişlerim"],
   ["gun", "gunPanel", null, "Kullanıcıların tabloları"],
   ["ort", "ortPanel", null, "Ortalama"],
