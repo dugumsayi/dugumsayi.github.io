@@ -584,6 +584,10 @@ table.sp td.why{min-width:220px}
     <button id="kayitAcKapat" type="button" class="alt">Kayıt ayarını yükle</button>
   </div>
   <hr>
+  <strong>Eski kayıtları düzelt</strong>
+  <p class="mut">Mevcut kullanıcıların yalnızca soyadlarının son kelimesini büyük harfe çevirir. Kullanıcı hesapları ve diğer bilgiler silinmez.</p>
+  <div class="row"><button id="eskiSoyadlariBuyut" type="button" class="alt">Eski kayıtların soyadlarını büyüt</button></div>
+  <hr>
   <strong>Yeni kullanıcı ekle</strong>
   <div class="row">
     <input id="aAd" placeholder="Ad Soyad">
@@ -832,7 +836,7 @@ $("kayit").onclick = async () => {
   const kayitAcik = await kayitDurumuYukle();
   if (!kayitAcik) { msg("Yeni kullanıcı kaydı şu anda kapalı. Yönetici ile iletişime geçin."); authMod(false); return; }
   const s = sicilAl(); if (!s) return;
-  const ad = $("ad").value.trim();
+  const ad = soyadiBuyut($("ad").value);
   if (!ad) { msg("Kayıt için adınızı yazın."); return; }
   const vk = $("vardiyaKayit").value;
   if (!vk) { msg("Kayıt için vardiyanızı seçin (A, B, C veya D)."); return; }
@@ -883,8 +887,20 @@ $("profilBtn").onclick = () => {
 };
 $("profilKapat").onclick = () => $("profil").classList.add("hide");
 $("adminKapat").onclick = () => $("admin").classList.add("hide");
+// Ad Soyad alanında yalnızca son kelimeyi (soyadı) Türkçe kurallarına göre büyüt.
+function soyadiBuyut(metin) {
+  const parcalar = String(metin || "").trim().split(/\\s+/).filter(Boolean);
+  if (parcalar.length < 2) return parcalar.join(" ");
+  parcalar[parcalar.length - 1] = parcalar[parcalar.length - 1].toLocaleUpperCase("tr-TR");
+  return parcalar.join(" ");
+}
+["ad", "pAd", "aAd"].forEach(id => {
+  const alan = $(id);
+  if (alan) alan.addEventListener("blur", () => { alan.value = soyadiBuyut(alan.value); });
+});
+
 $("pKaydet").onclick = async () => {
-  const ad = $("pAd").value.trim();
+  const ad = soyadiBuyut($("pAd").value);
   if (!ad) { msg("Ad Soyad boş olamaz."); return; }
   msg("Profil kaydediliyor…");
   const { data, error } = await sb.auth.updateUser({ data: { ...(me.user_metadata || {}), ad, sicil_gizle: $("pGizle").checked } });
@@ -1347,6 +1363,19 @@ $("adminBtn").onclick = () => {
   if (acik) { adminYukle(); a.scrollIntoView({ behavior: "smooth", block: "start" }); }
 };
 $("aYenile").onclick = () => adminYukle();
+
+$("eskiSoyadlariBuyut").onclick = async () => {
+  if (!isAdmin()) { msg("Bu işlem için yönetici olmalısınız."); return; }
+  if (!confirm("Tüm kayıtlı kullanıcıların soyadlarının son kelimesi büyük harfe çevrilsin mi? Bu işlem kullanıcı hesaplarını veya diğer bilgileri silmez.")) return;
+  msg("Eski kullanıcı adları güncelleniyor…");
+  const { data, error } = await sb.rpc("admin_soyadlari_buyut");
+  if (error) {
+    msg("Toplu güncelleme yapılamadı: " + error.message + " — Önce eklenen admin-soyad-buyut.sql kodunu Supabase SQL Editor'de çalıştırın.");
+    return;
+  }
+  msg((Number(data) || 0) + " kullanıcının soyadı güncellendi.");
+  await adminYukle();
+};
 $("aAra").oninput = () => adminCiz();
 
 // ---- Vardiya sistemi (A, B, C, D) ----
@@ -1593,7 +1622,7 @@ async function adminSil(u) {
 }
 
 $("aEkle").onclick = async () => {
-  const ad = $("aAd").value.trim(), s = $("aSicil").value.trim().toLowerCase(), sifre = $("aSifre").value, rol = $("aRol").value;
+  const ad = soyadiBuyut($("aAd").value), s = $("aSicil").value.trim().toLowerCase(), sifre = $("aSifre").value, rol = $("aRol").value;
   if (!ad) { msg("Yeni kullanıcı için ad soyad yazın."); return; }
   if (!/^[a-z0-9]{1,30}$/.test(s)) { msg("Sicil numarası yalnızca harf ve rakamdan oluşmalı."); return; }
   if (!sifre) { msg("Bir şifre yazın."); return; }
