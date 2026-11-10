@@ -544,15 +544,20 @@ table.sp td.why{min-width:220px}
 .sp-rozet{display:inline-block;border-radius:999px;padding:1px 10px;font-size:12px;font-weight:700;color:#fff;background:#777;white-space:nowrap}
 .sp-rozet.y{background:var(--bad)}.sp-rozet.o{background:#c27a0e}.sp-rozet.d{background:#6b7a90}.sp-rozet.t{background:var(--ok)}
 
-.online-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--fg);font-size:13px;font-weight:650;white-space:nowrap}
+ .online-pill{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:7px 11px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--fg);font-size:13px;font-weight:650;max-width:min(520px,100%)}
+.online-head{display:flex;align-items:center;gap:8px;white-space:nowrap}
 .online-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.14);flex:none}
-@media(max-width:600px){.top{gap:8px;flex-wrap:wrap}.online-pill{font-size:12px;padding:6px 9px}}
+#onlineNames{font-size:12px;line-height:1.4;color:var(--mut);font-weight:500;white-space:normal;overflow-wrap:anywhere}
+@media(max-width:600px){.top{gap:8px;flex-wrap:wrap}.online-pill{font-size:12px;padding:6px 9px;max-width:100%}}
 </style>
 </head>
 <body>
 <header class="top">
   <div class="brand"><div><p id="st">Yükleniyor…</p></div></div>
-  <div class="online-pill" aria-live="polite" title="Şu anda siteyi açık tutan ziyaretçi sayısı"><span class="online-dot"></span><span id="onlineCount">0 kişi çevrimiçi</span></div>
+  <div class="online-pill" aria-live="polite" title="Şu anda siteyi açık tutan ziyaretçiler">
+    <div class="online-head"><span class="online-dot"></span><span id="onlineCount">0 kişi çevrimiçi</span></div>
+    <div id="onlineNames">Kullanıcılar bekleniyor…</div>
+  </div>
   <div id="bar" class="bar hide"><span id="kim"></span><button id="profilBtn" type="button" class="alt">Profilim</button><button id="adminBtn" class="alt hide">Yönetim paneli</button><button id="cikis" type="button" class="alt">Çıkış yap</button></div>
 </header>
 
@@ -942,6 +947,7 @@ $("pKaydet").onclick = async () => {
   // Tablolarda görünen adı (kullanici) tüm satırlarda güncelle
   const up = await sb.from("sayilar").update({ kullanici: userName() }).eq("user_id", myId());
   kimYaz();
+  onlineKimlikGuncelle();
   if (up.error) { msg("Profil kaydedildi ama eski satırlardaki ad güncellenemedi: " + up.error.message); return; }
   msg(isAdmin() && profil.yonetici_gizli ? "Profil kaydedildi. Yönetici hesabınız normal kullanıcıların listelerinden gizlendi." : "Profil güncellendi.");
   await vardiyaYukle();
@@ -2767,11 +2773,28 @@ async function ziyaretKaydet() {
 // Supabase Realtime Presence: anlık çevrimiçi ziyaretçi sayısı.
 // Aynı tarayıcıdaki birden fazla sekme tek ziyaretçi olarak sayılır; bağlantı kopunca Presence otomatik düşer.
 let onlineKanal = null;
+function onlineKimlikVeri() {
+  // Kullanıcının sicil gizleme tercihi userName() içinde korunur.
+  return { ad: me ? (userName() || "Kullanıcı") : "Misafir", online_at: new Date().toISOString() };
+}
+async function onlineKimlikGuncelle() {
+  if (!onlineKanal || typeof onlineKanal.track !== "function") return;
+  try { await onlineKanal.track(onlineKimlikVeri()); } catch (e) {}
+}
 function onlineSayiGuncelle() {
-  const hedef = $("onlineCount");
+  const hedef = $("onlineCount"), isimHedef = $("onlineNames");
   if (!hedef || !onlineKanal || typeof onlineKanal.presenceState !== "function") return;
   const state = onlineKanal.presenceState() || {};
-  hedef.textContent = Object.keys(state).length + " kişi çevrimiçi";
+  const kisiler = [];
+  // Presence key ziyaretçi kimliğidir; aynı tarayıcıdaki sekmeler tek kişi gösterilir.
+  Object.keys(state).forEach(key => {
+    const metas = Array.isArray(state[key]) ? state[key] : [];
+    const meta = metas.length ? metas[metas.length - 1] : {};
+    const ad = String((meta && meta.ad) || "Misafir").trim() || "Misafir";
+    kisiler.push(ad);
+  });
+  hedef.textContent = kisiler.length + " kişi çevrimiçi";
+  if (isimHedef) isimHedef.textContent = kisiler.length ? kisiler.join(" · ") : "Şu anda ziyaretçi yok";
 }
 function onlineCanliKur() {
   if (!sb || onlineKanal || typeof sb.channel !== "function") return;
@@ -2782,13 +2805,13 @@ function onlineCanliKur() {
       .on("presence", { event: "leave" }, onlineSayiGuncelle);
     onlineKanal.subscribe(async status => {
       if (status === "SUBSCRIBED") {
-        try { await onlineKanal.track({ online_at: new Date().toISOString() }); } catch (e) {}
+        await onlineKimlikGuncelle();
         onlineSayiGuncelle();
       }
     });
   } catch (e) { onlineKanal = null; }
 }
-document.addEventListener("visibilitychange", () => { if (!document.hidden) { ziyaretKaydet(); if (onlineKanal && typeof onlineKanal.track === "function") onlineKanal.track({ online_at: new Date().toISOString() }).catch(() => {}); } });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { ziyaretKaydet(); onlineKimlikGuncelle(); } });
 
 (async function () {
   if (SUPABASE_URL.includes("PROJE-KODUNUZ") || SUPABASE_KEY.includes("ANAHTARINIZ")) { msg("Önce dosyanın başındaki SUPABASE_URL ve SUPABASE_KEY değerlerini girin."); return; }
@@ -2802,13 +2825,13 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) { zi
   }).subscribe();
   let started = false;
   sb.auth.onAuthStateChange((ev, session) => {
-    if (session) { me = session.user; cevrimdisiOturum = false; bellekSifre = null; if (!started) { started = true; setTimeout(hazirla, 0); } }
+    if (session) { me = session.user; cevrimdisiOturum = false; bellekSifre = null; onlineKimlikGuncelle(); if (!started) { started = true; setTimeout(hazirla, 0); } }
     else if (!session && (ev === "SIGNED_OUT" || ev === "INITIAL_SESSION")) {
       if (ev === "SIGNED_OUT") lsDel(OTURUM_KEY);
       // İnternet yokken sayfa açıldı ve daha önce giriş yapılmışsa: cihazdaki oturumla devam et
       const o = lsGet(OTURUM_KEY, null), e = o && Object.values(lsGet(CRED_KEY, {})).find(x => x.user && x.user.id === o.uid);
       if (ev === "INITIAL_SESSION" && !navigator.onLine && e) { me = e.user; cevrimdisiOturum = true; started = false; setTimeout(hazirla, 0); return; }
-      started = false; me = null; setTimeout(hazirla, 0);
+      started = false; me = null; onlineKimlikGuncelle(); setTimeout(hazirla, 0);
     }
   });
   // İnternet geri gelince, çevrimdışı girilen oturum için sunucu oturumunu sessizce yenile
