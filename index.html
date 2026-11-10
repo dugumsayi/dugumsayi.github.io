@@ -543,11 +543,16 @@ table.sp td.u{color:var(--warn);font-weight:700}
 table.sp td.why{min-width:220px}
 .sp-rozet{display:inline-block;border-radius:999px;padding:1px 10px;font-size:12px;font-weight:700;color:#fff;background:#777;white-space:nowrap}
 .sp-rozet.y{background:var(--bad)}.sp-rozet.o{background:#c27a0e}.sp-rozet.d{background:#6b7a90}.sp-rozet.t{background:var(--ok)}
+
+.online-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--fg);font-size:13px;font-weight:650;white-space:nowrap}
+.online-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.14);flex:none}
+@media(max-width:600px){.top{gap:8px;flex-wrap:wrap}.online-pill{font-size:12px;padding:6px 9px}}
 </style>
 </head>
 <body>
 <header class="top">
   <div class="brand"><div><p id="st">Yükleniyor…</p></div></div>
+  <div class="online-pill" aria-live="polite" title="Şu anda siteyi açık tutan ziyaretçi sayısı"><span class="online-dot"></span><span id="onlineCount">0 kişi çevrimiçi</span></div>
   <div id="bar" class="bar hide"><span id="kim"></span><button id="profilBtn" type="button" class="alt">Profilim</button><button id="adminBtn" class="alt hide">Yönetim paneli</button><button id="cikis" type="button" class="alt">Çıkış yap</button></div>
 </header>
 
@@ -2759,11 +2764,36 @@ async function ziyaretKaydet() {
   if (ziyaretGun === g) return;
   try { const r = await sb.rpc("ziyaret_kaydet", { zid: ziyaretciId() }); if (!r.error) { ziyaretGun = g; vardiyaYukle(); } } catch (e) {}
 }
-document.addEventListener("visibilitychange", () => { if (!document.hidden) ziyaretKaydet(); });
+// Supabase Realtime Presence: anlık çevrimiçi ziyaretçi sayısı.
+// Aynı tarayıcıdaki birden fazla sekme tek ziyaretçi olarak sayılır; bağlantı kopunca Presence otomatik düşer.
+let onlineKanal = null;
+function onlineSayiGuncelle() {
+  const hedef = $("onlineCount");
+  if (!hedef || !onlineKanal || typeof onlineKanal.presenceState !== "function") return;
+  const state = onlineKanal.presenceState() || {};
+  hedef.textContent = Object.keys(state).length + " kişi çevrimiçi";
+}
+function onlineCanliKur() {
+  if (!sb || onlineKanal || typeof sb.channel !== "function") return;
+  try {
+    onlineKanal = sb.channel("site-anlik-ziyaretciler", { config: { presence: { key: ziyaretciId() } } })
+      .on("presence", { event: "sync" }, onlineSayiGuncelle)
+      .on("presence", { event: "join" }, onlineSayiGuncelle)
+      .on("presence", { event: "leave" }, onlineSayiGuncelle);
+    onlineKanal.subscribe(async status => {
+      if (status === "SUBSCRIBED") {
+        try { await onlineKanal.track({ online_at: new Date().toISOString() }); } catch (e) {}
+        onlineSayiGuncelle();
+      }
+    });
+  } catch (e) { onlineKanal = null; }
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { ziyaretKaydet(); if (onlineKanal && typeof onlineKanal.track === "function") onlineKanal.track({ online_at: new Date().toISOString() }).catch(() => {}); } });
 
 (async function () {
   if (SUPABASE_URL.includes("PROJE-KODUNUZ") || SUPABASE_KEY.includes("ANAHTARINIZ")) { msg("Önce dosyanın başındaki SUPABASE_URL ve SUPABASE_KEY değerlerini girin."); return; }
   sb = (typeof supabase !== "undefined") ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : cevrimdisiSb();
+  onlineCanliKur();
   ziyaretKaydet();
   gorCanliKur();
   logCanliKur();
