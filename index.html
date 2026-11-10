@@ -889,10 +889,15 @@ $("profilKapat").onclick = () => $("profil").classList.add("hide");
 $("adminKapat").onclick = () => $("admin").classList.add("hide");
 // Ad Soyad alanında yalnızca son kelimeyi (soyadı) Türkçe kurallarına göre büyüt.
 function soyadiBuyut(metin) {
-  const parcalar = String(metin || "").trim().split(/\\s+/).filter(Boolean);
+  const parcalar = String(metin || "").trim().split(/\s+/).filter(Boolean);
   if (parcalar.length < 2) return parcalar.join(" ");
   parcalar[parcalar.length - 1] = parcalar[parcalar.length - 1].toLocaleUpperCase("tr-TR");
   return parcalar.join(" ");
+}
+// Eski kayıtlar dahil görünen adı düzeltir: "Ali Yılmaz (1234)" -> "Ali YILMAZ (1234)"
+function adBuyut(metin) {
+  const m = String(metin == null ? "" : metin).match(/^(.*?)(\s*[\(\[].*)?$/);
+  return m ? soyadiBuyut(m[1]) + (m[2] || "") : String(metin || "");
 }
 ["ad", "pAd", "aAd"].forEach(id => {
   const alan = $(id);
@@ -1115,7 +1120,7 @@ function renderShared() {
   rows.forEach(r => {
     // Vardiya RPC'sinde görünmeyen hesaplar (gizli yönetici dahil) ortak tablolarda da gösterilmez.
     if (gorunenKullanicilar && !gorunenKullanicilar.has(r.user_id)) return;
-    if (!byUser.has(r.user_id)) byUser.set(r.user_id, { ad: r.kullanici || "?", list: [] });
+    if (!byUser.has(r.user_id)) byUser.set(r.user_id, { ad: adBuyut(r.kullanici) || "?", list: [] });
     byUser.get(r.user_id).list.push(r);
   });
   const users = [...byUser.entries()].sort((a, b) =>
@@ -1389,7 +1394,7 @@ async function vardiyaYukle() {
   if (!sb) { box.classList.add("hide"); return; }
   const { data, error } = await sb.rpc("vardiya_listesi", { gun: secili });   // gizli yönetici kayıtları sunucuda filtrelenir
   if (error) { vardiyaList = []; vardiyaListeHazir = true; box.classList.add("hide"); renderShared(); return; }
-  vardiyaList = data || [];
+  vardiyaList = (data || []).map(u => ({ ...u, ad: adBuyut(u.ad) }));
   vardiyaListeHazir = true;
   try { const g = await sb.rpc("giris_sayisi", { gun: secili }); girisSayi = g.error ? null : g.data; } catch (e) { girisSayi = null; }
   try { const z = await sb.rpc("ziyaret_sayisi", { gun: secili }); ziyaretSayi = z.error ? null : z.data; } catch (e) { ziyaretSayi = null; }
@@ -1533,7 +1538,7 @@ async function adminYukle() {
   await kayitDurumuYukle();
   const { data, error } = await sb.rpc("admin_kullanicilar");
   if (error) { msg("Kullanıcı listesi alınamadı: " + error.message); return; }
-  adminList = data || []; adminCiz();
+  adminList = (data || []).map(u => ({ ...u, ad: soyadiBuyut(u.ad) })); adminCiz();
 }
 
 function adminCiz() {
@@ -1871,7 +1876,7 @@ function toplamHarita() {
 const makineYaz = l => l.sutun === "makine" ? (l.eski || "(adsız)") + " → " + (l.yeni || "(adsız)") + " (ad değişti)" : (l.makine || "(adsız)");
 // Herkes kimin girdiğini görür; sicil yalnızca yöneticiye ek olarak gösterilir (kullanıcı listesinden)
 const sicilHarita = () => new Map(adminList.map(u => [u.id, u.sicil]));
-const logAd = (l, sm) => (l.kullanici || "?") + (isAdmin() && sm.get(l.user_id) ? " [" + sm.get(l.user_id) + "]" : "");
+const logAd = (l, sm) => (adBuyut(l.kullanici) || "?") + (isAdmin() && sm.get(l.user_id) ? " [" + sm.get(l.user_id) + "]" : "");
 
 async function logYukle() {
   if (!sb) { logs = []; logCiz(); return; }
@@ -1880,7 +1885,7 @@ async function logYukle() {
   logOk = true; logs = data || [];
   if (isAdmin() && !adminList.length) {
     const r = await sb.rpc("admin_kullanicilar");
-    if (!r.error) adminList = r.data || [];
+    if (!r.error) adminList = (r.data || []).map(u => ({ ...u, ad: soyadiBuyut(u.ad) }));
   }
   logCiz();
 }
@@ -2014,7 +2019,7 @@ function logCizAsil() {
     if (!ad && tekrar.has(l.id)) tdS.append(el("div", "lg-ayni", "↺ Aynı makineye daha önce girdin"));   // SÜRE sütununda: aynı kullanıcı bu makineye daha önce girmiş, arada başka makineye geçip geri dönmüş
     if (gn !== "—" && gn !== mk) tdS.append(el("div", "lg-alt", "genel: " + gn));
     tr.append(el("td", "lg-t", saatOf(l.zaman)),
-      el("td", "", (l.kullanici || "?") + (isAdmin() && sm.get(l.user_id) ? " [" + sm.get(l.user_id) + "]" : "") + (l.user_id === myId() ? " (siz)" : "")),
+      el("td", "", (adBuyut(l.kullanici) || "?") + (isAdmin() && sm.get(l.user_id) ? " [" + sm.get(l.user_id) + "]" : "") + (l.user_id === myId() ? " (siz)" : "")),
       tdMk, tdE, el("td", "lg-tp", toplamOkYaz(l, hs)), tdS);
     if (isAdmin()) {
       const td = el("td", "act"), b = el("button", "sm red", "Sil");
@@ -2121,7 +2126,7 @@ function logCsv() {
   const baslik = ["Tarih", "Saat", "Kullanıcı"].concat(isAdmin() ? ["Sicil"] : [], ["Makine", "İşlem", "Eklenen", "Önceki toplam", "Sonraki toplam", "Makinede önceki girişten (sn)", "Genel önceki girişten (sn)"]);
   const satirlar = [baslik.map(q).join(";")];
   const dv = v => v == null ? "" : toplamYaz(v), th = toplamHarita();
-  list.slice().reverse().forEach(l => satirlar.push([secili, saatOf(l.zaman), l.kullanici].concat(isAdmin() ? [sm.get(l.user_id) || ""] : [],
+  list.slice().reverse().forEach(l => satirlar.push([secili, saatOf(l.zaman), adBuyut(l.kullanici)].concat(isAdmin() ? [sm.get(l.user_id) || ""] : [],
     [makineYaz(l), l.islem, eklenenYaz(l), dv(l.toplam_once ?? (th.get(l.id) || [])[0]), dv(l.toplam_sonra ?? (th.get(l.id) || [])[1]), l.fark_makine_sn, l.fark_genel_sn]).map(q).join(";")));
   const blob = new Blob(["\ufeff" + satirlar.join("\r\n")], { type: "text/csv;charset=utf-8" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "giris-kayitlari-" + secili + ".csv";
@@ -2191,8 +2196,8 @@ async function haftaYukle() {
     data.forEach(r => {
       if (!COLS.some(k => r[k] != null && r[k] !== "")) return;   // sayı girilmemiş satırlar sayılmaz
       let u = kisi.get(r.user_id);
-      if (!u) { u = { ad: r.kullanici || "?", g: {} }; kisi.set(r.user_id, u); }
-      if (r.kullanici) u.ad = r.kullanici;
+      if (!u) { u = { ad: adBuyut(r.kullanici) || "?", g: {} }; kisi.set(r.user_id, u); }
+      if (adBuyut(r.kullanici)) u.ad = adBuyut(r.kullanici);
       u.g[r.tarih] = (u.g[r.tarih] || 0) + rsum(r);
     });
     if (data.length < 1000) break;
@@ -2222,8 +2227,8 @@ async function oncekiHaftaYukle(gunler) {
         if (!COLS.some(k => r[k] != null && r[k] !== "")) return;
         const t = rsum(r);
         sonuc.g[r.tarih] = (sonuc.g[r.tarih] || 0) + t;
-        let u = sonuc.k.get(r.user_id); if (!u) { u = { ad: r.kullanici || "?", g: {} }; sonuc.k.set(r.user_id, u); }
-        if (r.kullanici) u.ad = r.kullanici;
+        let u = sonuc.k.get(r.user_id); if (!u) { u = { ad: adBuyut(r.kullanici) || "?", g: {} }; sonuc.k.set(r.user_id, u); }
+        if (adBuyut(r.kullanici)) u.ad = adBuyut(r.kullanici);
         u.g[r.tarih] = (u.g[r.tarih] || 0) + t;
       });
       if (data.length < 1000) break;
@@ -2390,8 +2395,8 @@ async function ayYukle() {
     if (error) { $("aEtiket").textContent = "Aylık veriler yüklenemedi: " + error.message; return; }
     data.forEach(r => {
       if (!COLS.some(k => r[k] != null && r[k] !== "")) return;
-      let u = kisi.get(r.user_id); if (!u) { u = { ad: r.kullanici || "?", g: {} }; kisi.set(r.user_id, u); }
-      if (r.kullanici) u.ad = r.kullanici;
+      let u = kisi.get(r.user_id); if (!u) { u = { ad: adBuyut(r.kullanici) || "?", g: {} }; kisi.set(r.user_id, u); }
+      if (adBuyut(r.kullanici)) u.ad = adBuyut(r.kullanici);
       u.g[r.tarih] = (u.g[r.tarih] || 0) + rsum(r); gunler.add(r.tarih);
     });
     if (data.length < 1000) break;
