@@ -1565,7 +1565,11 @@ function adminCiz() {
     const tdA = el("td", "act");
     const b0 = el("button", "sm alt", "Sicil değiştir");
     b0.onclick = () => adminSicil(u);
-    tdA.append(b0);
+    const bAd = el("button", "sm alt", "Ad Soyad değiştir");
+    bAd.onclick = () => adminAd(u);
+    const bSf = el("button", "sm alt", "Şifre değiştir");
+    bSf.onclick = () => adminSifre(u);
+    tdA.append(bAd, b0, bSf);
     if (!self) {
       const b1 = el("button", "sm " + (u.banli ? "grn" : "red"), u.banli ? "Banı kaldır" : "Banla");
       b1.onclick = () => adminBan(u);
@@ -1603,6 +1607,31 @@ async function adminSicil(u) {
     if (r.data && r.data.session) me = r.data.session.user;
     await hazirla();
   }
+}
+async function adminAd(u) {
+  const eski = (u.ad || "") + " (" + u.sicil + ")", self = u.id === myId();
+  const yeni = prompt(eski + " için yeni Ad Soyad yazın (soyadı otomatik büyük harf olur):", u.ad || "");
+  if (yeni === null) return;
+  const ad = soyadiBuyut(yeni);
+  if (!ad) { msg("Ad Soyad boş olamaz."); return; }
+  if (ad === u.ad) { msg("Yeni ad mevcut adla aynı."); return; }
+  if (!confirm(eski + " adı \"" + (u.ad || "") + "\" yerine \"" + ad + "\" olarak değiştirilsin mi?")) return;
+  const ok = await adminIslem("admin_ad_degistir", { hedef: u.id, yeni_ad: ad }, "Ad Soyad değiştirildi: " + ad + ".");
+  if (ok && self) {
+    const r = await sb.auth.refreshSession();
+    if (r.data && r.data.session) me = r.data.session.user;
+    await hazirla();
+  }
+}
+async function adminSifre(u) {
+  const ad = (u.ad || "") + " (" + u.sicil + ")", self = u.id === myId();
+  const yeni = prompt(ad + " için yeni şifreyi yazın:");
+  if (yeni === null) return;
+  if (!yeni.trim()) { msg("Şifre boş olamaz."); return; }
+  if (!confirm(ad + " şifresi değiştirilsin mi?" + (self ? "" : "\nKullanıcının açık oturumu kapanır, yeni şifreyle giriş yapması gerekir."))) return;
+  const ok = await adminIslem("admin_sifre_degistir", { hedef: u.id, yeni_sifre: sifreHazirla(yeni) },
+    "Şifre değiştirildi: " + ad + (self ? "." : ". Yeni şifreyi kullanıcıya iletin."));
+  if (ok && self) { msg("Şifreniz değişti, yeniden giriş yapın."); try { await sb.auth.signOut(); } catch (e) {} location.reload(); }
 }
 async function adminBan(u) {
   const ad = (u.ad || "") + " (" + u.sicil + ")";
