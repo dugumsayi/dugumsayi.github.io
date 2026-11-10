@@ -1550,7 +1550,18 @@ async function adminYukle() {
   adminList = (data || []).map(u => ({ ...u, ad: soyadiBuyut(u.ad) })); adminCiz();
 }
 
+// Yönetici listesinde ad eksik gelirse (yalnızca ilk ad) diğer kaynaklardaki tam adı kullan
+function adTamla(u) {
+  const say = t => String(t || "").trim().split(/\s+/).filter(Boolean).length;
+  const adaylar = [u.ad];
+  const v = (vardiyaList || []).find(x => x.id === u.id); if (v) adaylar.push(v.ad);
+  (typeof rows !== "undefined" && rows ? rows : []).forEach(r => { if (r.user_id === u.id && r.kullanici) adaylar.push(String(r.kullanici).replace(/\s*[\(\[].*$/, "")); });
+  let en = adBuyut(u.ad || "");
+  adaylar.forEach(a => { const x = adBuyut(String(a || "").replace(/\s*[\(\[].*$/, "")); if (say(x) > say(en)) en = x; });
+  return en;
+}
 function adminCiz() {
+  adminList.forEach(u => { u.ad = adTamla(u); });
   const box = $("aListe"); box.textContent = "";
   const q = $("aAra").value.trim().toLocaleLowerCase("tr");
   const list = adminList.filter(u => !q || ((u.sicil || "") + " " + (u.ad || "")).toLocaleLowerCase("tr").includes(q));
