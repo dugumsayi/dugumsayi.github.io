@@ -1931,7 +1931,7 @@ async function logYukle() {
   if (!sb) { logs = []; logCiz(); return; }
   const { data, error } = await sb.from("sayi_log").select("*").eq("tarih", secili).order("zaman", { ascending: false }).limit(2000);
   if (error) { logOk = false; logCiz(); return; }   // tablo kurulmamışsa bölüm gizli kalır
-  logOk = true; logs = data || [];
+  logOk = true; logs = (data || []).filter(l => l.sutun !== "makine");   // makine adı değişiklikleri kayıtta gösterilmez; makine adı sayı girişiyle birlikte görünür
   if (isAdmin() && !adminList.length) {
     const r = await sb.rpc("admin_kullanicilar");
     if (!r.error) adminList = (r.data || []).map(u => ({ ...u, ad: soyadiBuyut(u.ad) }));
