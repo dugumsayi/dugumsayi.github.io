@@ -585,6 +585,15 @@ table.sp td.why{min-width:220px}
     <button id="kayitAcKapat" type="button" class="alt">Kayıt ayarını yükle</button>
   </div>
   <hr>
+  <strong>Günlük hedef sayıları</strong>
+  <p class="mut">Burada belirlediğiniz iki hedef, tüm kullanıcıların giriş özeti ve hedef hesaplamalarında ortak kullanılır.</p>
+  <div class="row">
+    <label>Birinci hedef <input id="hedefBir" type="number" min="1" max="1000000" step="1" value="504"></label>
+    <label>İkinci hedef <input id="hedefIki" type="number" min="1" max="1000000" step="1" value="552"></label>
+    <button id="hedefKaydet" type="button">Hedefleri kaydet</button>
+    <span id="hedefDurum" class="mut"></span>
+  </div>
+  <hr>
   <strong>Eski kayıtları düzelt</strong>
   <p class="mut">Mevcut kullanıcıların yalnızca soyadlarının son kelimesini büyük harfe çevirir. Kullanıcı hesapları ve diğer bilgiler silinmez.</p>
   <div class="row"><button id="eskiSoyadlariBuyut" type="button" class="alt">Eski kayıtların soyadlarını büyüt</button></div>
@@ -1264,6 +1273,7 @@ async function hazirla() {
   const ah = $("app").querySelector("h2"); if (ah) ah.textContent = "Benim girişlerim (bugün · " + VNO_AD[gv] + ")";
   if (me) kimYaz();
   await gorYukle();
+  await hedefYukle();
   await kalpAt();
   await vardiyaYukle();
   if (duzenle) {
@@ -1351,6 +1361,44 @@ $("kayitAcKapat").onclick = async () => {
   msg(kayitAcikMi ? "Yeni kullanıcı kaydı açıldı." : "Yeni kullanıcı kaydı kapatıldı.");
 };
 
+// ================= YÖNETİCİ HEDEF AYARLARI =================
+function hedefleriGoster() {
+  const a = $("hedefBir"), b = $("hedefIki");
+  if (a && document.activeElement !== a) a.value = HEDEFLER[0];
+  if (b && document.activeElement !== b) b.value = HEDEFLER[1];
+  // Hedefler değiştiğinde açık özetleri yeni değerlere göre yeniden çiz.
+  try { if (typeof logOk !== "undefined" && logOk) { logOzetCiz(logGorunen(), sicilHarita()); ozetKartlar(); } } catch (e) {}
+}
+async function hedefYukle() {
+  if (!sb) return;
+  try {
+    const { data, error } = await sb.from("site_ayar").select("deger").eq("anahtar", "hedefler").maybeSingle();
+    if (error) throw error;
+    const d = data && data.deger;
+    if (d && Number.isFinite(Number(d.birinci)) && Number(d.birinci) > 0 && Number.isFinite(Number(d.ikinci)) && Number(d.ikinci) > 0) {
+      HEDEFLER = [Math.round(Number(d.birinci)), Math.round(Number(d.ikinci))];
+    }
+    hedefleriGoster();
+  } catch (e) {
+    const durum = $("hedefDurum");
+    if (durum && isAdmin()) durum.textContent = "Hedef ayarları için hedef-ayarlari.sql kurulmalı.";
+  }
+}
+$("hedefKaydet").onclick = async () => {
+  if (!isAdmin()) { msg("Hedefleri değiştirmek için yönetici olmalısınız."); return; }
+  const birinci = Number($("hedefBir").value), ikinci = Number($("hedefIki").value);
+  if (!Number.isInteger(birinci) || !Number.isInteger(ikinci) || birinci < 1 || ikinci < 1 || birinci > 1000000 || ikinci > 1000000 || birinci === ikinci) {
+    msg("İki hedef de 1 ile 1.000.000 arasında tam sayı olmalı ve birbirinden farklı olmalı."); return;
+  }
+  msg("Hedefler kaydediliyor…");
+  const { data, error } = await sb.rpc("admin_hedef_ayari", { birinci, ikinci });
+  if (error) { msg("Hedefler kaydedilemedi: " + error.message + " — Supabase SQL Editor'de hedef-ayarlari.sql dosyasını çalıştırın."); return; }
+  HEDEFLER = [birinci, ikinci];
+  hedefleriGoster();
+  try { if (gorKanal) gorKanal.send({ type: "broadcast", event: "guncelle", payload: { hedefler: true, t: Date.now() } }); } catch (e) {}
+  msg("Hedefler tüm kullanıcılar için kaydedildi.");
+};
+
 // ================= YÖNETİM / BAN =================
 // Not: Asıl yetki kontrolü veritabanında (RLS + admin_* fonksiyonları). Buradaki kontroller yalnızca arayüz içindir.
 async function profilYukleAsil() {
@@ -1395,6 +1443,7 @@ $("aAra").oninput = () => adminCiz();
 // Veritabanı: profiles.vardiya + vardiya_listesi() + admin_vardiya() (vardiya.sql)
 const VARDIYALAR = ["A", "B", "C", "D"];
 const MOLA_DK = 35, VARDIYA_DK = 480, NET_DK = VARDIYA_DK - MOLA_DK;   // 8 saatlik vardiyada 35 dk mola: net çalışma 445 dk (7 sa 25 dk)
+let HEDEFLER = [504, 552]; // Sunucudan yüklenir; varsayılan hedefler
 let vardiyaList = [], girisSayi = null, ziyaretSayi = null, vardiyaListeHazir = false;   // gizlilik filtresi için liste yükleme durumu
 const vardiyaOf = id => { const x = vardiyaList.find(u => u.id === id); return x ? x.vardiya : null; };
 async function vardiyaYukle() {
@@ -1532,7 +1581,7 @@ async function kalpAt() {
     try { const r = await sb.rpc("giris_kaydet"); if (!r.error) girisKayitGun = me.id + g; } catch (e) {}
   }
 }
-setInterval(async () => { await kalpAt(); vardiyaYukle(); gorYukle(); }, 45000);
+setInterval(async () => { await kalpAt(); vardiyaYukle(); gorYukle(); hedefYukle(); }, 45000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { kalpAt().then(vardiyaYukle); } });
 async function adminVardiya(u, v) {
   msg("Vardiya kaydediliyor…");
@@ -1800,8 +1849,8 @@ function gorCanliKur() {
   try {
     // Yönetici kaydedince yayın (broadcast) gönderir; tablo realtime'a açıksa veritabanı değişikliği de tetikler.
     gorKanal = sb.channel("gorunurluk-canli", { config: { broadcast: { self: false } } })
-      .on("broadcast", { event: "guncelle" }, () => { gorYukle(); })
-      .on("postgres_changes", { event: "*", schema: "public", table: "site_ayar" }, () => { gorYukle(); })
+      .on("broadcast", { event: "guncelle" }, () => { gorYukle(); hedefYukle(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "site_ayar" }, () => { gorYukle(); hedefYukle(); })
       .subscribe();
   } catch (e) { gorKanal = null; }
 }
@@ -1957,27 +2006,58 @@ function ozetGrupla(list, sm) {
 function ozetChipListesi(g) {
   const c = [];
   g.t.sort((a, b) => a - b);
-  const n = g.t.length, ilk = g.t[0], son = g.t[n - 1], top = (son - ilk) / 1000, saat = top / 3600,
-    H8 = 8 * 3600000, vBas = ilk - ((ilk + 3 * 3600000) % H8),
-    simdi = Date.now(), canli = secili === bugun && simdi >= ilk && simdi < vBas + H8,   // bugünün vardiyası sürüyorsa referans an = şimdi (canlı tahmin)
-    ref = canli ? simdi : son, vSaat = (ref - vBas) / 3600000, calDk = vSaat * 60 - MOLA_DK;   // calDk: vardiya başından beri net çalışma dakikası (35 dk mola düşülmüş)
+  const n = g.t.length;
+  if (!n) return c;
+
+  const ilk = g.t[0], son = g.t[n - 1], top = Math.max(0, (son - ilk) / 1000), saat = top / 3600;
+  const H8 = 8 * 3600000;
+  const vBas = ilk - ((ilk + 3 * 3600000) % H8);
+  const simdi = Date.now();
+  const canli = secili === bugun && simdi >= ilk && simdi < vBas + H8;
+  const ref = canli ? simdi : son;
+  const vSaat = Math.max(0, (ref - vBas) / 3600000);
+  const calDk = Math.max(0, vSaat * 60 - MOLA_DK);
+  const hesapHazir = calDk >= 1;
+  const hizDk = hesapHazir && g.net > 0 ? g.net / calDk : 0;
+
+  // Bu kart bütün kullanıcılar için aynı alanları gösterir.
   c.push(["Atılan toplam sayı", fmt(Math.round(g.net * 100) / 100), true]);
   c.push(["İlk giriş", saatOf(ilk)]);
   c.push(["Son giriş", saatOf(son)]);
   c.push(["İlk girişten sona", n > 1 ? sure(top) + " (" + fmt(Math.round(saat * 100) / 100) + " saat)" : "tek giriş", true]);
-  if (calDk >= 1) c.push(["8 saatlik baz (35 dk mola düşülmüş, tahmini" + (canli ? ", canlı" : "") + ")", fmt(Math.round(g.net / calDk * NET_DK * 10) / 10) + " sayı", canli]);
-  if (calDk >= 1) c.push(["Ortalama (saatte, mola hariç)", fmt(Math.round(g.net / calDk * 60 * 10) / 10) + " sayı/saat", true]);
-  if (calDk >= 1 && g.net > 0) {
-    const dkHiz = g.net / calDk;
-    [504, 552].forEach(hd => {
-      const kalan = hd - g.net;
-      if (kalan <= 0) { c.push([hd + " hedefi", "tamamlandı (+" + fmt(Math.round(-kalan * 100) / 100) + ")", true]); return; }
-      const dk = kalan / dkHiz;
+
+  c.push([
+    "8 saatlik baz (35 dk mola düşülmüş, tahmini" + (canli ? ", canlı" : "") + ")",
+    hesapHazir ? fmt(Math.round(g.net / calDk * NET_DK * 10) / 10) + " sayı" : "Hesaplanıyor (mola süresi bekleniyor)",
+    canli
+  ]);
+  c.push([
+    "Ortalama (saatte, mola hariç)",
+    hesapHazir ? fmt(Math.round(g.net / calDk * 60 * 10) / 10) + " sayı/saat" : "Hesaplanıyor",
+    true
+  ]);
+
+  // Hedef ve kalan sayı, hız hesabı henüz oluşmasa da her kullanıcıda görünür.
+  HEDEFLER.forEach(hd => {
+    const kalan = hd - g.net;
+    if (kalan <= 0) {
+      c.push([hd + " hedefi", "tamamlandı (+" + fmt(Math.round(-kalan * 100) / 100) + ")", true]);
+      return;
+    }
+    if (hizDk > 0) {
+      const dk = kalan / hizDk;
       let bitis = "";
-      if (secili === bugun) bitis = " · bitiş " + new Date(Date.now() + dk * 60000).toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit" });
+      if (secili === bugun) {
+        bitis = " · bitiş " + new Date(Date.now() + dk * 60000).toLocaleTimeString("tr-TR", {
+          timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit"
+        });
+      }
       c.push([hd + " için kalan", fmt(Math.round(kalan * 100) / 100) + " sayı · " + Math.ceil(dk) + " dk" + bitis, true]);
-    });
-  }
+    } else {
+      c.push([hd + " için kalan", fmt(Math.round(kalan * 100) / 100) + " sayı · tahmin için veri bekleniyor", true]);
+    }
+  });
+
   c.push(["Giriş sayısı", String(n)]);
   if (n > 1) c.push(["Ort. aralık", sure(top / (n - 1))]);
   return c;
