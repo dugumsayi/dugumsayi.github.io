@@ -292,7 +292,7 @@ button.alt.sel{background:var(--blue);color:#fff;border-color:var(--blue)}
 #gList input{width:18px;height:18px;flex:none}
 
 /* Haftalık ortalama grafiği */
-#haftaPanel .ucard,#ayPanel .ucard{padding:12px 14px}
+#haftaPanel .ucard,#ayPanel .ucard,#yilPanel .ucard{padding:12px 14px}
 #hGrafik svg{width:100%;height:auto;display:block}
 .hc-t{fill:var(--mut);font-size:12px}
 .hc-v{fill:var(--fg);font-size:12px;font-weight:700}
@@ -664,7 +664,7 @@ table.sp td.why{min-width:220px}
 </section>
 
 <section class="panel" id="ortPanel">
-  <div class="sec-head"><h2>Ortalama</h2><div class="bar" id="ortSekme"><button id="ortH" type="button" class="alt sm sel">Haftalık</button><button id="ortA" type="button" class="alt sm">Aylık</button></div></div>
+  <div class="sec-head"><h2>Ortalama</h2><div class="bar" id="ortSekme"><button id="ortH" type="button" class="alt sm sel">Haftalık</button><button id="ortA" type="button" class="alt sm">Aylık</button><button id="ortY" type="button" class="alt sm">Yıllık</button></div></div>
 
   <div id="haftaPanel">
     <div class="sec-head"><div class="bar"><button id="hOnce" type="button" class="alt sm">◀ Önceki hafta</button><button id="hBu" type="button" class="alt sm">Bu hafta</button><button id="hSonra" type="button" class="alt sm">Sonraki hafta ▶</button></div></div>
@@ -678,6 +678,13 @@ table.sp td.why{min-width:220px}
     <p id="aEtiket" class="mut"></p>
     <div id="aStat" class="stats"></div>
     <div class="ucard"><div id="aTablo" class="scroll"></div></div>
+  </div>
+
+  <div id="yilPanel" class="ort-gizli">
+    <div class="sec-head"><div class="bar"><button id="yOnce" type="button" class="alt sm">◀ Önceki yıl</button><button id="yBu" type="button" class="alt sm">Bu yıl</button><button id="ySonra" type="button" class="alt sm">Sonraki yıl ▶</button></div></div>
+    <p id="yEtiket" class="mut"></p>
+    <div id="yStat" class="stats"></div>
+    <div class="ucard"><div id="yGrafik"></div></div>
   </div>
 </section>
 
@@ -1688,7 +1695,7 @@ const GOR = [
   ["tablolar", "Kullanıcıların tabloları", ["users"]],
   ["ozetyan", "Tabloların yanındaki giriş özeti (ilk/son giriş, ortalama, hedefler)", []],
   ["hafta", "Haftalık ortalama", ["haftaPanel"]],
-  ["ay", "Aylık ortalama", ["ayPanel"]],
+  ["ay", "Aylık ve yıllık ortalama", ["ayPanel"]],
   ["log", "Giriş kayıtları ve süre farkı", ["logBox"]]
 ];
 // misafir: giriş yapmadan (kayıt yoksa gizli) · uye: giriş yapınca (kayıt yoksa görünür)
@@ -2210,7 +2217,7 @@ const haftaPzt = str => { const d = new Date(str + "T12:00:00"); d.setDate(d.get
 const yuv = x => Math.round(x * 100) / 100;
 let haftaTimer = null, haftaSeq = 0, haftaGunler = [], haftaGiris = null;
 
-let aySonAy = ""; function haftaPlanla() { clearTimeout(haftaTimer); haftaTimer = setTimeout(() => { haftaYukle(); if (aySonAy !== secili.slice(0, 7)) { aySonAy = secili.slice(0, 7); ayBas = null; } ayYukle(); }, 800); }
+let aySonAy = ""; function haftaPlanla() { clearTimeout(haftaTimer); haftaTimer = setTimeout(() => { haftaYukle(); if (aySonAy !== secili.slice(0, 7)) { aySonAy = secili.slice(0, 7); ayBas = null; } ayYukle(); if (ortSekme === "yil") yilYukle(); }, 800); }
 
 async function haftaYukle() {
   if (!sb) return;
@@ -2459,21 +2466,147 @@ $("aOnce").onclick = () => { const d = new Date((ayBas || ayBaslangic(secili)) +
 $("aSonra").onclick = () => { const d = new Date((ayBas || ayBaslangic(secili)) + "T12:00:00"); ayBas = ayBaslangic(tarihStr(new Date(d.getFullYear(), d.getMonth() + 1, 1))); ayYukle(); };
 $("aBu").onclick = () => { ayBas = ayBaslangic(bugun); ayYukle(); };
 
+// ================= YILLIK ORTALAMA =================
+const AY_KISA = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+let yilNo = null, yilSeq = 0;
+async function yilYukle() {
+  if (!sb) return;
+  const seq = ++yilSeq, yil = yilNo || Number(secili.slice(0, 4));
+  const kisi = new Map();
+  $("yEtiket").textContent = "Yıllık veriler yükleniyor…";
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await sb.from("sayilar").select("tarih,user_id,kullanici,n1,n2,n3,n4,n5,n6")
+      .gte("tarih", yil + "-01-01").lte("tarih", yil + "-12-31").order("tarih").order("user_id").order("satir").range(from, from + 999);
+    if (seq !== yilSeq) return;
+    if (error) { $("yEtiket").textContent = "Yıllık veriler yüklenemedi: " + error.message; return; }
+    data.forEach(r => {
+      if (!COLS.some(k => r[k] != null && r[k] !== "")) return;
+      let u = kisi.get(r.user_id); if (!u) { u = { ad: adBuyut(r.kullanici) || "?", g: {} }; kisi.set(r.user_id, u); }
+      if (adBuyut(r.kullanici)) u.ad = adBuyut(r.kullanici);
+      u.g[r.tarih] = (u.g[r.tarih] || 0) + rsum(r);
+    });
+    if (data.length < 1000) break;
+  }
+  yilCiz(yil, kisi);
+}
+function yilCiz(yil, kisi) {
+  const bugunYil = Number(bugun.slice(0, 4));
+  // Kişi başına ay toplamı ve sayı girilen gün sayısı (bugünden sonraki tarihler sayılmaz)
+  const us = [...kisi.entries()].map(([id, u]) => {
+    const ay = Array(12).fill(null), gun = new Set();
+    Object.keys(u.g).filter(g => g <= bugun).forEach(g => { const m = Number(g.slice(5, 7)) - 1; ay[m] = (ay[m] || 0) + u.g[g]; gun.add(g); });
+    return { id, ad: u.ad, ay, gun, top: ay.reduce((a, v) => a + (v || 0), 0) };
+  }).filter(u => u.gun.size).sort((a, b) => b.top - a.top || a.ad.localeCompare(b.ad, "tr"));
+  us.forEach((u, i) => { u.renk = HC_RENK[i % HC_RENK.length]; });
+  const gunSet = new Set(); us.forEach(u => u.gun.forEach(g => gunSet.add(g)));
+  const gunSay = gunSet.size;
+  const ayTop = Array.from({ length: 12 }, (_, m) => us.some(u => u.ay[m] != null) ? yuv(us.reduce((a, u) => a + (u.ay[m] || 0), 0)) : null);
+  const ayGun = Array.from({ length: 12 }, (_, m) => [...gunSet].filter(g => Number(g.slice(5, 7)) - 1 === m).length);
+  const doluAy = ayTop.filter(v => v != null).length;
+  const toplam = yuv(ayTop.reduce((a, v) => a + (v || 0), 0));
+  const gunOrt = gunSay ? yuv(toplam / gunSay) : 0, ayOrt = doluAy ? yuv(toplam / doluAy) : 0;
+  $("yEtiket").textContent = yil + (gunSay ? " · günlük ortalama, sayı girilen " + gunSay + " günün ortalamasıdır" : "");
+  $("ySonra").disabled = yil >= bugunYil;
+  $("yBu").disabled = yil === bugunYil;
+
+  const hs = $("yStat"); hs.textContent = "";
+  const stat = (k, v, sub, cls) => { const c = el("div", "stat" + (cls ? " " + cls : "")); c.append(el("div", "k", k), el("div", "v", v), el("div", "s", sub || "")); hs.append(c); };
+  stat("Günlük ortalama", fmt(gunOrt), "sayı girilen günlere göre", "g");
+  stat("Aylık ortalama", fmt(ayOrt), doluAy ? "sayı girilen " + doluAy + " ayın ortalaması" : "");
+  stat("Yıllık toplam", fmt(toplam), "");
+  stat("Çalışılan gün", String(gunSay), "");
+
+  const box = $("yGrafik"); box.textContent = "";
+  if (!gunSay) { box.append(el("p", "mut", yil + " yılında henüz sayı girilmemiş.")); return; }
+
+  const NS = "http://www.w3.org/2000/svg", W = 760, H = 300, L = 54, R = 84, T = 30, B = 34;
+  const mk = (n, at, t) => { const e = document.createElementNS(NS, n); for (const k in at || {}) e.setAttribute(k, at[k]); if (t != null) e.textContent = t; return e; };
+  const svg = mk("svg", { viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": "Aylık atılan sayı grafiği (kullanıcıya göre)" });
+  const hedef = Math.max(...ayTop.map(v => v || 0), ayOrt, 1) * 1.12;
+  const adim = (() => { const ham = hedef / 4, e = Math.pow(10, Math.floor(Math.log10(ham))), f = ham / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * e; })();
+  const ust = adim * 4, y = v => T + (H - T - B) * (1 - v / ust);
+  for (let i = 0; i <= 4; i++) {
+    const v = adim * i;
+    svg.append(mk("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), class: "hc-g" }));
+    svg.append(mk("text", { x: L - 8, y: y(v) + 4, "text-anchor": "end", class: "hc-t" }, fmt(yuv(v))));
+  }
+  const kol = (W - L - R) / 12, bw = Math.min(44, kol * 0.66);
+  const buAy = Number(bugun.slice(5, 7)) - 1;
+  for (let m = 0; m < 12; m++) {
+    const cx = L + kol * m + kol / 2, gelecek = yil > bugunYil || (yil === bugunYil && m > buAy), v = ayTop[m];
+    const grp = mk("g", { class: "hc-col" });
+    const kim = us.filter(u => u.ay[m] != null).map(u => u.ad + ": " + fmt(yuv(u.ay[m]))).join("\n");
+    grp.append(mk("title", {}, AY_KISA[m] + " " + yil + (gelecek ? ": henüz yok" : v != null ? " · toplam " + fmt(v) + " · " + ayGun[m] + " gün" + (kim ? "\n" + kim : "") : ": kayıt yok")));
+    grp.append(mk("rect", { x: cx - kol / 2, y: T - 14, width: kol, height: H - T - B + 14, fill: "transparent" }));
+    if (v != null) {
+      let alt = 0;
+      us.forEach(u => {
+        const d = u.ay[m]; if (d == null || d <= 0) return;
+        const yy = y(alt + d), h = y(alt) - yy;
+        grp.append(mk("rect", { x: cx - bw / 2, y: yy, width: bw, height: Math.max(h, 1), fill: u.renk, stroke: "var(--card)", "stroke-width": 1 }));
+        alt += d;
+      });
+      grp.append(mk("text", { x: cx, y: y(alt) - 6, "text-anchor": "middle", class: "hc-v" }, fmt(v)));
+    } else if (gelecek) {
+      grp.append(mk("rect", { x: cx - bw / 2, y: y(0) - 3, width: bw, height: 3, rx: 1.5, class: "hc-bar fut" }));
+    } else {
+      grp.append(mk("text", { x: cx, y: y(0) - 6, "text-anchor": "middle", class: "hc-t" }, "—"));
+    }
+    grp.append(mk("text", { x: cx, y: H - 12, "text-anchor": "middle", class: "hc-t", style: (yil === bugunYil && m === buAy) ? "font-weight:700;fill:var(--fg)" : "" }, AY_KISA[m]));
+    if (!gelecek) grp.onclick = () => { ayBas = yil + "-" + String(m + 1).padStart(2, "0") + "-01"; ortSekme = "ay"; ortUygula(); ayYukle(); };
+    svg.append(grp);
+  }
+  svg.append(mk("line", { x1: L, x2: W - R + 6, y1: y(ayOrt), y2: y(ayOrt), class: "hc-avg" }));
+  svg.append(mk("text", { x: W - R + 10, y: y(ayOrt) + 4, "text-anchor": "start", class: "hc-avgt" }, "Ort. " + fmt(ayOrt)));
+  box.append(svg);
+  box.append(el("p", "mut cmp-alt", "Çizgi, sayı girilen ayların aylık ortalamasıdır. Bir aya tıklarsanız o ayın ayrıntısı açılır."));
+
+  const leg = el("div", "hc-leg");
+  us.forEach(u => {
+    const c = el("span", "hc-chip"), d = el("i"); d.style.background = u.renk;
+    c.append(d, el("span", "", u.ad + " · " + fmt(yuv(u.top)))); leg.append(c);
+  });
+  box.append(leg);
+
+  // Kim ne kadar attı: ay ay kişi tablosu
+  const wrap = el("div", "scroll"), tbl = el("table", "at hc-tbl"), head = el("thead"), hr = el("tr"), body = el("tbody");
+  ["KİM"].concat(AY_KISA, ["TOPLAM", "GÜN", "GÜNLÜK ORT."]).forEach(h => hr.append(el("th", "", h))); head.append(hr); tbl.append(head);
+  us.forEach(u => {
+    const tr = el("tr"), k = el("td", "hc-k"), d = el("i"); d.style.background = u.renk;
+    k.append(d, document.createTextNode(u.ad)); tr.append(k);
+    u.ay.forEach(v => tr.append(el("td", "hc-n", v != null ? fmt(yuv(v)) : "—")));
+    tr.append(el("td", "hc-n hc-s", fmt(yuv(u.top))), el("td", "hc-n", String(u.gun.size)), el("td", "hc-n", fmt(yuv(u.top / u.gun.size)))); body.append(tr);
+  });
+  const ft = el("tr", "tot"); ft.append(el("td", "", "GENEL TOPLAM"));
+  ayTop.forEach(v => ft.append(el("td", "", v != null ? fmt(v) : "—")));
+  ft.append(el("td", "", fmt(toplam)), el("td", "", String(gunSay)), el("td", "", fmt(gunOrt))); body.append(ft);
+  tbl.append(body); wrap.append(tbl); box.append(wrap);
+}
+$("yOnce").onclick = () => { yilNo = (yilNo || Number(secili.slice(0, 4))) - 1; yilYukle(); };
+$("ySonra").onclick = () => { yilNo = Math.min((yilNo || Number(secili.slice(0, 4))) + 1, Number(bugun.slice(0, 4))); yilYukle(); };
+$("yBu").onclick = () => { yilNo = Number(bugun.slice(0, 4)); yilYukle(); };
+
 // Haftalık + aylık ortalama tek pencerede, sekmeli
 var ortSekme = "hafta";
 function ortUygula() {
   const h = gorunur("hafta"), a = gorunur("ay");
   if (ortSekme === "hafta" && !h && a) ortSekme = "ay";
-  if (ortSekme === "ay" && !a && h) ortSekme = "hafta";
+  if ((ortSekme === "ay" || ortSekme === "yil") && !a && h) ortSekme = "hafta";
   $("haftaPanel").classList.toggle("ort-gizli", ortSekme !== "hafta");
   $("ayPanel").classList.toggle("ort-gizli", ortSekme !== "ay");
+  $("yilPanel").classList.toggle("ort-gizli", ortSekme !== "yil");
   $("ortH").classList.toggle("sel", ortSekme === "hafta");
   $("ortA").classList.toggle("sel", ortSekme === "ay");
-  $("ortSekme").classList.toggle("hide", !(h && a));
+  $("ortY").classList.toggle("sel", ortSekme === "yil");
+  $("ortH").classList.toggle("hide", !h);
+  $("ortA").classList.toggle("hide", !a);
+  $("ortY").classList.toggle("hide", !a);
+  $("ortSekme").classList.toggle("hide", !((h ? 1 : 0) + (a ? 2 : 0) > 1));
   $("ortPanel").classList.toggle("gz", !(h || a));
 }
 $("ortH").onclick = () => { ortSekme = "hafta"; ortUygula(); };
 $("ortA").onclick = () => { ortSekme = "ay"; ortUygula(); };
+$("ortY").onclick = () => { ortSekme = "yil"; ortUygula(); yilYukle(); };
 ortUygula();
 
 // Sayfadan ayrılmadan / sekme gizlenmeden önce bekleyen değişiklikleri hemen kaydet
