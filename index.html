@@ -53,20 +53,7 @@ button.grn{background:#2a9d4a}
 .badge.ok{background:#2a9d4a}
 #vardiyaBox{margin:12px 0}
 #vardiyaGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
-#tumKullanicilar{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;box-shadow:var(--shadow)}
-#tumKullanicilar h3{margin:0 0 8px;font-size:15px}
-#tumKullanicilar>.sec-head{margin:0 0 8px}
-#tumKullanicilar>.sec-head h3{margin:0}
 .pen-bas>h3{margin-right:auto;cursor:pointer;user-select:none}
-#tumKullanicilar.pen.kapali>.sec-head{margin-bottom:0}
-#tumKullanicilar .kisi-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
-#tumKullanicilar .kisi{display:flex;align-items:center;gap:9px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);min-width:0}
-#tumKullanicilar .kisi .kisi-ad{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
-#tumKullanicilar .kisi .kisi-alt{font-size:12px;color:var(--mut);margin-top:2px}
-#tumKullanicilar .kisi .kisi-bilgi{flex:1 1 auto;min-width:0}
-#tumKullanicilar .kisi .durum{flex:none;margin-left:auto;font-size:11px;font-weight:700;border-radius:999px;padding:3px 8px;white-space:nowrap}
-#tumKullanicilar .kisi .durum.on{background:#2ecc4020;color:#23943a}
-#tumKullanicilar .kisi .durum.off{background:#e5484d18;color:#d33}
 .vcard{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 14px}
 .vcard h4{margin:0 0 6px;font-size:16px;color:var(--blue)}
 .vgenel{font-size:16px;font-weight:700;margin:0 0 10px}
@@ -141,6 +128,8 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 .vcard li.vm{display:flex;align-items:center;gap:8px;margin:0;padding:7px 9px;border-radius:8px;background:var(--bg);border-left:3px solid transparent;font-size:14px}
 .vcard li.vm.on{border-left-color:#2ecc40}
 .vcard li.vm.off{border-left-color:#d33}
+.vcard li .vinfo{flex:1;min-width:0}
+.vcard li .vson{font-size:11px;color:var(--mut);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vcard li .vn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vcard li .vs{float:none;margin:0;font-weight:700;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:1px 10px;font-size:13px}
 .dot{margin-right:0;flex:none}
@@ -382,8 +371,6 @@ table.at tr.ban td{background:rgba(224,72,79,.12)}
 .dot{background:var(--bad);color:var(--bad);box-shadow:0 0 7px 1px currentColor}
 .dot.on{background:var(--ok);color:var(--ok)}
 @media (max-width:600px){.dot{box-shadow:0 0 5px 1px currentColor}}
-#tumKullanicilar .kisi .durum.on{background:rgba(23,166,114,.15);color:var(--ok)}
-#tumKullanicilar .kisi .durum.off{background:rgba(224,72,79,.13);color:var(--bad)}
 .stat.g .v{color:var(--ok)}
 .vcard.vA{--vc:#3b82f6}.vcard.vB{--vc:#8b5cf6}.vcard.vC{--vc:#e0a030}.vcard.vD{--vc:#14a898}
 .vcard li.vm.on{border-left-color:var(--ok)}
@@ -402,9 +389,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;backgr
 .top h1{letter-spacing:-.01em;font-weight:750}
 #st,.mut{color:var(--mut)}
 /* kartlar */
-#auth,#profil,#admin,#logBox,#app,.stat,.vcard,.ucard,#tumKullanicilar{background:var(--card);border-color:var(--line);box-shadow:var(--shadow)}
-#app,#profil,#admin,#logBox,.ucard,#tumKullanicilar,.stat,.vcard{border-radius:14px}
-/* özet kutuları: solda ince vurgu şeridi */
+#auth,#profil,#admin,#logBox,#app,.stat,.vcard,.ucard,#app,#profil,#admin,#logBox,.ucard,/* özet kutuları: solda ince vurgu şeridi */
 .stat{position:relative;overflow:hidden}
 .stat::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--blue);opacity:.9}
 .stat.g::before{background:var(--ok)}
@@ -462,7 +447,6 @@ details[open]>summary::before{transform:rotate(45deg)}
 .vcard li.vm.on{border-left-color:var(--ok)}
 .vcard li.vm.off{border-left-color:var(--bad)}
 /* kullanıcı kartları */
-#tumKullanicilar .kisi{background:var(--bg);border-color:var(--line)}
 /* grafik */
 .hc-g{stroke:var(--line)}
 .hc-t{fill:var(--mut)}
@@ -650,10 +634,6 @@ table.sp td.why{min-width:220px}
   <div id="vardiyaSamp" class="hide"></div>
   <div id="vardiyaGrid"></div>
   <p id="vardiyaAtanmamis" class="mut"></p>
-  <div id="tumKullanicilar">
-    <div class="sec-head" id="kullaniciHead"><h3>Tüm kullanıcılar <span id="kullaniciSayisi" class="mut"></span></h3></div>
-    <div id="kullaniciListesi" class="kisi-list"></div>
-  </div>
 </div>
 
 
@@ -1524,7 +1504,11 @@ function vardiyaCiz() {
   const satir = u => {
     const li = el("li", "vm" + (bugunMu ? (u.aktif ? " on" : " off") : ""));
     if (bugunMu) li.append(el("span", "dot" + (u.aktif ? " on" : "")));
-    li.append(el("span", "vn", ad(u)), el("span", "vs", fmt(num(u))));
+    const info = el("div", "vinfo");
+    info.append(el("div", "vn", ad(u)));
+    const son = u.son_giris || u.last_sign_in_at || u.son_gorulme || u.last_seen_at || u.son_aktiflik || null;
+    if (son) { const dt = new Date(son); if (!isNaN(dt.getTime())) info.append(el("div", "vson", "Son giriş: " + dt.toLocaleString("tr-TR"))); }
+    li.append(info, el("span", "vs", fmt(num(u))));
     li.title = bugunMu ? (u.aktif ? "Aktif (sitede)" : "Aktif değil") : "";
     return li;
   };
@@ -1538,29 +1522,8 @@ function vardiyaCiz() {
   };
   VARDIYALAR.forEach(v => kart(v, v + " vardiyası", sirala(vardiyaList.filter(u => u.vardiya === v))));
   const yok = sirala(vardiyaList.filter(u => !u.vardiya));
-  // Vardiya seçmemiş olanlar dahil tüm kayıtlı kullanıcıları ortak listede göster.
-  const kisiBox = $("kullaniciListesi");
-  if (kisiBox) {
-    kisiBox.textContent = "";
-    const tum = sirala(vardiyaList);
-    $("kullaniciSayisi").textContent = "(" + tum.length + ")";
-    tum.forEach(u => {
-      const item = el("div", "kisi"), info = el("div", "kisi-bilgi", ""), aktifMi = !!u.aktif;
-      const adMetni = ad(u);
-      info.append(el("div", "kisi-ad", adMetni));
-      const alt = (u.vardiya ? u.vardiya + " vardiyası" : "Vardiya seçilmedi");
-      const son = u.son_giris || u.last_sign_in_at || u.son_gorulme || u.last_seen_at || u.son_aktiflik || null;
-      let sonMetin = "";
-      if (son) { const dt = new Date(son); if (!isNaN(dt.getTime())) sonMetin = " · Son giriş: " + dt.toLocaleString("tr-TR"); }
-      info.append(el("div", "kisi-alt", alt));
-      if (sonMetin) info.append(el("div", "kisi-alt", sonMetin.replace(" · ", "")));
-      item.append(el("span", "dot" + (aktifMi ? " on" : "")));
-      item.append(info);
-      item.append(el("span", "durum " + (aktifMi ? "on" : "off"), aktifMi ? "Çevrimiçi" : "Çevrimdışı"));
-      kisiBox.append(item);
-    });
-    if (!tum.length) kisiBox.append(el("p", "mut", "Kullanıcı listesi alınamadı veya henüz kullanıcı yok."));
-  }
+  // Vardiya seçmemiş kayıtlı kullanıcılar da listeden düşmesin diye ayrı bir kartta gösterilir.
+  if (yok.length) kart("", "Vardiya seçilmedi", yok);
   // Özet kutuları
   const st = $("vardiyaStat"); st.textContent = "";
   const n = vardiyaList.length, aktif = vardiyaList.filter(u => u.aktif).length;
@@ -1761,7 +1724,6 @@ $("aEkle").onclick = async () => {
 const GOR = [
   ["ozet", "Özet kutuları (siteye bakan, genel toplam, aktif kullanıcı…)", ["vardiyaStat"]],
   ["vardiya", "Vardiya listesi (A, B, C, D kartları)", ["vardiyaHead", "vardiyaGrid"]],
-  ["kul", "Tüm kullanıcılar listesi (çevrimiçi/çevrimdışı durumu)", ["tumKullanicilar"]],
   ["genel", "Genel toplam tablosu", ["genCard", "genel"]],
   ["tablolar", "Kullanıcıların tabloları", ["users"]],
   ["ozetyan", "Tabloların yanındaki giriş özeti (ilk/son giriş, ortalama, hedefler)", []],
@@ -1780,7 +1742,6 @@ const gorunur = k => isAdmin() || (me ? gorAyar.uye[k] !== false : gorAyar.misaf
 const PEN = [
   ["vardiya", "vardiyaBox", "vardiyaHead", "Vardiya listesi"],
   ["benim", "app", "appHead", "Benim girişlerim"],
-  ["kul", "tumKullanicilar", "kullaniciHead", "Tüm kullanıcılar"],
   ["gun", "gunPanel", null, "Kullanıcıların tabloları"],
   ["ort", "ortPanel", null, "Ortalama"],
   ["log", "logBox", null, "Giriş kayıtları ve süre farkı"]
@@ -1831,7 +1792,7 @@ function pCiz() {
 }
 function gorUygula() {
   GOR.forEach(([k, , ids]) => ids.forEach(id => $(id).classList.toggle("gz", !gorunur(k))));
-  $("vardiyaBox").classList.toggle("gz", !(gorunur("ozet") || gorunur("vardiya") || gorunur("kul")));
+  $("vardiyaBox").classList.toggle("gz", !(gorunur("ozet") || gorunur("vardiya")));
   $("gunPanel").classList.toggle("gz", !(gorunur("genel") || gorunur("tablolar")));
   if (typeof ortUygula === "function") ortUygula();
   try { ozetKartlar(); } catch (e) {}
