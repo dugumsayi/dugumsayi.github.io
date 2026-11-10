@@ -2016,7 +2016,11 @@ function ozetChipListesi(g) {
   const canli = secili === bugun && simdi >= ilk && simdi < vBas + H8;
   const ref = canli ? simdi : son;
   const vSaat = Math.max(0, (ref - vBas) / 3600000);
-  const calDk = Math.max(0, vSaat * 60 - MOLA_DK);
+  // 35 dakikalık molayı vardiyanın başında topluca düşmek erken girişlerde
+  // süreyi negatif yapıp canlı tahmini 35 dakika boyunca kilitliyordu.
+  // Mola payını 8 saatlik vardiyaya orantılı dağıt: 8 saatin sonunda
+  // toplam net çalışma süresi yine 445 dakika olur.
+  const calDk = Math.max(0, vSaat * 60 * (NET_DK / VARDIYA_DK));
   const hesapHazir = calDk >= 1;
   const hizDk = hesapHazir && g.net > 0 ? g.net / calDk : 0;
 
@@ -2027,12 +2031,12 @@ function ozetChipListesi(g) {
   c.push(["İlk girişten sona", n > 1 ? sure(top) + " (" + fmt(Math.round(saat * 100) / 100) + " saat)" : "tek giriş", true]);
 
   c.push([
-    "8 saatlik baz (35 dk mola düşülmüş, tahmini" + (canli ? ", canlı" : "") + ")",
+    "8 saatlik baz (35 dk mola payı orantılı düşülmüş, tahmini" + (canli ? ", canlı" : "") + ")",
     hesapHazir ? fmt(Math.round(g.net / calDk * NET_DK * 10) / 10) + " sayı" : "Hesaplanıyor (mola süresi bekleniyor)",
     canli
   ]);
   c.push([
-    "Ortalama (saatte, mola hariç)",
+    "Ortalama (saatte, mola payı düşülmüş)",
     hesapHazir ? fmt(Math.round(g.net / calDk * 60 * 10) / 10) + " sayı/saat" : "Hesaplanıyor",
     true
   ]);
@@ -2091,11 +2095,27 @@ function logOzetCiz(list, sm) {
     card.append(chips); oz.append(card);
   });
 }
-// Canlı tahmin: saat geçtikçe özet kutuları (baz/saatlik hız/hedefe kalan süre) kendiliğinden güncellenir
-setInterval(() => {
-  if (document.hidden || secili !== bugun) return;
-  try { if (logOk) logOzetCiz(logGorunen(), sicilHarita()); ozetKartlar(); } catch (e) {}
-}, 10000);
+// Canlı tahmin: yalnızca yerel saat ilerledikçe görünümü güncelle.
+// Veritabanındaki yeni girişler Supabase Realtime sayi_log aboneliğiyle anında gelir.
+let logCanliSaatTimer = null;
+function logCanliSaatBaslat() {
+  if (logCanliSaatTimer) clearInterval(logCanliSaatTimer);
+  logCanliSaatTimer = setInterval(() => {
+    if (document.hidden || secili !== bugun) return;
+    try { if (logOk) logOzetCiz(logGorunen(), sicilHarita()); ozetKartlar(); } catch (e) {}
+  }, 1000);
+}
+logCanliSaatBaslat();
+let logCanliYenileTimer = null;
+function logCanliKur() {
+  if (!sb || typeof sb.channel !== "function") return;
+  sb.channel("sayi-log-canli")
+    .on("postgres_changes", { event: "*", schema: "public", table: "sayi_log" }, () => {
+      clearTimeout(logCanliYenileTimer);
+      logCanliYenileTimer = setTimeout(() => { logYukle(); }, 50);
+    })
+    .subscribe();
+}
 
 function logCizAsil() {
   const box = $("logBox");
@@ -2746,6 +2766,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) ziya
   sb = (typeof supabase !== "undefined") ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : cevrimdisiSb();
   ziyaretKaydet();
   gorCanliKur();
+  logCanliKur();
   sb.channel("sayilar-canli").on("postgres_changes", { event: "*", schema: "public", table: "sayilar" }, () => {
     clearTimeout(timer); timer = setTimeout(load, 300);
   }).subscribe();
