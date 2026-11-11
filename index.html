@@ -765,13 +765,16 @@ const st = $("st");
 // Şifre kuralı yok: istenen şifre kullanılır. Supabase sunucusu en az 6 karakter istediği için
 // 6 karakterden kısa şifreler arka planda sabit bir ekle tamamlanır (giriş, kayıt, değiştirme hepsinde aynı).
 const sifreHazirla = p => p.length >= 6 ? p : p + "#Mkn24".slice(0, 6 - p.length);
-const todayStr = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Istanbul" });
+// ---- Ortak saat: her cihaz kendi saatine değil sunucu saatine göre çalışır (telefon/bilgisayar aynı canlı durumu görsün) ----
+var SAAT_FARK = 0;                                   // sunucu saati − cihaz saati (ms)
+function simdiMs() { return Date.now() + SAAT_FARK; }
+const todayStr = () => new Date(simdiMs()).toLocaleDateString("sv-SE", { timeZone: "Europe/Istanbul" });
 let N = N0, sb, me = null, rows = [], myInputs = [], myTot = [], myTr = [], timer = null;
 const OTO_MS = 700, otoTimer = {}, kirli = {}; let kayitZinciri = Promise.resolve();
 let bugun = todayStr(), secili = bugun;
 // Vardiya tabloları: her vardiya (00-08, 08-16, 16-24) için ayrı tablo (sayilar.vno = 0, 1, 2) — vardiya-tablo.sql gerekir
 const VNO_AD = ["00:00–08:00", "08:00–16:00", "16:00–24:00"];
-const vNoNow = () => Math.floor((((Date.now() + 10800000) % 86400000) + 86400000) % 86400000 / 28800000);   // İstanbul saatine göre
+const vNoNow = () => Math.floor((((simdiMs() + 10800000) % 86400000) + 86400000) % 86400000 / 28800000);   // İstanbul saatine göre
 let gv = vNoNow(), sonV = gv;   // gv: görüntülenen vardiya, sonV: son bilinen güncel vardiya
 const duzenlenir = () => secili === bugun && gv === vNoNow();   // yalnızca bugünün şu anki vardiyası düzenlenir
 const vnoHata = m => /vno/i.test(m || "") ? " — Supabase'de vardiya-tablo.sql çalıştırılmalı." : "";
@@ -2167,7 +2170,7 @@ function ozetChipListesi(g) {
   const ilk = g.t[0], son = g.t[n - 1], top = Math.max(0, (son - ilk) / 1000), saat = top / 3600;
   const H8 = 8 * 3600000;
   const vBas = ilk - ((ilk + 3 * 3600000) % H8);
-  const simdi = Date.now();
+  const simdi = simdiMs();
   const canli = secili === bugun && simdi >= ilk && simdi < vBas + H8;
   const vBitti = !canli;   // vardiya bittiyse (ya da geçmiş gün) tahmini bitiş saati hesaplanmaz
   const ref = canli ? simdi : son;
@@ -2212,7 +2215,7 @@ function ozetChipListesi(g) {
       const dk = kalan / hizDk;
       let bitis = "";
       if (secili === bugun) {
-        bitis = " · bitiş " + new Date(Date.now() + dk * 60000).toLocaleTimeString("tr-TR", {
+        bitis = " · bitiş " + new Date(simdiMs() + dk * 60000).toLocaleTimeString("tr-TR", {
           timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit"
         });
       }
@@ -2362,7 +2365,7 @@ function supheHesapla(list, sm) {
     const n = g.e.length, top = g.e.reduce((a, x) => a + x.d, 0);
     if (!n || top < SUPHE_MIN_TOPLAM) { atlanan++; return; }
     const enBuyuk = Math.max(...g.e.map(x => x.d)), pay = enBuyuk / top;
-    const vSon = g.vb + H8MS, bitti = Date.now() >= vSon;
+    const vSon = g.vb + H8MS, bitti = simdiMs() >= vSon;
     const son30 = g.e.filter(x => x.t >= vSon - 30 * 60000).reduce((a, x) => a + x.d, 0);
     const payS = bitti ? son30 / top : null;
     let bosluk = 0, maxHiz = 0, hizIhlal = 0;
@@ -2894,7 +2897,7 @@ setInterval(async () => {
   if (profil && profil.banli) banliCikis();
 }, 30000);
 
-setInterval(() => {
+function gunVardiyaKontrol() {
   const yeni = todayStr(), yv = vNoNow();
   if (yeni !== bugun || yv !== sonV) {   // gün ya da vardiya değişti: yeni vardiyanın tablosu açılır
     const bugunduydu = secili === bugun, vduydu = gv === sonV;
@@ -2902,7 +2905,32 @@ setInterval(() => {
     if (bugunduydu) { secili = bugun; if (vduydu) { gv = yv; } }
     if (sb) hazirla();
   }
-}, 60000);
+}
+setInterval(gunVardiyaKontrol, 60000);
+
+// Sunucu saatini al: önce Supabase yanıtındaki Date başlığı, olmazsa herkese açık saat servisi.
+async function saatSenkron() {
+  const dene = async (url, ayar, oku) => {
+    const t0 = Date.now();
+    const r = await fetch(url, Object.assign({ cache: "no-store" }, ayar));
+    const t1 = Date.now();
+    const sunucu = await oku(r);
+    if (!Number.isFinite(sunucu)) throw new Error("saat yok");
+    return sunucu + (t1 - t0) / 2 - t1;   // yarım gidiş-dönüş süresi payı
+  };
+  let fark = null;
+  try { fark = await dene(SUPABASE_URL + "/rest/v1/", { method: "HEAD", headers: { apikey: SUPABASE_KEY } }, async r => { const d = r.headers.get("date"); return d ? new Date(d).getTime() : NaN; }); } catch (e) {}
+  if (fark == null) {
+    try { fark = await dene("https://worldtimeapi.org/api/timezone/Europe/Istanbul", {}, async r => { const j = await r.json(); return Number(j.unixtime) * 1000; }); } catch (e) {}
+  }
+  if (fark != null && Math.abs(fark) < 24 * 3600000) {
+    const eski = SAAT_FARK; SAAT_FARK = Math.round(fark);
+    if (Math.abs(SAAT_FARK - eski) > 1000) { try { gunVardiyaKontrol(); if (logOk) logOzetCiz(logGorunen(), sicilHarita()); ozetKartlar(); } catch (e) {} }
+  }
+}
+saatSenkron();
+setInterval(saatSenkron, 5 * 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) saatSenkron(); });
 
 // Ziyaretçi sayacı: tarayıcıya rastgele kimlik yazılır; aynı kişi günde bir kez sayılır (giriş yapmasa da)
 function ziyaretciId() {
