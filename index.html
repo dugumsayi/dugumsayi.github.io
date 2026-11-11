@@ -889,17 +889,23 @@ const vNoNow = () => Math.floor((((simdiMs() + 10800000) % 86400000) + 86400000)
 let gv = vNoNow(), sonV = gv;   // gv: görüntülenen vardiya, sonV: son bilinen güncel vardiya
 // Erken giriş: bir sonraki vardiya başlamadan ERKEN_DK dakika önce (örn. 15:45) o vardiyanın tablosu da açılır;
 // bu aralıkta girilen sayılar yeni vardiyaya yazılır. (Gece yarısı 00:00 geçişi kapsam dışı: gün değişir.)
-const ERKEN_DK = 15, ERKEN_MS = ERKEN_DK * 60000;
+const ERKEN_DK = 15, ERKEN_MS = ERKEN_DK * 60000;   // tablo, vardiya başlamadan ERKEN_DK dk önce açılır
+const KAPAN_DK = 10, KAPAN_MS = KAPAN_DK * 60000;   // tablo, vardiya bitmeden KAPAN_DK dk önce kapanır (örn. 08–16 vardiyası: 07:45–15:50)
 // Sonraki vardiya başlamadan ERKEN_DK dk önceyse o vardiyanın {t: tarih, v: vardiya no} bilgisi (23:45'te: ertesi günün 00:00 vardiyası), değilse null
 const erkenSlot = () => {
   const v = vNoNow(), gunMs = (((simdiMs() + 10800000) % 86400000) + 86400000) % 86400000;
   if (((v + 1) * 28800000 - gunMs) > ERKEN_MS) return null;
   return { t: new Date(simdiMs() + ERKEN_MS).toLocaleDateString("sv-SE", { timeZone: "Europe/Istanbul" }), v: (v + 1) % 3 };
 };
-const vardiyaGuncel = () => {   // bugünün şu anki vardiyası ya da erken girişe açılmış sonraki vardiya
-  if (secili === bugun && gv === vNoNow()) return true;
-  const e = erkenSlot(); return !!e && secili === e.t && gv === e.v;
+const sonKalanMs = () => (vNoNow() + 1) * 28800000 - (((simdiMs() + 10800000) % 86400000) + 86400000) % 86400000;   // şu anki vardiyanın bitmesine kalan süre
+// Şu an düzenlemeye açık tablolar: şu anki vardiya (bitmesine KAPAN_DK kalana dek) ve sonraki vardiya (başlamasına ERKEN_DK kala)
+const acikSlotlar = () => {
+  const l = [];
+  if (sonKalanMs() > KAPAN_MS) l.push({ t: bugun, v: vNoNow() });
+  const e = erkenSlot(); if (e) l.push(e);
+  return l;
 };
+const vardiyaGuncel = () => acikSlotlar().some(x => x.t === secili && x.v === gv);   // gösterilen tablo şu an düzenlemeye açık mı
 // Girişin yazılacağı tarih: düzenlenen (güncel ya da erken açılmış) vardiyanın tarihi
 const girT = () => vardiyaGuncel() ? secili : bugun;
 const gonderKey = () => "gonderildi:" + myId() + ":" + girT() + ":" + gv;
@@ -1135,7 +1141,7 @@ $("pSifre").onclick = async () => {
 
 $("tarih").max = bugun; $("tarih").value = secili;
 $("tarih").onchange = () => { secili = $("tarih").value || bugun; if (secili > bugun) secili = bugun; hazirla(); };
-$("bugunBtn").onclick = () => { secili = bugun; gv = vNoNow(); hazirla(); };
+$("bugunBtn").onclick = () => { const l = acikSlotlar(); if (l.length) { const x = l[l.length - 1]; secili = x.t; gv = x.v; } else { secili = bugun; gv = vNoNow(); } hazirla(); };
 function vnoCiz() {
   const sk = $("vnoSekme"); if (!sk) return;
   sk.textContent = "";
@@ -3156,13 +3162,21 @@ setInterval(async () => {
 }, 30000);
 
 let erkenGecisAnahtar = "";
-function erkenOtoGecis() {   // pencere açıldığında, mevcut vardiyada henüz sayı girmemiş kullanıcıyı yeni vardiyanın tablosuna alır (bir kez)
+function erkenOtoGecis() {   // sonraki tablo açıkken: eski tablo kapandıysa (15:50) herkes, henüz sayı girmemiş olanlar ise açıldığı anda (15:45) yeni tabloya alınır (bir kez)
   if (!me || secili !== bugun || gv !== vNoNow()) return false;
   const e = erkenSlot(); if (!e) return false;
   const an = e.t + ":" + e.v; if (erkenGecisAnahtar === an) return false;
-  if (!rows.some(x => x.user_id === myId())) return false;   // tablo henüz yüklenmedi
-  if (rows.some(x => x.user_id === myId() && COLS.some(k => x[k] != null && String(x[k]).trim() !== ""))) return false;   // mevcut vardiyada sayı girmiş: yerinde kalır
-  erkenGecisAnahtar = an; secili = e.t; gv = e.v; hazirla(); return true;
+  const kapandi = sonKalanMs() <= KAPAN_MS;
+  const sayiVar = rows.some(x => x.user_id === myId() && COLS.some(k => x[k] != null && String(x[k]).trim() !== ""));
+  if (!kapandi && (sayiVar || !rows.some(x => x.user_id === myId()))) return false;   // eski tabloda sayısı olan kişi, tablo kapanana dek yerinde kalır
+  erkenGecisAnahtar = an;
+  (async () => {
+    try { bekleyenleriKaydet(); await kayitZinciri; } catch (x) {}   // eski tablodaki bekleyen kayıtlar önce yazılır
+    secili = e.t; gv = e.v;
+    msg((kapandi ? "Önceki vardiyanın tablosu kapandı. " : "") + VNO_AD[e.v] + " vardiyasının tablosu açıldı: bundan sonra girilen sayılar yeni tabloya yazılır.");
+    hazirla();
+  })();
+  return true;
 }
 function gunVardiyaKontrol() {
   const yeni = todayStr(), yv = vNoNow();
@@ -3192,7 +3206,7 @@ function yeniVardiyaBar() {
   const e = me ? erkenSlot() : null;
   const goster = !!e && secili === bugun && gv === vNoNow();
   bar.classList.toggle("hide", !goster);
-  if (goster) $("yeniVardMetin").textContent = "Yeni vardiya tablosu açıldı (" + VNO_AD[e.v] + "). Bu vardiya bitince şu anki tablo kapanır.";
+  if (goster) $("yeniVardMetin").textContent = "Yeni vardiya tablosu açıldı (" + VNO_AD[e.v] + "). Bu tablo vardiya bitmeden " + KAPAN_DK + " dk önce kapanır; sonrasında sayılar yeni tabloya girilir.";
 }
 $("yeniVardGec").onclick = () => {
   const e = erkenSlot(); if (!e) return;
