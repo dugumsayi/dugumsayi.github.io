@@ -767,7 +767,7 @@ td.rv-bar{min-width:90px;padding:0 10px}
   <div class="sec-head" id="appHead"><h2>Benim girişlerim (bugün)</h2></div>
   <div id="hedefKutu" class="hedef-kutu hide"></div>
   <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="satirSilBtn" type="button" class="alt sm">− Satır sil</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
-  <div class="scroll"><table><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody></table></div>
+  <div class="scroll"><table id="mineTbl"><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody></table></div>
 </div>
 
 <section class="panel" id="gunPanel">
@@ -1927,13 +1927,21 @@ function trOrnekGuncelle() {
   let ad = ""; try { ad = (typeof userName === "function" ? userName() : "") || ""; } catch (e) {}
   document.querySelectorAll(".tr-ornek th.tr-ad").forEach(x => { x.textContent = ad || "Ad Soyad"; });
   trOrnekBoya(kk, tabloRenkEtkin());
+  // Yönetici renk seçerken kendi giriş tablosu da anında değişsin (kaydetmeden önizleme)
+  try {
+    const mt = document.getElementById("mineTbl");
+    if (mt && ai && typeof isAdmin === "function" && isAdmin() && (ai.dataset.varsayilan === "1" || ai.dataset.dokunuldu === "1")) {
+      trOrnekBoya({ querySelector: () => mt }, ai.dataset.varsayilan === "1" ? "" : ai.value);
+      mt.style.setProperty("--totfg", "var(--fg)");
+    } else if (mt) { trOrnekBoya({ querySelector: () => mt }, ""); }
+  } catch (e) {}
   if (ai) { const d = ai.dataset; trOrnekBoya(ak, d.varsayilan === "1" ? "" : (d.dokunuldu === "1" ? ai.value : (trGecerli(gorAyar.tabloRenk) ? gorAyar.tabloRenk : ""))); }
 }
 function tabloRenkUygula() {
   const c = tabloRenkEtkin(); let st = document.getElementById("tabloRenkStil");
   if (!st) { st = document.createElement("style"); st.id = "tabloRenkStil"; document.head.append(st); }
   if (!c) st.textContent = "";
-  else { const t = trMetin(c); st.textContent = "#users table,#agg table{--head:" + c + ";--headfg:" + t + ";--mcell:" + c + ";--mfg:" + t + ";--tot:color-mix(in srgb," + c + " 28%,var(--cell));--totfg:var(--fg)}\n#users tr.tot td,#agg tr.tot td{border-top-color:" + c + " !important}"; }
+  else { const t = trMetin(c); st.textContent = "#users table,#agg table,#mineTbl{--head:" + c + ";--headfg:" + t + ";--mcell:" + c + ";--mfg:" + t + ";--tot:color-mix(in srgb," + c + " 28%,var(--cell));--totfg:var(--fg)}\n#users tr.tot td,#agg tr.tot td,#mineTbl tr.tot td{border-top-color:" + c + " !important}"; }
   const ks = document.getElementById("tabloRenkSatir"), ki = document.getElementById("tabloRenkKisisel");
   if (ks) ks.classList.toggle("hide", !gorAyar.tabloIzin);
   if (ki && document.activeElement !== ki) ki.value = c || "#3159b7";
@@ -2148,7 +2156,7 @@ $("tabloRenkKaydet").onclick = async () => {
   msg("Tablo rengi kaydediliyor…");
   const { error } = await sb.rpc("admin_gorunurluk_kaydet", { ayar });
   if (error) { msg("Kaydedilemedi: " + error.message); return; }
-  gorAyar = gorNorm(ayar); lsSet(GOR_KEY, ayar); tabloRenkUygula();
+  gorAyar = gorNorm(ayar); lsSet(GOR_KEY, ayar); $("tabloRenkAdmin").dataset.dokunuldu = "0"; $("tabloRenkAdmin").dataset.varsayilan = "0"; tabloRenkUygula();
   try { if (gorKanal) gorKanal.send({ type: "broadcast", event: "guncelle", payload: { t: Date.now() } }); } catch (e) {}
   msg("Tablo rengi kaydedildi." + (gorAyar.tabloIzin ? " Kullanıcılar kendi rengini seçebilir." : " Renk tüm kullanıcılarda geçerli."));
 };
