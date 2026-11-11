@@ -562,8 +562,9 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 .hd-t{display:flex;justify-content:space-between;gap:8px;font-size:14px;font-weight:650;margin-bottom:5px}
 .hd-bar{position:relative;height:16px;border-radius:8px;background:var(--card);border:1px solid var(--line);overflow:hidden}
 .hd-dol{height:100%;border-radius:8px;background:var(--blue);transition:width .4s ease}
-.hd-dol.son30{background:#e0a030 !important}
-.hd-son30-yazi{font-size:13px;font-weight:700;color:#e0a030}
+.hd-dol.son30{background:var(--son30,#8b5cf6) !important;animation:hdSon30 1.6s ease-in-out infinite}
+@keyframes hdSon30{50%{opacity:.6}}
+.hd-son30-yazi{font-size:13px;font-weight:700;color:var(--son30,#8b5cf6)}
 .hd-dol.ok{background:var(--ok)}.hd-dol.bad{background:var(--warn)}.hd-dol.bek{background:var(--blue)}
 .hd-dinlen{font-size:13px;font-weight:700;margin-top:3px;color:var(--blue)}
 .hd-isaret{position:absolute;top:0;bottom:0;width:2px;background:var(--fg);opacity:.55}
@@ -656,6 +657,11 @@ td.rv-bar{min-width:90px;padding:0 10px}
     <label class="chk"><input id="hedefGor2" type="checkbox" checked> İkinci hedef tüm kullanıcılarda görünsün</label>
   </div>
   <p class="mut">Kutuyu kapatırsanız o hedef; ilerleme çubuğundan giriş özetine kadar herkesin ekranında gizlenir. "Hedefleri kaydet" düğmesiyle kaydedilir.</p>
+  <div class="row">
+    <label>Son 30 dakika çubuk rengi <input id="son30Renk" type="color" value="#8b5cf6"></label>
+    <button id="son30Sifirla" type="button" class="alt sm">Varsayılan</button>
+  </div>
+  <p class="mut">Vardiya bitimine 30 dakika kala ilerleme çubuklarının alacağı renk. "Hedefleri kaydet" ile herkes için kaydedilir.</p>
   <hr>
   <strong>Eski kayıtları düzelt</strong>
   <p class="mut">Mevcut kullanıcıların yalnızca soyadlarının son kelimesini büyük harfe çevirir. Kullanıcı hesapları ve diğer bilgiler silinmez.</p>
@@ -1459,7 +1465,13 @@ $("kayitAcKapat").onclick = async () => {
 };
 
 // ================= YÖNETİCİ HEDEF AYARLARI =================
+function son30RenkUygula() {
+  const r = (gorAyar && gorAyar.son30Renk) || "";
+  if (r) document.documentElement.style.setProperty("--son30", r); else document.documentElement.style.removeProperty("--son30");
+  const c = $("son30Renk"); if (c && document.activeElement !== c) c.value = r || "#8b5cf6";
+}
 function hedefleriGoster() {
+  son30RenkUygula();
   const a = $("hedefBir"), b = $("hedefIki");
   if (a && document.activeElement !== a) a.value = HEDEFLER[0];
   if (b && document.activeElement !== b) b.value = HEDEFLER[1];
@@ -1482,6 +1494,8 @@ async function hedefYukle() {
     if (durum && isAdmin()) durum.textContent = "Hedef ayarları için hedef-ayarlari.sql kurulmalı.";
   }
 }
+$("son30Renk").oninput = () => { $("son30Renk").dataset.varsayilan = "0"; };
+$("son30Sifirla").onclick = () => { $("son30Renk").value = "#8b5cf6"; $("son30Renk").dataset.varsayilan = "1"; };
 $("hedefKaydet").onclick = async () => {
   if (!isAdmin()) { msg("Hedefleri değiştirmek için yönetici olmalısınız."); return; }
   const birinci = Number($("hedefBir").value), ikinci = Number($("hedefIki").value);
@@ -1494,7 +1508,7 @@ $("hedefKaydet").onclick = async () => {
   HEDEFLER = [birinci, ikinci];
   // Hangi hedefin herkese görüneceği: görünürlük ayarının içinde saklanır (yeni SQL gerekmez)
   const hg = {}; if (!$("hedefGor1").checked) hg[0] = true; if (!$("hedefGor2").checked) hg[1] = true;
-  const yeniAyar = Object.assign({}, gorAyar, { hedefGizli: hg });
+  const yeniAyar = Object.assign({}, gorAyar, { hedefGizli: hg, son30Renk: ($("son30Renk").dataset.varsayilan === "1") ? "" : $("son30Renk").value });
   const gr = await sb.rpc("admin_gorunurluk_kaydet", { ayar: yeniAyar });
   if (gr.error) { hedefleriGoster(); msg("Hedef sayıları kaydedildi ama gizleme ayarı kaydedilemedi: " + gr.error.message); return; }
   gorAyar = gorNorm(yeniAyar); lsSet(GOR_KEY, yeniAyar);
@@ -1852,8 +1866,8 @@ const GOR = [
   ["log", "Giriş kayıtları ve süre farkı", ["logBox"]]
 ];
 // misafir: giriş yapmadan (kayıt yoksa gizli) · uye: giriş yapınca (kayıt yoksa görünür)
-let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {}, sira: [], hedefGizli: {} };
-const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {}, neon: (d.neon && typeof d.neon === "object") ? d.neon : {}, sira: Array.isArray(d.sira) ? d.sira : [], hedefGizli: (d.hedefGizli && typeof d.hedefGizli === "object") ? d.hedefGizli : {} } : { misafir: {}, uye: d || {}, kapali: {}, hedefGizli: {} };
+let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {}, sira: [], hedefGizli: {}, son30Renk: "" };
+const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {}, neon: (d.neon && typeof d.neon === "object") ? d.neon : {}, sira: Array.isArray(d.sira) ? d.sira : [], hedefGizli: (d.hedefGizli && typeof d.hedefGizli === "object") ? d.hedefGizli : {}, son30Renk: /^#[0-9a-fA-F]{6}$/.test(d.son30Renk || "") ? d.son30Renk : "" } : { misafir: {}, uye: d || {}, kapali: {}, hedefGizli: {}, son30Renk: "" };
 // Yöneticinin herkes için gizlediği hedefler (HEDEFLER dizisindeki sıraya göre: 0 = birinci, 1 = ikinci)
 const hedefGizliMi = hd => { const i = HEDEFLER.indexOf(hd); return i >= 0 && !!(gorAyar.hedefGizli && gorAyar.hedefGizli[i]); };
 const gorunur = k => isAdmin() || (me ? gorAyar.uye[k] !== false : gorAyar.misafir[k] === true);
@@ -2037,7 +2051,7 @@ async function gorYukle() {
 }
 $("gKaydet").onclick = async () => {
   if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
-  const ayar = { misafir: {}, uye: {}, kapali: {}, neon: neonOku(), sira: siraTaslak.slice(), hedefGizli: gorAyar.hedefGizli || {} };
+  const ayar = { misafir: {}, uye: {}, kapali: {}, neon: neonOku(), sira: siraTaslak.slice(), hedefGizli: gorAyar.hedefGizli || {}, son30Renk: gorAyar.son30Renk || "" };
   document.querySelectorAll("#gList input").forEach(i => { ayar[i.dataset.g][i.dataset.k] = i.checked; });
   document.querySelectorAll("#pList input").forEach(i => { ayar.kapali[i.dataset.k] = i.checked; });
   msg("Görünürlük kaydediliyor…");
