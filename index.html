@@ -648,6 +648,11 @@ td.rv-bar{min-width:90px;padding:0 10px}
     <button id="hedefKaydet" type="button">Hedefleri kaydet</button>
     <span id="hedefDurum" class="mut"></span>
   </div>
+  <div class="row">
+    <label class="chk"><input id="hedefGor1" type="checkbox" checked> Birinci hedef tüm kullanıcılarda görünsün</label>
+    <label class="chk"><input id="hedefGor2" type="checkbox" checked> İkinci hedef tüm kullanıcılarda görünsün</label>
+  </div>
+  <p class="mut">Kutuyu kapatırsanız o hedef; ilerleme çubuğundan giriş özetine kadar herkesin ekranında gizlenir. "Hedefleri kaydet" düğmesiyle kaydedilir.</p>
   <hr>
   <strong>Eski kayıtları düzelt</strong>
   <p class="mut">Mevcut kullanıcıların yalnızca soyadlarının son kelimesini büyük harfe çevirir. Kullanıcı hesapları ve diğer bilgiler silinmez.</p>
@@ -1455,6 +1460,7 @@ function hedefleriGoster() {
   const a = $("hedefBir"), b = $("hedefIki");
   if (a && document.activeElement !== a) a.value = HEDEFLER[0];
   if (b && document.activeElement !== b) b.value = HEDEFLER[1];
+  [0, 1].forEach(i => { const c = $("hedefGor" + (i + 1)); if (c && document.activeElement !== c) c.checked = !(gorAyar.hedefGizli && gorAyar.hedefGizli[i]); });
   // Hedefler değiştiğinde açık özetleri yeni değerlere göre yeniden çiz.
   try { if (typeof logOk !== "undefined" && logOk) { logOzetCiz(logGorunen(), sicilHarita()); ozetKartlar(); } } catch (e) {}
 }
@@ -1483,9 +1489,15 @@ $("hedefKaydet").onclick = async () => {
   const { data, error } = await sb.rpc("admin_hedef_ayari", { birinci, ikinci });
   if (error) { msg("Hedefler kaydedilemedi: " + error.message + " — Supabase SQL Editor'de hedef-ayarlari.sql dosyasını çalıştırın."); return; }
   HEDEFLER = [birinci, ikinci];
-  hedefleriGoster();
+  // Hangi hedefin herkese görüneceği: görünürlük ayarının içinde saklanır (yeni SQL gerekmez)
+  const hg = {}; if (!$("hedefGor1").checked) hg[0] = true; if (!$("hedefGor2").checked) hg[1] = true;
+  const yeniAyar = Object.assign({}, gorAyar, { hedefGizli: hg });
+  const gr = await sb.rpc("admin_gorunurluk_kaydet", { ayar: yeniAyar });
+  if (gr.error) { hedefleriGoster(); msg("Hedef sayıları kaydedildi ama gizleme ayarı kaydedilemedi: " + gr.error.message); return; }
+  gorAyar = gorNorm(yeniAyar); lsSet(GOR_KEY, yeniAyar);
+  hedefleriGoster(); gorUygula();
   try { if (gorKanal) gorKanal.send({ type: "broadcast", event: "guncelle", payload: { hedefler: true, t: Date.now() } }); } catch (e) {}
-  msg("Hedefler tüm kullanıcılar için kaydedildi.");
+  msg("Hedefler tüm kullanıcılar için kaydedildi." + (Object.keys(hg).length ? " Gizlenen hedefler kimsede görünmeyecek." : ""));
 };
 
 // ================= YÖNETİM / BAN =================
@@ -1837,8 +1849,10 @@ const GOR = [
   ["log", "Giriş kayıtları ve süre farkı", ["logBox"]]
 ];
 // misafir: giriş yapmadan (kayıt yoksa gizli) · uye: giriş yapınca (kayıt yoksa görünür)
-let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {}, sira: [] };
-const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {}, neon: (d.neon && typeof d.neon === "object") ? d.neon : {}, sira: Array.isArray(d.sira) ? d.sira : [] } : { misafir: {}, uye: d || {}, kapali: {} };
+let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {}, sira: [], hedefGizli: {} };
+const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {}, neon: (d.neon && typeof d.neon === "object") ? d.neon : {}, sira: Array.isArray(d.sira) ? d.sira : [], hedefGizli: (d.hedefGizli && typeof d.hedefGizli === "object") ? d.hedefGizli : {} } : { misafir: {}, uye: d || {}, kapali: {}, hedefGizli: {} };
+// Yöneticinin herkes için gizlediği hedefler (HEDEFLER dizisindeki sıraya göre: 0 = birinci, 1 = ikinci)
+const hedefGizliMi = hd => { const i = HEDEFLER.indexOf(hd); return i >= 0 && !!(gorAyar.hedefGizli && gorAyar.hedefGizli[i]); };
 const gorunur = k => isAdmin() || (me ? gorAyar.uye[k] !== false : gorAyar.misafir[k] === true);
 
 // ================= AÇILIR-KAPANIR PENCERELER =================
@@ -1904,6 +1918,8 @@ function gorUygula() {
   penUygula();
   neonUygula();
   siraUygula();
+  try { hedefleriGoster(); } catch (e) {}
+  try { if (typeof hedefCiz === "function") hedefCiz(); } catch (e) {}
 }
 // ---- Pencere sırası: yönetici belirler ----
 var SIRA_VARS = ["benim", "gun", "vardiya", "ort", "log"];
@@ -2018,7 +2034,7 @@ async function gorYukle() {
 }
 $("gKaydet").onclick = async () => {
   if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
-  const ayar = { misafir: {}, uye: {}, kapali: {}, neon: neonOku(), sira: siraTaslak.slice() };
+  const ayar = { misafir: {}, uye: {}, kapali: {}, neon: neonOku(), sira: siraTaslak.slice(), hedefGizli: gorAyar.hedefGizli || {} };
   document.querySelectorAll("#gList input").forEach(i => { ayar[i.dataset.g][i.dataset.k] = i.checked; });
   document.querySelectorAll("#pList input").forEach(i => { ayar.kapali[i.dataset.k] = i.checked; });
   msg("Görünürlük kaydediliyor…");
@@ -2211,7 +2227,7 @@ function ozetChipListesi(g) {
   ]);
 
   // Hedef ve kalan sayı, hız hesabı henüz oluşmasa da her kullanıcıda görünür.
-  HEDEFLER.forEach(hd => {
+  HEDEFLER.filter(hd => !hedefGizliMi(hd)).forEach(hd => {
     const kalan = hd - g.net;
     if (kalan <= 0) {
       c.push([hd + " hedefi", "tamamlandı (+" + fmt(Math.round(-kalan * 100) / 100) + ")", true]);
@@ -3252,7 +3268,7 @@ function xlsxBlob(sayfalar) {
       k.append(k._bas, k._sec, k._liste); k._kur = true;
     }
     k.classList.remove("hide");
-    const hedefler = HEDEFLER.slice().sort((a, b) => a - b), gizli = hgOku();
+    const hedefler = HEDEFLER.filter(h => !hedefGizliMi(h)).sort((a, b) => a - b), gizli = hgOku();
     // Hedef aç/kapa düğmeleri: yalnızca hedefler ya da seçim değişince yeniden kurulur (tıklama kaybolmasın)
     const imza = hedefler.map(h => h + ":" + (gizli[h] ? 0 : 1)).join("|");
     if (imza !== hdSecImza) {
