@@ -2170,8 +2170,10 @@ function ozetChipListesi(g) {
   const ilk = g.t[0], son = g.t[n - 1], top = Math.max(0, (son - ilk) / 1000), saat = top / 3600;
   const H8 = 8 * 3600000;
   const vBas = ilk - ((ilk + 3 * 3600000) % H8);
-  const simdi = simdiMs();
-  const canli = secili === bugun && simdi >= ilk && simdi < vBas + H8;
+  // Cihaz saati geride kalsa bile şu an en az son girişin saati kadardır (gelecekte giriş olamaz);
+  // aksi halde saati geri olan bilgisayar canlı vardiyayı "bitti" sanıyordu.
+  const simdi = Math.max(simdiMs(), son);
+  const canli = secili === bugun && simdi < vBas + H8;
   const vBitti = !canli;   // vardiya bittiyse (ya da geçmiş gün) tahmini bitiş saati hesaplanmaz
   const ref = canli ? simdi : son;
   const vSaat = Math.max(0, (ref - vBas) / 3600000);
