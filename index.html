@@ -565,6 +565,9 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 .hd-son30-seg{position:absolute;top:0;bottom:0;right:0;pointer-events:none;border-left:2px dashed #8b5cf6;background:repeating-linear-gradient(90deg,#8b5cf6 0 5px,transparent 5px 9px);opacity:.9}
 .hd-dol.ozel{background:var(--son30) !important}
 .hd-ozet{margin:8px 0 0}
+.tr-ornek-kap{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}
+.tr-ornek th,.tr-ornek td{height:30px;min-width:70px!important;font-size:14px!important;padding:0 10px!important}
+.tr-ornek tr.tot td{border-top-color:var(--tr-c,var(--blue))!important}
 .hd-son30-yazi{font-size:13px;font-weight:700;color:#8b5cf6}
 .hd-dol.ok{background:var(--ok)}.hd-dol.bad{background:var(--warn)}.hd-dol.bek{background:var(--blue)}
 .hd-dinlen{font-size:13px;font-weight:700;margin-top:3px;color:var(--blue)}
@@ -623,6 +626,12 @@ td.rv-bar{min-width:90px;padding:0 10px}
       <label id="pYoneticiGizleBilgi" class="mut hide">Bu ayar normal kullanıcıların ve ziyaretçilerin listelerinde geçerlidir. Yönetim yetkiniz değişmez.</label>
       <label class="mut" for="pVardiya">Vardiyam</label>
       <select id="pVardiya"><option value="">Vardiya seçilmedi</option><option value="A">A vardiyası</option><option value="B">B vardiyası</option><option value="C">C vardiyası</option><option value="D">D vardiyası</option></select>
+      <div id="tabloRenkSatir" class="hide" style="display:flex;flex-direction:column;gap:6px">
+        <label class="mut">Tablo rengim <input id="tabloRenkKisisel" type="color" value="#3159b7"></label>
+        <button id="tabloRenkSifirlaKisisel" type="button" class="alt sm">Yönetici rengine dön</button>
+        <span class="mut">Renk seçince anında uygulanır, bu cihazda saklanır.</span>
+        <div id="tabloOrnekKisisel" class="tr-ornek-kap"></div>
+      </div>
       <button id="pKaydet">Profili kaydet</button>
     </div>
     <div class="p-col">
@@ -672,6 +681,7 @@ td.rv-bar{min-width:90px;padding:0 10px}
     <label class="chk"><input id="tabloIzin" type="checkbox"> Kullanıcılar kendi tablo rengini seçebilsin</label>
     <button id="tabloRenkKaydet" type="button">Tablo rengini kaydet</button>
   </div>
+  <div id="tabloOrnekAdmin" class="tr-ornek-kap"></div>
   <hr>
   <strong>Eski kayıtları düzelt</strong>
   <p class="mut">Mevcut kullanıcıların yalnızca soyadlarının son kelimesini büyük harfe çevirir. Kullanıcı hesapları ve diğer bilgiler silinmez.</p>
@@ -764,7 +774,6 @@ td.rv-bar{min-width:90px;padding:0 10px}
   <div id="benimGun" class="oz-card benim-gun"></div>
   <div class="bar" id="vnoSekme"></div>
   <p id="genel" class="mut"></p>
-  <div id="tabloRenkSatir" class="row hide"><label>Tablo rengim <input id="tabloRenkKisisel" type="color" value="#3159b7"></label><button id="tabloRenkSifirlaKisisel" type="button" class="alt sm">Yönetici rengi</button></div>
   <div class="ugrid">
     <div class="ucard gen" id="genCard">
       <h3>Genel toplam (herkesin girdiği sayılar)</h3>
@@ -1885,6 +1894,28 @@ const trGecerli = c => /^#[0-9a-fA-F]{6}$/.test(c || "");
 function trMetin(c) { const n = parseInt(c.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? "#14202f" : "#ffffff"; }
 function trKisisel() { try { const k = localStorage.getItem(TR_KEY) || ""; return trGecerli(k) ? k : ""; } catch (e) { return ""; } }
 function tabloRenkEtkin() { const k = trKisisel(); if (gorAyar.tabloIzin && k) return k; return trGecerli(gorAyar.tabloRenk) ? gorAyar.tabloRenk : ""; }
+function trOrnekKur(kap) {
+  if (!kap || kap.firstChild) return;
+  const tbl = el("table", "tr-ornek"), h = el("thead"), hr = el("tr"), b = el("tbody");
+  ["MAKİNE", "SAYI"].forEach(x => hr.append(el("th", "", x))); h.append(hr);
+  [["1", "430"], ["2", "120"]].forEach(([a, n]) => { const tr = el("tr"); tr.append(el("td", "sn", a), el("td", "t", n)); b.append(tr); });
+  const ft = el("tr", "tot"); ft.append(el("td", "", "TOPLAM"), el("td", "", "550")); b.append(ft);
+  tbl.append(h, b); kap.append(el("span", "mut", "Örnek tablo:"), tbl);
+}
+function trOrnekBoya(kap, c) {
+  const t = kap && kap.querySelector("table"); if (!t) return;
+  ["--head", "--headfg", "--mcell", "--mfg", "--tot", "--totfg", "--tr-c"].forEach(k => t.style.removeProperty(k));
+  if (!c) return;
+  const m = trMetin(c);
+  t.style.setProperty("--head", c); t.style.setProperty("--headfg", m); t.style.setProperty("--mcell", c); t.style.setProperty("--mfg", m);
+  t.style.setProperty("--tot", "color-mix(in srgb," + c + " 28%,var(--cell))"); t.style.setProperty("--totfg", "var(--fg)"); t.style.setProperty("--tr-c", c);
+}
+function trOrnekGuncelle() {
+  const kk = document.getElementById("tabloOrnekKisisel"), ak = document.getElementById("tabloOrnekAdmin"), ai = document.getElementById("tabloRenkAdmin");
+  trOrnekKur(kk); trOrnekKur(ak);
+  trOrnekBoya(kk, tabloRenkEtkin());
+  if (ai) { const d = ai.dataset; trOrnekBoya(ak, d.varsayilan === "1" ? "" : (d.dokunuldu === "1" ? ai.value : (trGecerli(gorAyar.tabloRenk) ? gorAyar.tabloRenk : ""))); }
+}
 function tabloRenkUygula() {
   const c = tabloRenkEtkin(); let st = document.getElementById("tabloRenkStil");
   if (!st) { st = document.createElement("style"); st.id = "tabloRenkStil"; document.head.append(st); }
@@ -1896,6 +1927,7 @@ function tabloRenkUygula() {
   const ai = document.getElementById("tabloRenkAdmin"), iz = document.getElementById("tabloIzin");
   if (ai && document.activeElement !== ai) ai.value = trGecerli(gorAyar.tabloRenk) ? gorAyar.tabloRenk : "#3159b7";
   if (iz && document.activeElement !== iz) iz.checked = !!gorAyar.tabloIzin;
+  trOrnekGuncelle();
 }
 // Yöneticinin herkes için gizlediği hedefler (HEDEFLER dizisindeki sıraya göre: 0 = birinci, 1 = ikinci)
 const hedefGizliMi = hd => { const i = HEDEFLER.indexOf(hd); return i >= 0 && !!(gorAyar.hedefGizli && gorAyar.hedefGizli[i]); };
@@ -2095,8 +2127,8 @@ $("gKaydet").onclick = async () => {
   try { if (gorKanal) gorKanal.send({ type: "broadcast", event: "guncelle", payload: { t: Date.now() } }); } catch (e) {}
   msg("Görünürlük ve pencere açılış ayarları kaydedildi. Açık olan tüm ziyaretçi ve kullanıcılarda anında güncellenir.");
 };
-$("tabloRenkAdmin").oninput = () => { $("tabloRenkAdmin").dataset.varsayilan = "0"; };
-$("tabloRenkSifirla").onclick = () => { $("tabloRenkAdmin").value = "#3159b7"; $("tabloRenkAdmin").dataset.varsayilan = "1"; };
+$("tabloRenkAdmin").oninput = () => { $("tabloRenkAdmin").dataset.varsayilan = "0"; $("tabloRenkAdmin").dataset.dokunuldu = "1"; trOrnekGuncelle(); };
+$("tabloRenkSifirla").onclick = () => { $("tabloRenkAdmin").value = "#3159b7"; $("tabloRenkAdmin").dataset.varsayilan = "1"; trOrnekGuncelle(); };
 $("tabloRenkKaydet").onclick = async () => {
   if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
   const ayar = Object.assign({}, gorAyar, { tabloRenk: ($("tabloRenkAdmin").dataset.varsayilan === "1") ? "" : $("tabloRenkAdmin").value, tabloIzin: $("tabloIzin").checked });
