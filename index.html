@@ -165,6 +165,10 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 .oz-chip b{font-size:14px;color:var(--fg)}
 .oz-chip.vurgu{border-color:var(--blue)}
 .oz-chip.vurgu b{color:var(--blue)}
+.lg-dr{display:inline-block;border-radius:999px;padding:1px 10px;font-size:12px;font-weight:700;border:1px solid}
+.lg-dr.nor{color:#1a8f4c;border-color:#1a8f4c;background:#1a8f4c22}
+.lg-dr.sup{color:#d93025;border-color:#d93025;background:#d9302222}
+#logTbl td.lg-d{white-space:nowrap}
 .oz-chip.oz-normal b{color:#1a8f4c}
 .oz-chip.oz-supheli{border-color:#d93025}
 .oz-chip.oz-supheli b{color:#d93025}
@@ -249,7 +253,7 @@ table.lg tr.lg-ad td{opacity:.75}
   h2{font-size:16px}
   /* Giriş kayıtları: telefon ekranında sütunları ezmek yerine yatay kaydırma */
   #logTbl{display:block;width:100%;max-width:100%;overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;touch-action:auto;overscroll-behavior-x:contain}
-  #logTbl table.lg{width:760px;min-width:760px;max-width:none;table-layout:auto}
+  #logTbl table.lg{width:860px;min-width:860px;max-width:none;table-layout:auto}
   #logTbl table.lg th,#logTbl table.lg td{font-size:12px;padding:7px 7px;white-space:normal}
   #logTbl table.lg th:nth-child(1),#logTbl table.lg td:nth-child(1){min-width:82px;white-space:nowrap}
   #logTbl table.lg th:nth-child(2),#logTbl table.lg td:nth-child(2){min-width:145px}
@@ -2017,6 +2021,8 @@ const sure = sn => {
 const saatOf = z => new Date(z).toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 // Şüphe durumu: vardiya boyunca girilen toplam sayı bu sınırı aşarsa "Şüpheli", aksi halde "Normal"
 const SUPHE_LIMIT = 700;
+// Giriş başına hız: eklenen sayı / bir önceki girişten bu yana geçen dakika (genel süre). Bu değerin üstü "Şüpheli"
+const SUPHE_DK_HIZ = 2;
 const toplamYaz = v => v == null ? "—" : fmt(parseFloat(v));
 // Log: bu girişte toplama ne eklendi / çıkarıldı (+16, −10, silindi)
 const logFark = l => l.sutun === "makine" ? null : (parseFloat(l.yeni) || 0) - (parseFloat(l.eski) || 0);
@@ -2223,7 +2229,7 @@ function logCizAsil() {
   const box2 = $("logTbl"); box2.textContent = "";
   if (!list.length) { box2.append(el("p", "mut", "Bu tarihte kayıt yok.")); return; }
   const tbl = el("table", "at lg"), head = el("thead"), hr = el("tr"), body = el("tbody");
-  ["SAAT", "KİM", "MAKİNE", "EKLENEN", "TOPLAM", "SÜRE"].concat(isAdmin() ? [""] : []).forEach(h => hr.append(el("th", "", h)));
+  ["SAAT", "KİM", "MAKİNE", "EKLENEN", "TOPLAM", "SÜRE", "DURUM"].concat(isAdmin() ? [""] : []).forEach(h => hr.append(el("th", "", h)));
   head.append(hr); tbl.append(head);
   const th = toplamHarita();
   // "Aynı makineye daha önce girdin": kullanıcı bu makineye daha önce girmiş, bir önceki girişi başka makineyse ve şimdi geri dönmüşse
@@ -2246,9 +2252,14 @@ function logCizAsil() {
     tdS.append(el("div", "", mk));
     if (!ad && tekrar.has(l.id)) tdS.append(el("div", "lg-ayni", "↺ Aynı makineye daha önce girdin"));   // SÜRE sütununda: aynı kullanıcı bu makineye daha önce girmiş, arada başka makineye geçip geri dönmüş
     if (gn !== "—" && gn !== mk) tdS.append(el("div", "lg-alt", "genel: " + gn));
+    const tdD = el("td", "lg-d");
+    if (!ad && d != null && d > 0 && l.yeni != null && l.fark_genel_sn != null) {
+      const dkm = Math.max(l.fark_genel_sn, 60) / 60, hiz = d / dkm, sup = hiz > SUPHE_DK_HIZ;
+      tdD.append(el("span", "lg-dr " + (sup ? "sup" : "nor"), sup ? "Şüpheli" : "Normal"), el("div", "lg-alt", (Math.round(hiz * 10) / 10).toString().replace(".", ",") + " sayı/dk"));
+    } else tdD.append(el("span", "lg-alt", "—"));
     tr.append(el("td", "lg-t", saatOf(l.zaman)),
       el("td", "", (adBuyut(l.kullanici) || "?") + (isAdmin() && sm.get(l.user_id) ? " [" + sm.get(l.user_id) + "]" : "") + (l.user_id === myId() ? " (siz)" : "")),
-      tdMk, tdE, el("td", "lg-tp", toplamOkYaz(l, hs)), tdS);
+      tdMk, tdE, el("td", "lg-tp", toplamOkYaz(l, hs)), tdS, tdD);
     if (isAdmin()) {
       const td = el("td", "act"), b = el("button", "sm red", "Sil");
       onayli(b, () => logSil([l.id]));
