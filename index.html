@@ -504,16 +504,24 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 
 /* Şu an içinde bulunulan vardiya butonu: belirgin neon yanıp sönme */
 @keyframes vYan{
-  0%,100%{background:#39ff14;color:#041a06;box-shadow:0 0 6px #fff,0 0 14px #39ff14,0 0 30px #39ff14,0 0 55px #39ff14,0 0 90px #0aff6a;transform:scale(1.06)}
-  50%{background:#0b3d12;color:#7dff6a;box-shadow:0 0 3px #39ff14,0 0 8px #39ff14,0 0 16px rgba(57,255,20,.6);transform:scale(1)}
+  0%,100%{background:var(--n-bg);color:var(--n-fg);box-shadow:0 0 calc(6px*var(--n-int)) #fff,0 0 calc(14px*var(--n-int)) var(--n-glow),0 0 calc(30px*var(--n-int)) var(--n-glow),0 0 calc(55px*var(--n-int)) var(--n-glow),0 0 calc(90px*var(--n-int)) var(--n-glow2);transform:scale(var(--n-scale))}
+  50%{background:var(--n-dim);color:var(--n-dimfg);box-shadow:0 0 calc(3px*var(--n-int)) var(--n-glow),0 0 calc(8px*var(--n-int)) var(--n-glow),0 0 calc(16px*var(--n-int)) color-mix(in srgb,var(--n-glow) 60%,transparent);transform:scale(1)}
 }
-#vnoSekme button.simdi{border:2px solid #b6ff9e!important;font-weight:900;letter-spacing:.4px;animation:vYan .9s ease-in-out infinite}
+#vnoSekme button.simdi,.neon-onizle button.simdi{border:2px solid var(--n-border)!important;font-weight:900;letter-spacing:.4px;animation:vYan var(--n-hiz) ease-in-out infinite}
+#vnoSekme button.simdi.neon-durgun,.neon-onizle button.simdi.neon-durgun{animation:none;background:var(--n-bg);color:var(--n-fg);box-shadow:0 0 calc(6px*var(--n-int)) #fff,0 0 calc(14px*var(--n-int)) var(--n-glow),0 0 calc(30px*var(--n-int)) var(--n-glow)}
 /* Telefonda "hareketi azalt" açık olsa bile yanıp sönme çalışsın: sadece büyüme efekti kapanır, renk/ışık yanıp sönmesi sürer */
 @keyframes vYanSade{
-  0%,100%{background:#39ff14;color:#041a06;box-shadow:0 0 6px #fff,0 0 14px #39ff14,0 0 30px #39ff14,0 0 55px #39ff14}
-  50%{background:#0b3d12;color:#7dff6a;box-shadow:0 0 3px #39ff14,0 0 8px #39ff14}
+  0%,100%{background:var(--n-bg);color:var(--n-fg);box-shadow:0 0 calc(6px*var(--n-int)) #fff,0 0 calc(14px*var(--n-int)) var(--n-glow),0 0 calc(30px*var(--n-int)) var(--n-glow),0 0 calc(55px*var(--n-int)) var(--n-glow)}
+  50%{background:var(--n-dim);color:var(--n-dimfg);box-shadow:0 0 calc(3px*var(--n-int)) var(--n-glow),0 0 calc(8px*var(--n-int)) var(--n-glow)}
 }
-@media (prefers-reduced-motion:reduce){#vnoSekme button.simdi{animation:vYanSade .9s ease-in-out infinite}}
+@media (prefers-reduced-motion:reduce){#vnoSekme button.simdi:not(.neon-durgun),.neon-onizle button.simdi:not(.neon-durgun){animation:vYanSade var(--n-hiz) ease-in-out infinite}}
+:root{--n-bg:#39ff14;--n-fg:#041a06;--n-dim:#0b3d12;--n-dimfg:#7dff6a;--n-glow:#39ff14;--n-glow2:#0aff6a;--n-border:#b6ff9e;--n-int:1;--n-hiz:.9s;--n-scale:1.06}
+.neon-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:8px 0}
+.neon-grid label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mut)}
+.neon-grid input[type=color]{width:100%;height:34px;padding:2px;border-radius:8px;cursor:pointer}
+.neon-grid input[type=range]{width:100%}
+.neon-onizle{margin:8px 0}
+.neon-onizle button{pointer-events:none}
 
 /* ===== Şüpheli giriş analizi ===== */
 #suphelBox{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 14px;margin:12px 0}
@@ -608,6 +616,23 @@ table.sp td.why{min-width:220px}
   <strong>Pencere açılış durumu</strong>
   <p class="mut">Pencereler başlığındaki ok ile açılıp kapanır. Burada işaretlediğiniz pencereler, kullanıcı kendisi değiştirmedikçe <b>kapalı</b> açılır. Kullanıcının kendi açıp kapattığı pencere o cihazda hatırlanır.</p>
   <div id="pList"></div>
+  <strong>Şu anki vardiya butonu (neon) ayarı</strong>
+  <p class="mut">"Kullanıcıların tabloları" bölümündeki <b>· şimdi</b> butonunun renklerini, ışığını ve hızını belirleyin. Değişiklikler burada anında görünür; aşağıdaki kaydet düğmesine basınca herkeste güncellenir.</p>
+  <div class="neon-onizle"><button type="button" class="alt sm simdi" id="neonOnizle">08:00–16:00 · şimdi</button></div>
+  <div class="neon-grid">
+    <label>Parlak anın rengi<input type="color" id="neonBg"></label>
+    <label>Parlak anın yazı rengi<input type="color" id="neonFg"></label>
+    <label>Sönük anın rengi<input type="color" id="neonDim"></label>
+    <label>Sönük anın yazı rengi<input type="color" id="neonDimFg"></label>
+    <label>Işık (parlama) rengi<input type="color" id="neonGlow"></label>
+    <label>Dış ışık halkası rengi<input type="color" id="neonGlow2"></label>
+    <label>Kenarlık rengi<input type="color" id="neonBorder"></label>
+    <label>Işık şiddeti: <b id="neonIntV"></b><input type="range" id="neonInt" min="0" max="300" step="5"></label>
+    <label>Hız (bir yanıp sönme süresi): <b id="neonHizV"></b><input type="range" id="neonHiz" min="2" max="40" step="1"></label>
+    <label>Büyüme efekti: <b id="neonScaleV"></b><input type="range" id="neonScale" min="100" max="125" step="1"></label>
+    <label><span><input type="checkbox" id="neonAcik"> Yanıp sönsün (kapalıysa sabit yanar)</span></label>
+  </div>
+  <div class="row"><button id="neonSifirla" type="button" class="alt">Varsayılan yeşile dön</button></div>
   <div class="row"><button id="gKaydet">Görünürlüğü ve açılış durumunu kaydet</button></div>
   <hr>
   <strong>Toplu silme (tüm kullanıcılar)</strong>
@@ -957,7 +982,7 @@ function vnoCiz() {
   sk.textContent = "";
   const simdi = secili === bugun ? vNoNow() : -1;
   VNO_AD.forEach((a, i) => {
-    const b = el("button", "alt sm" + (i === gv ? " sel" : "") + (i === simdi ? " simdi" : ""), a + (i === simdi ? " · şimdi" : ""));
+    const b = el("button", "alt sm" + (i === gv ? " sel" : "") + (i === simdi ? " simdi" + (neonBirles(gorAyar.neon).acik ? "" : " neon-durgun") : ""), a + (i === simdi ? " · şimdi" : ""));
     b.type = "button";
     b.onclick = () => { gv = i; hazirla(); };
     sk.append(b);
@@ -1738,8 +1763,8 @@ const GOR = [
   ["log", "Giriş kayıtları ve süre farkı", ["logBox"]]
 ];
 // misafir: giriş yapmadan (kayıt yoksa gizli) · uye: giriş yapınca (kayıt yoksa görünür)
-let gorAyar = { misafir: {}, uye: {}, kapali: {} };
-const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {} } : { misafir: {}, uye: d || {}, kapali: {} };
+let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {} };
+const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {}, neon: (d.neon && typeof d.neon === "object") ? d.neon : {} } : { misafir: {}, uye: d || {}, kapali: {} };
 const gorunur = k => isAdmin() || (me ? gorAyar.uye[k] !== false : gorAyar.misafir[k] === true);
 
 // ================= AÇILIR-KAPANIR PENCERELER =================
@@ -1803,7 +1828,54 @@ function gorUygula() {
   if (typeof ortUygula === "function") ortUygula();
   try { ozetKartlar(); } catch (e) {}
   penUygula();
+  neonUygula();
 }
+// ---- Şimdi butonu (neon) ayarları: yönetici belirler, herkeste uygulanır ----
+var NEON_VARS = { bg: "#39ff14", fg: "#041a06", dim: "#0b3d12", dimfg: "#7dff6a", glow: "#39ff14", glow2: "#0aff6a", border: "#b6ff9e", int: 100, hiz: 9, scale: 106, acik: true };
+function neonRenk(v) { return typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v); }
+function neonSay(v, mn, mx, d) { v = Number(v); return Number.isFinite(v) ? Math.min(mx, Math.max(mn, v)) : d; }
+function neonBirles(n) {
+  n = n && typeof n === "object" ? n : {};
+  const o = Object.assign({}, NEON_VARS);
+  ["bg", "fg", "dim", "dimfg", "glow", "glow2", "border"].forEach(k => { if (neonRenk(n[k])) o[k] = n[k]; });
+  o.int = neonSay(n.int, 0, 300, o.int); o.hiz = neonSay(n.hiz, 2, 40, o.hiz); o.scale = neonSay(n.scale, 100, 125, o.scale);
+  o.acik = n.acik !== false;
+  return o;
+}
+function neonUygula(n) {
+  const o = neonBirles(n || gorAyar.neon), r = document.documentElement.style;
+  r.setProperty("--n-bg", o.bg); r.setProperty("--n-fg", o.fg); r.setProperty("--n-dim", o.dim); r.setProperty("--n-dimfg", o.dimfg);
+  r.setProperty("--n-glow", o.glow); r.setProperty("--n-glow2", o.glow2); r.setProperty("--n-border", o.border);
+  r.setProperty("--n-int", String(o.int / 100)); r.setProperty("--n-hiz", (o.hiz / 10) + "s"); r.setProperty("--n-scale", String(o.scale / 100));
+  document.querySelectorAll("#vnoSekme button.simdi,.neon-onizle button.simdi").forEach(b => b.classList.toggle("neon-durgun", !o.acik));
+}
+const NEON_ALAN = { bg: "neonBg", fg: "neonFg", dim: "neonDim", dimfg: "neonDimFg", glow: "neonGlow", glow2: "neonGlow2", border: "neonBorder", int: "neonInt", hiz: "neonHiz", scale: "neonScale" };
+function neonFormDoldur() {
+  const o = neonBirles(gorAyar.neon);
+  Object.keys(NEON_ALAN).forEach(k => { const i = $(NEON_ALAN[k]); if (i) i.value = o[k]; });
+  if ($("neonAcik")) $("neonAcik").checked = o.acik;
+  neonEtiket();
+}
+function neonEtiket() {
+  $("neonIntV").textContent = "%" + $("neonInt").value;
+  $("neonHizV").textContent = (Number($("neonHiz").value) / 10).toFixed(1) + " sn";
+  $("neonScaleV").textContent = "%" + $("neonScale").value;
+}
+function neonOku() {
+  const o = {};
+  Object.keys(NEON_ALAN).forEach(k => { const v = $(NEON_ALAN[k]).value; o[k] = (k === "int" || k === "hiz" || k === "scale") ? Number(v) : v; });
+  o.acik = $("neonAcik").checked;
+  return neonBirles(o);
+}
+Object.values(NEON_ALAN).concat(["neonAcik"]).forEach(id => {
+  const i = $(id);
+  i.addEventListener("input", () => { neonEtiket(); neonUygula(neonOku()); });   // yönetici için canlı önizleme
+  i.addEventListener("change", () => { neonEtiket(); neonUygula(neonOku()); });
+});
+$("neonSifirla").onclick = () => {
+  Object.keys(NEON_ALAN).forEach(k => { $(NEON_ALAN[k]).value = NEON_VARS[k]; });
+  $("neonAcik").checked = true; neonEtiket(); neonUygula(neonOku());
+};
 function gorCiz() {
   const box = $("gList"); box.textContent = "";
   const tbl = el("table", "at"), head = el("thead"), hr = el("tr"), body = el("tbody");
@@ -1819,7 +1891,7 @@ function gorCiz() {
     body.append(tr);
   });
   tbl.append(body); box.append(tbl);
-  pCiz();
+  pCiz(); neonFormDoldur();
 }
 var gorKanal = null;
 function gorCanliKur() {
@@ -1844,7 +1916,7 @@ async function gorYukle() {
 }
 $("gKaydet").onclick = async () => {
   if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
-  const ayar = { misafir: {}, uye: {}, kapali: {} };
+  const ayar = { misafir: {}, uye: {}, kapali: {}, neon: neonOku() };
   document.querySelectorAll("#gList input").forEach(i => { ayar[i.dataset.g][i.dataset.k] = i.checked; });
   document.querySelectorAll("#pList input").forEach(i => { ayar.kapali[i.dataset.k] = i.checked; });
   msg("Görünürlük kaydediliyor…");
