@@ -882,7 +882,15 @@ const vNoNow = () => Math.floor((((simdiMs() + 10800000) % 86400000) + 86400000)
 let gv = vNoNow(), sonV = gv;   // gv: görüntülenen vardiya, sonV: son bilinen güncel vardiya
 const vardiyaGuncel = () => secili === bugun && gv === vNoNow();   // bugünün şu anki vardiyası
 const gonderKey = () => "gonderildi:" + myId() + ":" + bugun + ":" + gv;
-const donduMu = () => !!me && vardiyaGuncel() && !!lsGet(gonderKey(), false);   // "Gönder" ile dondurulmuş mu
+const donduMu = () => !!me && vardiyaGuncel() && !!lsGet(gonderKey(), false);   // "Gönder" ile dondurulmuş mu (gerçek durum sunucuda: gonderimler tablosu; burası cihaz önbelleği)
+async function gonderYukle() {   // dondurma durumunu sunucudan al: her cihazda aynı olsun
+  if (!me || !navigator.onLine || cevrimdisiOturum || !vardiyaGuncel()) return;
+  try {
+    const k = gonderKey();
+    const { data, error } = await sb.from("gonderimler").select("vno").eq("user_id", myId()).eq("tarih", bugun).eq("vno", gv).maybeSingle();
+    if (!error) lsSet(k, !!data);
+  } catch (e) {}
+}
 const duzenlenir = () => vardiyaGuncel() && !donduMu();   // yalnızca bugünün şu anki vardiyası ve gönderilmemişse düzenlenir
 const vnoHata = m => /vno/i.test(m || "") ? " — Supabase'de vardiya-tablo.sql çalıştırılmalı." : "";
 let profil = null, adminList = [], sonBan = "", cikisYapiliyor = false;
@@ -1251,6 +1259,11 @@ $("gonderBtn").onclick = async () => {
     bekleyenleriKaydet();
     await kayitZinciri;
     if (Object.keys(kirli).some(r => kirli[r])) { msg("Bazı kayıtlar henüz yazılamadı. Birkaç saniye sonra tekrar deneyin."); $("gonderBtn").disabled = false; return; }
+    const ins = await sb.from("gonderimler").insert({ user_id: myId(), tarih: bugun, vno: gv });
+    if (ins.error && ins.error.code !== "23505") {
+      msg("Gönderilemedi: " + ins.error.message + (/gonderimler|relation|schema|does not exist/i.test(ins.error.message) ? " — Supabase'de gonderim-dondur.sql çalıştırılmalı." : ""));
+      $("gonderBtn").disabled = false; return;
+    }
     lsSet(gonderKey(), true);
     dondurUygula();
     msg("Tablo gönderildi ve donduruldu.");
@@ -1437,7 +1450,7 @@ async function load() {
     if (me && secili === bugun && gv === vNoNow()) for (let r = 0; r < N; r++) if (!rows.some(x => x.user_id === myId() && x.satir === r)) rows.push({ user_id: myId(), tarih: bugun, vno: gv, satir: r, name: "", n1: null, n2: null, n3: null, n4: null, n5: null, n6: null, kullanici: userName() });
     msg(navigator.onLine ? "Veriler yüklenemedi; cihazdaki son kayıtlar gösteriliyor." : "Çevrimdışı mod: cihazdaki kayıtlar gösteriliyor. İnternet gelince eşitlenecek.");
   }
-  if (me && vardiyaGuncel()) { fillMine(); dondurUygula(); } renderShared();
+  if (me && vardiyaGuncel()) { await gonderYukle(); fillMine(); dondurUygula(); } renderShared();
   try { if (typeof hedefCiz === "function") hedefCiz(); } catch (e) {}
   if (navigator.onLine) { offlineKuyrukGonder(); logYukle(); }
   haftaPlanla();
@@ -1467,6 +1480,7 @@ async function hazirla() {
   await hedefYukle();
   await kalpAt();
   await vardiyaYukle();
+  if (duzenle) await gonderYukle();
   if (duzenle) {
     N = N0;
     const nAnahtar = N_KEY + ":" + myId() + ":" + bugun + ":" + gv;
@@ -1486,7 +1500,7 @@ async function hazirla() {
         }
         buildMine();
         const seed = Array.from({length: N}, (_, i) => { return { satir: i, tarih: bugun, vno: gv, kullanici: userName(), name: adlar.get(i) || "" }; });
-        const ins = await sb.from("sayilar").upsert(seed, { onConflict: "user_id,tarih,vno,satir", ignoreDuplicates: true });
+        const ins = donduMu() ? {} : await sb.from("sayilar").upsert(seed, { onConflict: "user_id,tarih,vno,satir", ignoreDuplicates: true });
         if (ins.error) {
           if (agHatasi(ins.error.message)) ag = true;
           else { msg("Satırlar oluşturulamadı: " + ins.error.message + vnoHata(ins.error.message)); return; }
