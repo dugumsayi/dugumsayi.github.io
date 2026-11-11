@@ -3669,8 +3669,9 @@ function xlsxBlob(sayfalar) {
       if (kalan <= 0) { durum = "✓ Hedef tamamlandı (+" + fmt(yuv(-kalan)) + ")"; cls = "ok"; const kal = Math.max(0, Math.floor((vbit - simdi) / 60000)); dinlen = "☕ Hedef tamam · vardiya bitimine " + (kal ? sure(kal * 60) : "1 dakikadan az") + " var"; }
       else if (!hiz) { durum = fmt(yuv(kalan)) + " sayı kaldı · tahmin için veri bekleniyor"; cls = "bek"; }
       else {
-        const bit = simdi + kalan / hiz * (VARDIYA_DK / NET_DK) * 60000;
-        if (bit <= hbit) { durum = "Bu hızla yetişir · tahmini bitiş " + hm(bit) + " (" + fmt(yuv(kalan)) + " sayı kaldı)"; cls = "ok"; const pay = Math.floor((hbit - simdi) / 60000 - kalan / hizC * (VARDIYA_DK / NET_DK)); dinlen = pay >= 1 ? "☕ Dinlenebileceğin süre: ≈ " + sure(pay * 60) + " (sonra yine aynı hızla devam)" : "☕ Dinlenme payı yok · tam sınırda yetişiyor"; }
+        // Tahmini bitiş ve dinlenme payı AYNI hızdan hesaplanır (dinlenirken ortalama düşmesin diye son girişe kadarki hız): dinlenme = hedef sınırı − tahmini bitiş
+        const bit = simdi + kalan / hizC * (VARDIYA_DK / NET_DK) * 60000;
+        if (bit <= hbit) { durum = "Bu hızla yetişir · tahmini bitiş " + hm(bit) + " (" + fmt(yuv(kalan)) + " sayı kaldı)"; cls = "ok"; const pay = Math.floor((hbit - bit) / 60000); dinlen = pay >= 1 ? "☕ Dinlenebileceğin süre: ≈ " + sure(pay * 60) + " (sonra yine aynı hızla devam)" : "☕ Dinlenme payı yok · tam sınırda yetişiyor"; }
         else {
           const kalanDk = Math.max(0, (hbit - simdi) / 60000 * (NET_DK / VARDIYA_DK));
           durum = "Bu hızla yetişmez · " + hm(hbit) + " itibarıyla ≈ " + fmt(Math.round(tahmin)) + " (" + fmt(Math.max(0, Math.round(hd - tahmin))) + " eksik)" +
