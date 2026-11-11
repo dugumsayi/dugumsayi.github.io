@@ -3269,19 +3269,9 @@ function xlsxBlob(sayfalar) {
       k.append(k._bas, k._sec, k._liste); k._kur = true;
     }
     k.classList.remove("hide");
-    const hedefler = HEDEFLER.filter(h => !hedefGizliMi(h)).sort((a, b) => a - b), gizli = hgOku();
-    // Hedef aç/kapa düğmeleri: yalnızca hedefler ya da seçim değişince yeniden kurulur (tıklama kaybolmasın)
-    const imza = hedefler.map(h => h + ":" + (gizli[h] ? 0 : 1)).join("|");
-    if (imza !== hdSecImza) {
-      hdSecImza = imza; k._sec.textContent = "";
-      k._sec.append(el("span", "", "Göster:"));
-      hedefler.forEach(hd => {
-        const acik = !gizli[hd], b = el("button", "alt sm hd-sw" + (acik ? " sel" : ""), (acik ? "✓ " : "") + fmt(hd));
-        b.type = "button"; b.title = acik ? "Bu hedefin çubuğunu gizle" : "Bu hedefin çubuğunu göster";
-        b.onclick = () => { const g = hgOku(); if (g[hd]) delete g[hd]; else g[hd] = true; hgYaz(g); hedefCiz(); };
-        k._sec.append(b);
-      });
-    }
+    const hedefler = HEDEFLER.filter(h => !hedefGizliMi(h)).sort((a, b) => a - b), gizli = {};
+    // Hedef aç/kapa düğmeleri kaldırıldı: tüm hedef çubukları sabit olarak görünür
+    if (k._sec) k._sec.textContent = "";
     const net = yuv(rows.filter(x => x.user_id === myId()).reduce((a, r) => a + rsum(r), 0));
     const simdi = simdiMs(), vb = vbBul(simdi), vbit = vb + 8 * 3600000;
     const calDk = Math.max(0, (simdi - vb) / 60000) * (NET_DK / VARDIYA_DK);   // mola payı orantılı düşülmüş çalışma dakikası
