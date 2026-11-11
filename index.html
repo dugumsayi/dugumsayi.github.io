@@ -2523,7 +2523,7 @@ function ozetChipListesi(g) {
   const canli = secili === bugun && simdi < vBas + H8;
   const vBitti = !canli;   // vardiya bittiyse (ya da geçmiş gün) tahmini bitiş saati hesaplanmaz
   const ref = canli ? simdi : son;
-  const vSaat = Math.max(0, (ref - vBas) / 3600000);
+  const vSaat = Math.max(0, (ref - ilk) / 3600000);   // ilk girişten itibaren
   // 35 dakikalık molayı vardiyanın başında topluca düşmek erken girişlerde
   // süreyi negatif yapıp canlı tahmini 35 dakika boyunca kilitliyordu.
   // Mola payını 8 saatlik vardiyaya orantılı dağıt: 8 saatin sonunda
@@ -2594,13 +2594,13 @@ function ozetHedefCubuklari(g) {
   const H8 = 8 * 3600000, ilk = g.t[0], son = g.t[g.t.length - 1];
   const vb = ilk - ((ilk + 3 * 3600000) % H8), simdi = Math.max(simdiMs(), son), vbit = vb + H8;
   if (secili !== bugun || simdi >= vbit) return null;   // geçmiş gün ya da biten vardiyada çubuk gösterilmez
-  const net = yuv(g.net), calDk = Math.max(0, (simdi - vb) / 60000) * (NET_DK / VARDIYA_DK);
-  const hiz = calDk >= 1 && net > 0 ? net / calDk : 0, tahmin = hiz * HEDEF_NET_DK;
+  const net = yuv(g.net), calDk = Math.max(0, (simdi - ilk) / 60000) * (NET_DK / VARDIYA_DK);   // ilk girişten itibaren
+  const hiz = calDk >= 1 && net > 0 ? net / calDk : 0, tahmin = 0;
   const kutu = el("div", "hedef-kutu hd-ozet"), liste = el("div", "hd-liste");
   const kalanVrd = (vbit - simdi) / 60000;
   if (kalanVrd > 0 && kalanVrd <= 30) kutu.append(el("span", "hd-son30-yazi", "⏰ Vardiya bitimine " + Math.max(1, Math.ceil(kalanVrd)) + " dakika kaldı"));
   kutu.append(liste);
-  hedefSatirlari(liste, hedefler, net, calDk, hiz, tahmin, simdi, vbit, son);
+  hedefSatirlari(liste, hedefler, net, calDk, hiz, tahmin, simdi, vbit, son, ilk);
   liste.lastChild && liste.lastChild.classList && liste.lastChild.classList.contains("hd-not") && liste.lastChild.remove();
   return kutu;
 }
@@ -3654,12 +3654,14 @@ function xlsxBlob(sayfalar) {
   const hgYaz = o => { try { localStorage.setItem(HG_KEY, JSON.stringify(o)); } catch (e) {} };
   let hdSecImza = "";
   // Hedef çubukları: hem 'Benim girişlerim' kutusunda hem de herkesin görebildiği kullanıcı özetlerinde kullanılır
-  window.hedefSatirlari = function (liste, gorunen, net, calDk, hiz, tahmin, simdi, vbit, sonMs) {
+  window.hedefSatirlari = function (liste, gorunen, net, calDk, hiz, tahmin, simdi, vbit, sonMs, ilkMs) {
     const hbit = vbit - (VARDIYA_DK - HEDEF_BITIS_DK) * 60000;   // hedefin bitmiş olması gereken an (vardiya bitiminden 30 dk önce)
-    tahmin = hiz * HEDEF_NET_DK;                                  // hedef saatindeki tahmini sayı
+    // Tüm vardiyalarda aynı kural: süre, tabloya İLK yazılan andan vardiya sonuna göre hesaplanır (ilk giriş yoksa vardiya başı)
+    const vbas = ilkMs ? Math.min(Math.max(ilkMs, vbit - VARDIYA_DK * 60000), vbit) : vbit - VARDIYA_DK * 60000;
+    const hedefNetDk = Math.max(1, (hbit - vbas) / 60000 * (NET_DK / VARDIYA_DK));   // ilk girişten hedef sınırına kadar net çalışma dk
+    tahmin = hiz * hedefNetDk;                                    // hedef sınırındaki tahmini sayı
     // Dinlenme payı için hız: vardiya başından SON GİRİŞE kadar hesaplanır. "Şu ana kadar" ortalaması kullanılırsa
     // dinlendikçe ortalama düşer ve kalan süre gerçek zamandan kat kat hızlı erirdi (15 dk → 2 dk'da 0).
-    const vbas = vbit - VARDIYA_DK * 60000;
     const sonT = sonMs ? Math.min(Math.max(sonMs, vbas), simdi) : simdi;
     const calDkSon = Math.max(0, (sonT - vbas) / 60000) * (NET_DK / VARDIYA_DK);
     const hizC = calDkSon >= 1 && net > 0 ? Math.max(hiz, net / calDkSon) : hiz;
@@ -3682,7 +3684,7 @@ function xlsxBlob(sayfalar) {
       const s = el("div", "hd-satir"), t = el("div", "hd-t"), bar = el("div", "hd-bar"), dol = el("div", "hd-dol " + cls + ((gorAyar && gorAyar.son30Renk) ? " ozel" : ""));
       t.append(el("span", "", fmt(hd) + " hedefi"), el("span", "", fmt(net) + " / " + fmt(hd) + " · %" + fmt(Math.round(pct))));
       dol.style.width = pct + "%"; bar.append(dol);
-      const olmasi = Math.min(100, calDk / HEDEF_NET_DK * 100);   // eşit tempoyla gidilseydi şu an olunması gereken yer
+      const olmasi = Math.min(100, calDk / hedefNetDk * 100);   // eşit tempoyla gidilseydi şu an olunması gereken yer
       const isr = el("div", "hd-isaret"); isr.style.left = olmasi + "%"; isr.title = "Eşit tempoyla olunması gereken yer (hedef " + hm(hbit) + "'de tamamlanmış olmalı)"; bar.append(isr);
       const seg = el("div", "hd-son30-seg"); seg.style.left = ((VARDIYA_DK - 30) / VARDIYA_DK * 100) + "%"; seg.title = "Vardiyanın son 30 dakikası"; bar.append(seg);   // yalnızca görsel, mola hesabına dokunmaz
       s.append(t, bar, el("div", "hd-durum " + cls, durum)); if (dinlen) s.append(el("div", "hd-dinlen", dinlen)); liste.append(s);
@@ -3703,9 +3705,13 @@ function xlsxBlob(sayfalar) {
     if (k._sec) k._sec.textContent = "";
     const net = yuv(rows.filter(x => x.user_id === myId()).reduce((a, r) => a + rsum(r), 0));
     const simdi = simdiMs(), vb = vbBul(simdi), vbit = vb + 8 * 3600000;
-    const calDk = Math.max(0, (simdi - vb) / 60000) * (NET_DK / VARDIYA_DK);   // mola payı orantılı düşülmüş çalışma dakikası
+    let ilkGirisMs = 0;
+    try { logs.forEach(l => { if (l.user_id !== myId() || l.sutun === "makine" || l.yeni == null) return; const zt = new Date(l.zaman).getTime(); if (!isNaN(zt) && vbBul(zt) === vb && (!ilkGirisMs || zt < ilkGirisMs)) ilkGirisMs = zt; }); } catch (e) {}
+    const basMs = ilkGirisMs ? Math.min(ilkGirisMs, simdi) : vb;                   // tabloya ilk yazılan an (yoksa vardiya başı)
+    const calDk = Math.max(0, (simdi - basMs) / 60000) * (NET_DK / VARDIYA_DK);   // ilk girişten itibaren, mola payı orantılı düşülmüş çalışma dk
     const hiz = calDk >= 1 && net > 0 ? net / calDk : 0;                         // sayı / çalışma dakikası
-    const tahmin = hiz * HEDEF_NET_DK;                                            // hedef saatindeki (vardiya bitiminden 30 dk önce) tahmin
+    const hbitK = vbit - (VARDIYA_DK - HEDEF_BITIS_DK) * 60000;
+    const tahmin = hiz * Math.max(1, (hbitK - basMs) / 60000 * (NET_DK / VARDIYA_DK));   // hedef sınırındaki tahmin
     k._bas.textContent = "";
     k._bas.append(el("strong", "", VNO_AD[gv] + " vardiyası · hedef takibi"),
       el("span", "mut", "Şu an " + fmt(net) + (hiz ? " · hız " + fmt(Math.round(hiz * 600) / 10) + " sayı/saat · " + hm(vb + HEDEF_BITIS_DK * 60000) + " tahmini ≈ " + fmt(Math.round(tahmin)) : " · hız hesabı için biraz veri gerekli")));
@@ -3716,8 +3722,8 @@ function xlsxBlob(sayfalar) {
     if (!gorunen.length) { liste.append(el("div", "mut hd-not", "Tüm hedefler gizli. Yukarıdaki düğmelerden açabilirsiniz.")); return; }
     let sonGirisMs = 0;
     try { logs.forEach(l => { if (l.user_id !== myId() || l.sutun === "makine" || l.yeni == null) return; const zt = new Date(l.zaman).getTime(); if (!isNaN(zt) && vbBul(zt) === vb && zt > sonGirisMs) sonGirisMs = zt; }); } catch (e) {}
-    hedefSatirlari(liste, gorunen, net, calDk, hiz, tahmin, simdi, vbit, sonGirisMs || 0);
-    liste.append(el("div", "mut hd-not", "Dikey çizgi: hedefe vardiya bitiminden 30 dk önce (08:00 vardiyasında 15:30) ulaşılacak eşit tempoyla şu an olunması gereken yer. Mor kesik şerit: vardiyanın son 30 dakikası. Dinlenme payı, vardiya başından son girişinize kadarki ortalama hızın devam edeceği varsayımıyla hesaplanır ve gerçek zamanla birebir azalır; vardiyadaki 35 dk mola payı zaten hesapta."));
+    hedefSatirlari(liste, gorunen, net, calDk, hiz, tahmin, simdi, vbit, sonGirisMs || 0, ilkGirisMs || 0);
+    liste.append(el("div", "mut hd-not", "Dikey çizgi: hedefe vardiya bitiminden 30 dk önce (08:00 vardiyasında 15:30) ulaşılacak eşit tempoyla şu an olunması gereken yer. Mor kesik şerit: vardiyanın son 30 dakikası. Hız ve dinlenme payı, tabloya ilk yazdığınız andan itibaren hesaplanır (tüm vardiyalarda aynı); dinlenme payı, ilk girişinizden son girişinize kadarki ortalama hızın devam edeceği varsayımıyla hesaplanır ve gerçek zamanla birebir azalır; vardiyadaki 35 dk mola payı zaten hesapta."));
   };
 
   // ---------- 2) Aralık analizi: toplam, ortalama, en iyi gün, grafik, vardiya karşılaştırması ----------
