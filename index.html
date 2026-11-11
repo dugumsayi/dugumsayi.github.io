@@ -786,8 +786,8 @@ td.rv-bar{min-width:90px;padding:0 10px}
 <div id="app" class="hide">
   <div class="sec-head" id="appHead"><h2>Benim girişlerim (bugün)</h2></div>
   <div id="hedefKutu" class="hedef-kutu hide"></div>
-  <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="satirSilBtn" type="button" class="alt sm">− Satır sil</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button><button id="gonderBtn" type="button" class="sm">Gönder</button></div>
-  <p id="gonderNot" class="mut hide">✓ Bu vardiyanın tablosu gönderildi ve donduruldu. Artık hiçbir değişiklik yapılamaz.</p>
+  <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="satirSilBtn" type="button" class="alt sm">− Satır sil</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
+  <p id="gonderNot" class="mut hide">✓ Tablonuzu resim olarak kaydettiniz; bu vardiyanın tablosu donduruldu. Artık hiçbir değişiklik yapılamaz.</p>
   <div class="scroll"><table id="mineTbl"><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody><tfoot><tr class="tot"><td>TOPLAM</td><td id="mineToplam">0</td><td></td></tr></tfoot></table></div>
 </div>
 
@@ -1245,39 +1245,35 @@ function dondurUygula() {
   const d = donduMu();
   myInputs.forEach(f => { f[0].disabled = d; f[1].disabled = d; });
   document.querySelectorAll("#mine button").forEach(b => { b.disabled = d; });
-  ["satirBtn", "satirSilBtn", "sayiSil", "gonderBtn"].forEach(i => { const b = $(i); if (b) b.disabled = d; });
+  ["satirBtn", "satirSilBtn", "sayiSil"].forEach(i => { const b = $(i); if (b) b.disabled = d; });
   $("app").classList.toggle("dondu", d);
   $("gonderNot").classList.toggle("hide", !d);
   const fab = document.querySelector("#hizliFab"); if (fab && d) fab.classList.add("hide");
 }
-$("gonderBtn").onclick = async () => {
-  if (!me) return;
-  if (!duzenlenir()) { alert(donduMu() ? "Bu vardiyanın tablosu zaten gönderildi." : "Yalnızca şu anki vardiyanın tablosu gönderilebilir."); return; }
-  if (satirEkleniyor) { alert("Tablo şu an güncelleniyor, birkaç saniye sonra tekrar deneyin."); return; }
-  if (!navigator.onLine) { alert("İnternet yokken gönderilemez. Bağlantı gelince tekrar deneyin."); return; }
-  if (!confirm("Tablo gönderilsin mi? Gönderdikten sonra bu vardiyanın tablosu dondurulacak; hiçbir değişiklik yapılamayacak.")) return;
-  $("gonderBtn").disabled = true; msg("Gönderiliyor…");
+// Kendi kartımdaki "Resim olarak kaydet"ten sonra çağrılır: bekleyen kayıtları yazar, gönderimi sunucuya kaydeder ve tabloyu dondurur
+async function tabloyuDondur() {
+  if (!me || !duzenlenir() || satirEkleniyor) return false;
   try {
     bekleyenleriKaydet();
     await kayitZinciri;
-    if (Object.keys(kirli).some(r => kirli[r])) { msg("Bazı kayıtlar henüz yazılamadı. Birkaç saniye sonra tekrar deneyin."); $("gonderBtn").disabled = false; return; }
+    if (Object.keys(kirli).some(r => kirli[r])) { const h = "Bazı kayıtlar henüz yazılamadı, tablo dondurulmadı. Birkaç saniye sonra resmi tekrar kaydedin."; msg(h); alert(h); return false; }
     const ins = await sb.from("gonderimler").insert({ user_id: myId(), tarih: bugun, vno: gv });
     if (ins.error && ins.error.code !== "23505") {
-      const h = "Gönderilemedi: " + ins.error.message + (/gonderimler|relation|schema|does not exist|permission|policy/i.test(ins.error.message) ? "\n\nSupabase'de gonderim-dondur.sql dosyasını çalıştırdığınızdan emin olun." : "");
-      msg(h); alert(h);
-      $("gonderBtn").disabled = false; return;
+      const h = "Tablo dondurulamadı: " + ins.error.message + (/gonderimler|relation|schema|does not exist|permission|policy/i.test(ins.error.message) ? "\n\nSupabase'de gonderim-dondur.sql dosyasını çalıştırdığınızdan emin olun." : "");
+      msg(h); alert(h); return false;
     }
     const dog = await sb.from("gonderimler").select("vno").eq("user_id", myId()).eq("tarih", bugun).eq("vno", gv).maybeSingle();
     if (dog.error || !dog.data) {
-      const h = "Gönderim sunucuya kaydedilemedi" + (dog.error ? ": " + dog.error.message : " (kayıt okunamadı).") + "\n\nTablo dondurulmadı.";
-      msg(h); alert(h); $("gonderBtn").disabled = false; return;
+      const h = "Dondurma sunucuya kaydedilemedi" + (dog.error ? ": " + dog.error.message : " (kayıt okunamadı).") + "\n\nTablo dondurulmadı.";
+      msg(h); alert(h); return false;
     }
     lsSet(gonderKey(), true);
     dondurUygula();
-    msg("Tablo gönderildi ve donduruldu.");
+    msg("Resim kaydedildi ve tablo donduruldu.");
     await load();
-  } catch (e) { const h = "Gönderilemedi: " + (e && e.message ? e.message : e); msg(h); alert(h); $("gonderBtn").disabled = false; }
-};
+    return true;
+  } catch (e) { const h = "Tablo dondurulamadı: " + (e && e.message ? e.message : e); msg(h); alert(h); return false; }
+}
 $("mine").addEventListener("focusout", e => { if (!$("mine").contains(e.relatedTarget)) setTimeout(siralaMine, 0); });
 
 // Giriş tablosunun altındaki genel toplam (tüm satırların toplamı)
@@ -1300,8 +1296,8 @@ function fillMine() {
 
 // Tabloyu (çerçeveyi) tam kırpılmış, yüksek çözünürlüklü PNG olarak kaydet.
 // Telefonda paylaşım menüsü (WhatsApp vb.) açılır, olmazsa indirir. Renkler ekrandaki görünümle aynıdır.
-function tabloResim(tbl, baslik, dosya) {
-  if (!tbl) { msg("Kaydedilecek tablo yok."); return; }
+function tabloResim(tbl, baslik, dosya) {   // başarılı kaydedilirse/paylaşılırsa true döner (Promise)
+  if (!tbl) { msg("Kaydedilecek tablo yok."); return Promise.resolve(false); }
   const r0 = tbl.getBoundingClientRect(), m = 6, sc = 4;           // m: ince kenar payı, sc: çözünürlük çarpanı
   const bh = baslik ? 38 : 0;                                       // üstte kullanıcı adı şeridi (resimde ad görünsün)
   const W = Math.ceil(r0.width + m * 2), H = Math.ceil(r0.height + m * 2 + bh);
@@ -1326,18 +1322,20 @@ function tabloResim(tbl, baslik, dosya) {
     c.fillText(cell.textContent, x + w / 2, y + h / 2);
   });
   const ad = (dosya + "-" + secili).toLocaleLowerCase("tr").replace(/[^a-z0-9ğüşıöç_-]+/gi, "-").replace(/-+/g, "-") + ".png";
-  const indir = blob => {
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = ad;
-    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    msg("Resim kaydedildi: " + ad);
-  };
-  cv.toBlob(blob => {
-    if (!blob) { msg("Resim oluşturulamadı."); return; }
-    const f = new File([blob], ad, { type: "image/png" });
-    if (navigator.canShare && navigator.canShare({ files: [f] })) {
-      navigator.share({ files: [f], title: baslik || "Tablo" }).then(() => msg("Resim paylaşıldı.")).catch(e => { if (e && e.name !== "AbortError") indir(blob); });
-    } else indir(blob);
-  }, "image/png");
+  return new Promise(done => {
+    const indir = blob => {
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = ad;
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      msg("Resim kaydedildi: " + ad); done(true);
+    };
+    cv.toBlob(blob => {
+      if (!blob) { msg("Resim oluşturulamadı."); done(false); return; }
+      const f = new File([blob], ad, { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [f] })) {
+        navigator.share({ files: [f], title: baslik || "Tablo" }).then(() => { msg("Resim paylaşıldı."); done(true); }).catch(e => { if (e && e.name !== "AbortError") indir(blob); else done(false); });
+      } else indir(blob);
+    }, "image/png");
+  });
 }
 $("aggResim").onclick = () => tabloResim($("agg").querySelector("table"), "Genel toplam", "genel-toplam");
 
@@ -1377,7 +1375,16 @@ function renderShared() {
     ft.append(el("td", "", "TOPLAM"), el("td", "", fmt(total))); body.append(ft);
     tbl.append(body); wrap.append(tbl);
     const rb = el("button", "alt sm", "Resim olarak kaydet"); rb.type = "button";
-    rb.onclick = () => tabloResim(tbl, u.ad || "", "makine-tablosu-" + (u.ad || ""));
+    const benim = uid === myId();
+    rb.onclick = async () => {
+      const dondurulacak = benim && !!me && duzenlenir();
+      if (dondurulacak) {
+        if (!navigator.onLine) { alert("İnternet yokken resim kaydedilip tablo dondurulamaz. Bağlantı gelince tekrar deneyin."); return; }
+        if (!confirm("Tablo resim olarak kaydedilecek ve ardından bu vardiyanın tablosu dondurulacak; hiçbir değişiklik yapılamayacak. Devam edilsin mi?")) return;
+      }
+      const ok = await tabloResim(tbl, u.ad || "", "makine-tablosu-" + (u.ad || ""));
+      if (ok && dondurulacak) await tabloyuDondur();
+    };
     const satirKutu = el("div", "u-row"), sol = el("div", "u-sol"), sag = el("div", "u-ozet hide");
     sag.dataset.uid = uid;
     sol.append(wrap, rb); satirKutu.append(sol, sag); card.append(satirKutu); box.append(card);
