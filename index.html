@@ -789,6 +789,7 @@ td.rv-bar{min-width:90px;padding:0 10px}
 
 
 
+<div id="yeniVardBar" class="hide" style="margin:8px 0;padding:10px 12px;border:1px solid var(--line,#3b4a60);border-radius:10px"><span id="yeniVardMetin"></span> <button id="yeniVardGec" type="button" class="sm">Yeni tabloya geç</button></div>
 <div id="app" class="hide">
   <div class="sec-head" id="appHead"><h2>Benim girişlerim (bugün)</h2></div>
   <div id="hedefKutu" class="hedef-kutu hide"></div>
@@ -3159,6 +3160,7 @@ function erkenOtoGecis() {   // pencere açıldığında, mevcut vardiyada henü
   if (!me || secili !== bugun || gv !== vNoNow()) return false;
   const e = erkenSlot(); if (!e) return false;
   const an = e.t + ":" + e.v; if (erkenGecisAnahtar === an) return false;
+  if (!rows.some(x => x.user_id === myId())) return false;   // tablo henüz yüklenmedi
   if (rows.some(x => x.user_id === myId() && COLS.some(k => x[k] != null && String(x[k]).trim() !== ""))) return false;   // mevcut vardiyada sayı girmiş: yerinde kalır
   erkenGecisAnahtar = an; secili = e.t; gv = e.v; hazirla(); return true;
 }
@@ -3166,12 +3168,39 @@ function gunVardiyaKontrol() {
   const yeni = todayStr(), yv = vNoNow();
   if (yeni !== bugun || yv !== sonV) {   // gün ya da vardiya değişti: yeni vardiyanın tablosu açılır
     const bugunduydu = secili === bugun, vduydu = gv === sonV;
+    if (me && bugunduydu && vduydu) { try { bekleyenleriKaydet(); } catch (e) {} msg("Vardiya bitti: önceki tablo kapatıldı, yeni vardiyanın tablosu açıldı."); }   // eski vardiyanın son girişleri kaydedilir, tablo kapanır
     bugun = yeni; sonV = yv; $("tarih").max = bugun;
     if (bugunduydu) { secili = bugun; if (vduydu) { gv = yv; } }
     if (sb) hazirla();
   }
 }
-setInterval(() => { gunVardiyaKontrol(); try { erkenOtoGecis(); } catch (e) {} }, 60000);
+let yeniTabloAnahtar = "";
+async function yeniTabloOlustur() {   // sonraki vardiyaya ERKEN_DK kala: yeni vardiyanın tablosunu (şimdiki makine adlarıyla) hazırlar
+  if (!me || !sb || !navigator.onLine || cevrimdisiOturum) return;
+  const e = erkenSlot(); if (!e || !(secili === bugun && gv === vNoNow())) return;
+  const an = myId() + ":" + e.t + ":" + e.v; if (yeniTabloAnahtar === an) return;
+  yeniTabloAnahtar = an;
+  try {
+    const benim = rows.filter(x => x.user_id === myId());
+    const adet = Math.max(N0, N);
+    const seed = Array.from({ length: adet }, (_, i) => { const r = benim.find(x => x.satir === i); return { satir: i, tarih: e.t, vno: e.v, kullanici: userName(), name: (r && r.name) || "" }; });
+    await sb.from("sayilar").upsert(seed, { onConflict: "user_id,tarih,vno,satir", ignoreDuplicates: true });
+  } catch (x) {}
+}
+function yeniVardiyaBar() {
+  const bar = $("yeniVardBar"); if (!bar) return;
+  const e = me ? erkenSlot() : null;
+  const goster = !!e && secili === bugun && gv === vNoNow();
+  bar.classList.toggle("hide", !goster);
+  if (goster) $("yeniVardMetin").textContent = "Yeni vardiya tablosu açıldı (" + VNO_AD[e.v] + "). Bu vardiya bitince şu anki tablo kapanır.";
+}
+$("yeniVardGec").onclick = () => {
+  const e = erkenSlot(); if (!e) return;
+  try { bekleyenleriKaydet(); } catch (x) {}
+  erkenGecisAnahtar = e.t + ":" + e.v; secili = e.t; gv = e.v; hazirla();
+};
+// 5 sn'de bir: vardiya sınırı geçildiyse eski tabloyu hemen kapat; sınıra ERKEN_DK kala yeni tabloyu oluştur
+setInterval(() => { try { gunVardiyaKontrol(); erkenOtoGecis(); yeniTabloOlustur(); yeniVardiyaBar(); } catch (e) {} }, 5000);
 
 // Sunucu saatini al: önce Supabase yanıtındaki Date başlığı, olmazsa herkese açık saat servisi.
 async function saatSenkron() {
