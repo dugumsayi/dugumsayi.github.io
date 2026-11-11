@@ -707,6 +707,12 @@ td.rv-bar{min-width:90px;padding:0 10px}
   <p class="mut">Seçtiğiniz renk, tüm ilerleme çubuklarında her zaman kullanılır. "Varsayılan" seçilirse çubuklar durumuna göre renklenir (yeşil / turuncu / mavi). Vardiyanın son 30 dakikası ise her zaman çubuğun sağ ucunda mor kesik şeritle gösterilir. "Hedefleri kaydet" ile herkes için kaydedilir.</p>
   </div>
   <div class="adm-pane hide" data-pane="gorunum">
+  <strong>Tabloyu dondurma</strong>
+  <p class="mut">Açıkken, kullanıcı kendi kartındaki "Resim olarak kaydet"e basınca o vardiyanın tablosu donar ve değiştirilemez. Kapatırsanız kimsenin tablosu donmaz; daha önce dondurulmuş tablolar da yeniden düzenlenebilir olur (tekrar açarsanız eskiler yine donar).</p>
+  <div class="row">
+    <label class="chk"><input id="tabloDondurAc" type="checkbox" checked> Resim olarak kaydedince tablo dondurulsun</label>
+    <button id="tabloDondurKaydet" type="button">Dondurma ayarını kaydet</button>
+  </div>
   <strong>Tablo rengi</strong>
   <p class="mut">Kullanıcı tablolarının ve genel toplam tablosunun rengi. İsterseniz herkes için tek renk belirleyin, isterseniz kullanıcıların kendi tablo rengini (kendi cihazlarında) seçmesine izin verin.</p>
   <div class="row">
@@ -882,7 +888,7 @@ const vNoNow = () => Math.floor((((simdiMs() + 10800000) % 86400000) + 86400000)
 let gv = vNoNow(), sonV = gv;   // gv: görüntülenen vardiya, sonV: son bilinen güncel vardiya
 const vardiyaGuncel = () => secili === bugun && gv === vNoNow();   // bugünün şu anki vardiyası
 const gonderKey = () => "gonderildi:" + myId() + ":" + bugun + ":" + gv;
-const donduMu = () => !!me && vardiyaGuncel() && !!lsGet(gonderKey(), false);   // "Gönder" ile dondurulmuş mu (gerçek durum sunucuda: gonderimler tablosu; burası cihaz önbelleği)
+const donduMu = () => !!me && vardiyaGuncel() && gorAyar.tabloDondur !== false && !!lsGet(gonderKey(), false);   // "Gönder" ile dondurulmuş mu (gerçek durum sunucuda: gonderimler tablosu; burası cihaz önbelleği)
 async function gonderYukle() {   // dondurma durumunu sunucudan al: her cihazda aynı olsun
   if (!me || !navigator.onLine || cevrimdisiOturum || !vardiyaGuncel()) return;
   try {
@@ -1377,7 +1383,7 @@ function renderShared() {
     const rb = el("button", "alt sm", "Resim olarak kaydet"); rb.type = "button";
     const benim = uid === myId();
     rb.onclick = async () => {
-      const dondurulacak = benim && !!me && duzenlenir();
+      const dondurulacak = benim && !!me && duzenlenir() && gorAyar.tabloDondur !== false;   // dondurma yönetici ayarına bağlı
       if (dondurulacak) {
         if (!navigator.onLine) { alert("İnternet yokken resim kaydedilip tablo dondurulamaz. Bağlantı gelince tekrar deneyin."); return; }
         if (!confirm("Tablo resim olarak kaydedilecek ve ardından bu vardiyanın tablosu dondurulacak; hiçbir değişiklik yapılamayacak. Devam edilsin mi?")) return;
@@ -1985,8 +1991,8 @@ const GOR = [
   ["log", "Giriş kayıtları ve süre farkı", ["logBox"]]
 ];
 // misafir: giriş yapmadan (kayıt yoksa gizli) · uye: giriş yapınca (kayıt yoksa görünür)
-let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {}, sira: [], hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false };
-const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {}, neon: (d.neon && typeof d.neon === "object") ? d.neon : {}, sira: Array.isArray(d.sira) ? d.sira : [], hedefGizli: (d.hedefGizli && typeof d.hedefGizli === "object") ? d.hedefGizli : {}, son30Renk: /^#[0-9a-fA-F]{6}$/.test(d.son30Renk || "") ? d.son30Renk : "", tabloRenk: /^#[0-9a-fA-F]{6}$/.test(d.tabloRenk || "") ? d.tabloRenk : "", tabloIzin: d.tabloIzin === true } : { misafir: {}, uye: d || {}, kapali: {}, hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false };
+let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {}, sira: [], hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true };
+const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {}, neon: (d.neon && typeof d.neon === "object") ? d.neon : {}, sira: Array.isArray(d.sira) ? d.sira : [], hedefGizli: (d.hedefGizli && typeof d.hedefGizli === "object") ? d.hedefGizli : {}, son30Renk: /^#[0-9a-fA-F]{6}$/.test(d.son30Renk || "") ? d.son30Renk : "", tabloRenk: /^#[0-9a-fA-F]{6}$/.test(d.tabloRenk || "") ? d.tabloRenk : "", tabloIzin: d.tabloIzin === true, tabloDondur: d.tabloDondur !== false } : { misafir: {}, uye: d || {}, kapali: {}, hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true };
 // ---- Tablo rengi: yönetici herkes için renk belirler; izin verirse kullanıcı kendi cihazında kendi rengini seçer ----
 const TR_KEY = "dugum-tablo-renk-v1";
 const trGecerli = c => /^#[0-9a-fA-F]{6}$/.test(c || "");
@@ -2037,6 +2043,8 @@ function tabloRenkUygula() {
   const ai = document.getElementById("tabloRenkAdmin"), iz = document.getElementById("tabloIzin");
   if (ai && document.activeElement !== ai) ai.value = trGecerli(gorAyar.tabloRenk) ? gorAyar.tabloRenk : "#3159b7";
   if (iz && document.activeElement !== iz) iz.checked = !!gorAyar.tabloIzin;
+  const dz = document.getElementById("tabloDondurAc"); if (dz && document.activeElement !== dz) dz.checked = gorAyar.tabloDondur !== false;
+  try { if (me && typeof dondurUygula === "function" && typeof myInputs !== "undefined" && myInputs.length) dondurUygula(); } catch (e) {}
   trOrnekGuncelle();
 }
 // Yöneticinin herkes için gizlediği hedefler (HEDEFLER dizisindeki sıraya göre: 0 = birinci, 1 = ikinci)
@@ -2223,7 +2231,7 @@ async function gorYukle() {
 }
 $("gKaydet").onclick = async () => {
   if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
-  const ayar = { misafir: {}, uye: {}, kapali: {}, neon: neonOku(), sira: siraTaslak.slice(), hedefGizli: gorAyar.hedefGizli || {}, son30Renk: gorAyar.son30Renk || "", tabloRenk: gorAyar.tabloRenk || "", tabloIzin: !!gorAyar.tabloIzin };
+  const ayar = { misafir: {}, uye: {}, kapali: {}, neon: neonOku(), sira: siraTaslak.slice(), hedefGizli: gorAyar.hedefGizli || {}, son30Renk: gorAyar.son30Renk || "", tabloRenk: gorAyar.tabloRenk || "", tabloIzin: !!gorAyar.tabloIzin, tabloDondur: gorAyar.tabloDondur !== false };
   document.querySelectorAll("#gList input").forEach(i => { ayar[i.dataset.g][i.dataset.k] = i.checked; });
   document.querySelectorAll("#pList input").forEach(i => { ayar.kapali[i.dataset.k] = i.checked; });
   msg("Görünürlük kaydediliyor…");
@@ -2248,6 +2256,22 @@ $("tabloRenkKaydet").onclick = async () => {
   gorAyar = gorNorm(ayar); lsSet(GOR_KEY, ayar); $("tabloRenkAdmin").dataset.dokunuldu = "0"; $("tabloRenkAdmin").dataset.varsayilan = "0"; tabloRenkUygula();
   try { if (gorKanal) gorKanal.send({ type: "broadcast", event: "guncelle", payload: { t: Date.now() } }); } catch (e) {}
   msg("Tablo rengi kaydedildi." + (gorAyar.tabloIzin ? " Kullanıcılar kendi rengini seçebilir." : " Renk tüm kullanıcılarda geçerli."));
+};
+$("tabloDondurKaydet").onclick = async () => {
+  if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
+  const acik = $("tabloDondurAc").checked;
+  const ayar = Object.assign({}, gorAyar, { tabloDondur: acik });
+  msg("Dondurma ayarı kaydediliyor…");
+  const { error } = await sb.rpc("admin_gorunurluk_kaydet", { ayar });
+  if (error) { msg("Kaydedilemedi: " + error.message); alert("Kaydedilemedi: " + error.message); return; }
+  const dog = await sb.from("site_ayar").select("deger").eq("anahtar", "gorunurluk").maybeSingle();
+  if (dog.error || !dog.data || !dog.data.deger || (dog.data.deger.tabloDondur !== false) !== acik) {
+    const h = "Ayar sunucuda saklanamadı (gorunurluk kaydı tabloDondur alanını kabul etmiyor). admin_gorunurluk_kaydet fonksiyonu yeni alanı atıyor olabilir; bu uyarıyı geliştiriciye iletin.";
+    msg(h); alert(h); return;
+  }
+  gorAyar = gorNorm(ayar); lsSet(GOR_KEY, ayar); dondurUygula();
+  try { if (gorKanal) gorKanal.send({ type: "broadcast", event: "guncelle", payload: { t: Date.now() } }); } catch (e) {}
+  msg(acik ? "Dondurma açıldı: resim kaydedince tablo donacak." : "Dondurma kapatıldı: hiçbir tablo donmayacak.");
 };
 $("tabloRenkKisisel").oninput = () => { try { localStorage.setItem(TR_KEY, $("tabloRenkKisisel").value); } catch (e) {} tabloRenkUygula(); };
 $("tabloRenkSifirlaKisisel").onclick = () => { try { localStorage.removeItem(TR_KEY); } catch (e) {} tabloRenkUygula(); };
