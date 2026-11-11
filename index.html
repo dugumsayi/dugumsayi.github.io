@@ -1557,11 +1557,12 @@ function vardiyaCiz() {
   const st = $("vardiyaStat"), sampKart = $("vardiyaSamp"); st.textContent = "";
   const n = vardiyaList.length, aktif = vardiyaList.filter(u => u.aktif).length;
   const tile = (k, v, sub, cls) => { const d = el("div", "stat" + (cls ? " " + cls : "")); d.append(el("div", "k", k), el("div", "v", v), el("div", "s", sub || "")); st.append(d); };
-  if (ziyaretSayi != null) tile("Siteye bakan kişi", String(ziyaretSayi), bugunMu ? "bugün" : $("gunAd").textContent, "g");
+  // Sıra: şampiyon · genel toplam · sayfaya giren · aktif kullanıcı · siteye bakan
+  if (sampKart) st.append(sampKart);
   tile("Genel toplam", fmt(vardiyaList.reduce((x, u) => x + num(u), 0)), $("gunAd").textContent);
-  tile(bugunMu ? "Aktif kullanıcı" : "Kullanıcı", bugunMu ? aktif + " / " + n : String(n), bugunMu ? "şu an sitede" : "kayıtlı", bugunMu ? "g" : "");
   if (girisSayi != null) tile("Sayfaya giren kişi", String(girisSayi), bugunMu ? "bugün" : $("gunAd").textContent);
-  if (sampKart) st.append(sampKart);   // şampiyon kartı özet kutularının yanında
+  tile(bugunMu ? "Aktif kullanıcı" : "Kullanıcı", bugunMu ? aktif + " / " + n : String(n), bugunMu ? "şu an sitede" : "kayıtlı", bugunMu ? "g" : "");
+  if (ziyaretSayi != null) tile("Siteye bakan kişi", String(ziyaretSayi), bugunMu ? "bugün" : $("gunAd").textContent, "g");
   $("vardiyaAtanmamis").textContent = "";
   sampiyonCiz();
 }
