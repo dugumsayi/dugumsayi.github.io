@@ -562,10 +562,11 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 .hd-t{display:flex;justify-content:space-between;gap:8px;font-size:14px;font-weight:650;margin-bottom:5px}
 .hd-bar{position:relative;height:16px;border-radius:8px;background:var(--card);border:1px solid var(--line);overflow:hidden}
 .hd-dol{height:100%;border-radius:8px;background:var(--blue);transition:width .4s ease}
+.hd-dol.son30{background:#e0a030 !important}
+.hd-son30-yazi{font-size:13px;font-weight:700;color:#e0a030}
 .hd-dol.ok{background:var(--ok)}.hd-dol.bad{background:var(--warn)}.hd-dol.bek{background:var(--blue)}
 .hd-dinlen{font-size:13px;font-weight:700;margin-top:3px;color:var(--blue)}
 .hd-isaret{position:absolute;top:0;bottom:0;width:2px;background:var(--fg);opacity:.55}
-.hd-son30{position:absolute;top:-2px;bottom:-2px;width:0;border-left:2px dashed #e0a030;opacity:.95}
 .hd-durum{font-size:13px;margin-top:5px;font-weight:600}
 .hd-durum.ok{color:var(--ok)}.hd-durum.bad{color:var(--bad)}.hd-durum.bek{color:var(--mut)}
 .hd-not{margin:0;font-size:12px}
@@ -3281,6 +3282,8 @@ function xlsxBlob(sayfalar) {
     k._bas.textContent = "";
     k._bas.append(el("strong", "", VNO_AD[gv] + " vardiyası · hedef takibi"),
       el("span", "mut", "Şu an " + fmt(net) + (hiz ? " · hız " + fmt(Math.round(hiz * 600) / 10) + " sayı/saat · vardiya sonu tahmini ≈ " + fmt(Math.round(tahmin)) : " · hız hesabı için biraz veri gerekli")));
+    const kalanVrd = (vbit - simdi) / 60000, son30 = kalanVrd > 0 && kalanVrd <= 30;   // mola hesabına dokunmaz
+    if (son30) k._bas.append(el("span", "hd-son30-yazi", "⏰ Vardiya bitimine " + Math.max(1, Math.ceil(kalanVrd)) + " dakika kaldı"));
     const liste = k._liste; liste.textContent = "";
     const gorunen = hedefler.filter(hd => !gizli[hd]);
     if (!gorunen.length) { liste.append(el("div", "mut hd-not", "Tüm hedefler gizli. Yukarıdaki düğmelerden açabilirsiniz.")); return; }
@@ -3299,15 +3302,14 @@ function xlsxBlob(sayfalar) {
           cls = "bad";
         }
       }
-      const s = el("div", "hd-satir"), t = el("div", "hd-t"), bar = el("div", "hd-bar"), dol = el("div", "hd-dol " + cls);
+      const s = el("div", "hd-satir"), t = el("div", "hd-t"), bar = el("div", "hd-bar"), dol = el("div", "hd-dol " + cls + (son30 ? " son30" : ""));
       t.append(el("span", "", fmt(hd) + " hedefi"), el("span", "", fmt(net) + " / " + fmt(hd) + " · %" + fmt(Math.round(pct))));
       dol.style.width = pct + "%"; bar.append(dol);
       const olmasi = Math.min(100, calDk / NET_DK * 100);   // eşit tempoyla gidilseydi şu an olunması gereken yer
       const isr = el("div", "hd-isaret"); isr.style.left = olmasi + "%"; isr.title = "Eşit tempoyla olunması gereken yer"; bar.append(isr);
-      const s30 = el("div", "hd-son30"); s30.style.left = ((VARDIYA_DK - 30) / VARDIYA_DK * 100) + "%"; s30.title = "Vardiya bitimine 30 dk kala olunması gereken yer"; bar.append(s30);   // mola hesabına dokunmaz, yalnızca işaret
       s.append(t, bar, el("div", "hd-durum " + cls, durum)); if (dinlen) s.append(el("div", "hd-dinlen", dinlen)); liste.append(s);
     });
-    liste.append(el("div", "mut hd-not", "Dikey çizgi: vardiya boyunca eşit tempoyla gidilseydi şu an olunması gereken yer. Kesikli turuncu çizgi: vardiya bitimine 30 dk kala olunması gereken yer. Dinlenme payı, şu ana kadarki ortalama hızın devam edeceği varsayımıyla hesaplanır; vardiyadaki 35 dk mola payı zaten hesapta."));
+    liste.append(el("div", "mut hd-not", "Dikey çizgi: vardiya boyunca eşit tempoyla gidilseydi şu an olunması gereken yer. Dinlenme payı, şu ana kadarki ortalama hızın devam edeceği varsayımıyla hesaplanır; vardiyadaki 35 dk mola payı zaten hesapta."));
   };
 
   // ---------- 2) Aralık analizi: toplam, ortalama, en iyi gün, grafik, vardiya karşılaştırması ----------
