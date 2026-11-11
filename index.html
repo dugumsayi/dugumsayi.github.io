@@ -659,6 +659,7 @@ td.rv-bar{min-width:90px;padding:0 10px}
     <button type="button" role="tab" data-tab="kul" class="on">Kullanıcılar</button>
     <button type="button" role="tab" data-tab="hedef">Hedefler</button>
     <button type="button" role="tab" data-tab="gorunum">Görünüm</button>
+    <button type="button" role="tab" data-tab="vardiya">Vardiya tabloları</button>
     <button type="button" role="tab" data-tab="ana">Ana sayfa</button>
     <button type="button" role="tab" data-tab="veri">Denetim &amp; silme</button>
   </div>
@@ -722,6 +723,24 @@ td.rv-bar{min-width:90px;padding:0 10px}
     <button id="tabloRenkKaydet" type="button">Tablo rengini kaydet</button>
   </div>
   <div id="tabloOrnekAdmin" class="tr-ornek-kap"></div>
+  </div>
+  <div class="adm-pane hide" data-pane="vardiya">
+  <strong>Vardiya tablosu açılış ve kapanış saatleri</strong>
+  <p class="mut">Her vardiyanın tablosu başlamadan kaç dakika önce açılsın, bitmeden kaç dakika önce kapansın. Üç vardiyaya (00–08, 08–16, 16–24) aynı anda uygulanır. Kaydedince açık olan tüm kullanıcılarda anında geçerli olur. Kapanan tablodaki sayılar silinmez; "Kullanıcıların tabloları"nda tarih ve vardiya seçilerek görülür.</p>
+  <div class="row">
+    <label>Başlamadan önce açılış (dk) <input id="vErkenDk" type="number" min="0" max="120" step="1" value="15" style="width:90px"></label>
+    <label>Bitmeden önce kapanış (dk) <input id="vKapanDk" type="number" min="0" max="120" step="1" value="10" style="width:90px"></label>
+  </div>
+  <div class="row">
+    <label class="chk"><input id="vOtoGecis" type="checkbox" checked> Tablo açıldığında, eski tabloda hiç sayısı olmayanlar otomatik yeni tabloya geçsin</label>
+  </div>
+  <p class="mut">Kapalıysa herkes eski tabloda kalır ve yeni tabloya yalnızca eski tablo kapanınca (veya "yeni tabloya geç" düğmesiyle) geçer. Eski tabloda sayısı olanlar her durumda kapanışa kadar yerinde kalır.</p>
+  <div id="vOnizle" class="mut"></div>
+  <div class="row">
+    <button id="vSureKaydet" type="button">Vardiya saatlerini kaydet</button>
+    <button id="vSureSifirla" type="button" class="alt sm">Varsayılan (15 / 10)</button>
+    <span id="vSureDurum" class="mut"></span>
+  </div>
   </div>
   <div class="adm-pane hide" data-pane="ana">
   <strong>Ana sayfa görünürlüğü</strong>
@@ -889,8 +908,8 @@ const vNoNow = () => Math.floor((((simdiMs() + 10800000) % 86400000) + 86400000)
 let gv = vNoNow(), sonV = gv;   // gv: görüntülenen vardiya, sonV: son bilinen güncel vardiya
 // Erken giriş: bir sonraki vardiya başlamadan ERKEN_DK dakika önce (örn. 15:45) o vardiyanın tablosu da açılır;
 // bu aralıkta girilen sayılar yeni vardiyaya yazılır. (Gece yarısı 00:00 geçişi kapsam dışı: gün değişir.)
-const ERKEN_DK = 15, ERKEN_MS = ERKEN_DK * 60000;   // tablo, vardiya başlamadan ERKEN_DK dk önce açılır
-const KAPAN_DK = 10, KAPAN_MS = KAPAN_DK * 60000;   // tablo, vardiya bitmeden KAPAN_DK dk önce kapanır (örn. 08–16 vardiyası: 07:45–15:50)
+let ERKEN_DK = 15, ERKEN_MS = ERKEN_DK * 60000;   // tablo, vardiya başlamadan ERKEN_DK dk önce açılır (yönetici ayarı: Vardiya tabloları sekmesi)
+let KAPAN_DK = 10, KAPAN_MS = KAPAN_DK * 60000;   // tablo, vardiya bitmeden KAPAN_DK dk önce kapanır (örn. 08–16 vardiyası: 07:45–15:50) (yönetici ayarı)
 // Sonraki vardiya başlamadan ERKEN_DK dk önceyse o vardiyanın {t: tarih, v: vardiya no} bilgisi (23:45'te: ertesi günün 00:00 vardiyası), değilse null
 const erkenSlot = () => {
   const v = vNoNow(), gunMs = (((simdiMs() + 10800000) % 86400000) + 86400000) % 86400000;
@@ -2013,8 +2032,9 @@ const GOR = [
   ["log", "Giriş kayıtları ve süre farkı", ["logBox"]]
 ];
 // misafir: giriş yapmadan (kayıt yoksa gizli) · uye: giriş yapınca (kayıt yoksa görünür)
-let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {}, sira: [], hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true };
-const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {}, neon: (d.neon && typeof d.neon === "object") ? d.neon : {}, sira: Array.isArray(d.sira) ? d.sira : [], hedefGizli: (d.hedefGizli && typeof d.hedefGizli === "object") ? d.hedefGizli : {}, son30Renk: /^#[0-9a-fA-F]{6}$/.test(d.son30Renk || "") ? d.son30Renk : "", tabloRenk: /^#[0-9a-fA-F]{6}$/.test(d.tabloRenk || "") ? d.tabloRenk : "", tabloIzin: d.tabloIzin === true, tabloDondur: d.tabloDondur !== false } : { misafir: {}, uye: d || {}, kapali: {}, hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true };
+let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {}, sira: [], hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true, erkenDk: 15, kapanDk: 10, otoGecis: true };
+const vDkGecerli = (x, d) => (Number.isInteger(x) && x >= 0 && x <= 120) ? x : d;
+const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {}, neon: (d.neon && typeof d.neon === "object") ? d.neon : {}, sira: Array.isArray(d.sira) ? d.sira : [], hedefGizli: (d.hedefGizli && typeof d.hedefGizli === "object") ? d.hedefGizli : {}, son30Renk: /^#[0-9a-fA-F]{6}$/.test(d.son30Renk || "") ? d.son30Renk : "", tabloRenk: /^#[0-9a-fA-F]{6}$/.test(d.tabloRenk || "") ? d.tabloRenk : "", tabloIzin: d.tabloIzin === true, tabloDondur: d.tabloDondur !== false, erkenDk: vDkGecerli(d.erkenDk, 15), kapanDk: vDkGecerli(d.kapanDk, 10), otoGecis: d.otoGecis !== false } : { misafir: {}, uye: d || {}, kapali: {}, hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true, erkenDk: 15, kapanDk: 10, otoGecis: true };
 // ---- Tablo rengi: yönetici herkes için renk belirler; izin verirse kullanıcı kendi cihazında kendi rengini seçer ----
 const TR_KEY = "dugum-tablo-renk-v1";
 const trGecerli = c => /^#[0-9a-fA-F]{6}$/.test(c || "");
@@ -2128,6 +2148,7 @@ function pCiz() {
   });
 }
 function gorUygula() {
+  try { vardiyaSureUygula(); } catch (e) {}
   try { tabloRenkUygula(); } catch (e) {}
   GOR.forEach(([k, , ids]) => ids.forEach(id => $(id).classList.toggle("gz", !gorunur(k))));
   $("vardiyaBox").classList.toggle("gz", !(gorunur("ozet") || gorunur("vardiya")));
@@ -2253,7 +2274,7 @@ async function gorYukle() {
 }
 $("gKaydet").onclick = async () => {
   if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
-  const ayar = { misafir: {}, uye: {}, kapali: {}, neon: neonOku(), sira: siraTaslak.slice(), hedefGizli: gorAyar.hedefGizli || {}, son30Renk: gorAyar.son30Renk || "", tabloRenk: gorAyar.tabloRenk || "", tabloIzin: !!gorAyar.tabloIzin, tabloDondur: gorAyar.tabloDondur !== false };
+  const ayar = { misafir: {}, uye: {}, kapali: {}, neon: neonOku(), sira: siraTaslak.slice(), hedefGizli: gorAyar.hedefGizli || {}, son30Renk: gorAyar.son30Renk || "", tabloRenk: gorAyar.tabloRenk || "", tabloIzin: !!gorAyar.tabloIzin, tabloDondur: gorAyar.tabloDondur !== false, erkenDk: gorAyar.erkenDk, kapanDk: gorAyar.kapanDk, otoGecis: gorAyar.otoGecis !== false };
   document.querySelectorAll("#gList input").forEach(i => { ayar[i.dataset.g][i.dataset.k] = i.checked; });
   document.querySelectorAll("#pList input").forEach(i => { ayar.kapali[i.dataset.k] = i.checked; });
   msg("Görünürlük kaydediliyor…");
@@ -2278,6 +2299,46 @@ $("tabloRenkKaydet").onclick = async () => {
   gorAyar = gorNorm(ayar); lsSet(GOR_KEY, ayar); $("tabloRenkAdmin").dataset.dokunuldu = "0"; $("tabloRenkAdmin").dataset.varsayilan = "0"; tabloRenkUygula();
   try { if (gorKanal) gorKanal.send({ type: "broadcast", event: "guncelle", payload: { t: Date.now() } }); } catch (e) {}
   msg("Tablo rengi kaydedildi." + (gorAyar.tabloIzin ? " Kullanıcılar kendi rengini seçebilir." : " Renk tüm kullanıcılarda geçerli."));
+};
+// ---- Vardiya tablosu açılış/kapanış süreleri (yönetici ayarı) ----
+function vardiyaSureUygula() {
+  ERKEN_DK = vDkGecerli(gorAyar.erkenDk, 15); ERKEN_MS = ERKEN_DK * 60000;
+  KAPAN_DK = vDkGecerli(gorAyar.kapanDk, 10); KAPAN_MS = KAPAN_DK * 60000;
+  const a = document.getElementById("vErkenDk"), b = document.getElementById("vKapanDk"), c = document.getElementById("vOtoGecis");
+  if (a && document.activeElement !== a) a.value = ERKEN_DK;
+  if (b && document.activeElement !== b) b.value = KAPAN_DK;
+  if (c && document.activeElement !== c) c.checked = gorAyar.otoGecis !== false;
+  vSureOnizle();
+}
+function vSureOnizle() {
+  const o = document.getElementById("vOnizle"); if (!o) return;
+  const e = Number(document.getElementById("vErkenDk").value), k = Number(document.getElementById("vKapanDk").value);
+  if (!Number.isInteger(e) || !Number.isInteger(k) || e < 0 || k < 0 || e > 120 || k > 120) { o.textContent = "Süreler 0 ile 120 arasında tam sayı olmalı."; return; }
+  const hm = m => { m = ((m % 1440) + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); };
+  const satir = [0, 1, 2].map(v => VNO_AD[v] + " → " + hm(v * 480 - e) + (v === 0 && e > 0 ? " (önceki gün)" : "") + " – " + hm(v * 480 + 480 - k));
+  o.textContent = "Tablo açık olduğu saatler: " + satir.join(" · ") + (e < k ? " — Dikkat: açılış süresi kapanıştan kısa; vardiya geçişinde " + (k - e) + " dk hiçbir tablo açık olmaz." : (e > k ? " Geçişte " + (e - k) + " dk iki tablo birlikte açık." : ""));
+}
+["vErkenDk", "vKapanDk"].forEach(id => { const i = document.getElementById(id); if (i) i.addEventListener("input", vSureOnizle); });
+$("vSureSifirla").onclick = () => { $("vErkenDk").value = 15; $("vKapanDk").value = 10; $("vOtoGecis").checked = true; vSureOnizle(); };
+$("vSureKaydet").onclick = async () => {
+  if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
+  const e = Number($("vErkenDk").value), k = Number($("vKapanDk").value), oto = $("vOtoGecis").checked;
+  if (!Number.isInteger(e) || !Number.isInteger(k) || e < 0 || k < 0 || e > 120 || k > 120) { msg("Süreler 0 ile 120 dakika arasında tam sayı olmalı."); return; }
+  if (e < k && !confirm("Açılış süresi (" + e + " dk) kapanış süresinden (" + k + " dk) kısa: vardiya geçişinde " + (k - e) + " dk boyunca hiçbir tablo açık olmaz, kimse sayı giremez. Yine de kaydedilsin mi?")) return;
+  const ayar = Object.assign({}, gorAyar, { erkenDk: e, kapanDk: k, otoGecis: oto });
+  msg("Vardiya saatleri kaydediliyor…"); $("vSureDurum").textContent = "";
+  const { error } = await sb.rpc("admin_gorunurluk_kaydet", { ayar });
+  if (error) { msg("Kaydedilemedi: " + error.message); return; }
+  const dog = await sb.from("site_ayar").select("deger").eq("anahtar", "gorunurluk").maybeSingle();
+  if (dog.error || !dog.data || !dog.data.deger || dog.data.deger.erkenDk !== e || dog.data.deger.kapanDk !== k) {
+    const h = "Ayar sunucuda saklanamadı (gorunurluk kaydı erkenDk/kapanDk alanlarını kabul etmiyor). admin_gorunurluk_kaydet fonksiyonu yeni alanları atıyor olabilir; bu uyarıyı geliştiriciye iletin.";
+    msg(h); alert(h); return;
+  }
+  gorAyar = gorNorm(ayar); lsSet(GOR_KEY, ayar); gorUygula();
+  try { gunVardiyaKontrol(); erkenOtoGecis(); yeniTabloOlustur(); yeniVardiyaBar(); } catch (x) {}
+  try { if (gorKanal) gorKanal.send({ type: "broadcast", event: "guncelle", payload: { t: Date.now() } }); } catch (x) {}
+  $("vSureDurum").textContent = "Kaydedildi.";
+  msg("Vardiya saatleri kaydedildi: tablo başlamadan " + e + " dk önce açılır, bitmeden " + k + " dk önce kapanır.");
 };
 $("tabloDondurKaydet").onclick = async () => {
   if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
@@ -3167,6 +3228,7 @@ function erkenOtoGecis() {   // sonraki tablo açıkken: eski tablo kapandıysa 
   const e = erkenSlot(); if (!e) return false;
   const an = e.t + ":" + e.v; if (erkenGecisAnahtar === an) return false;
   const kapandi = sonKalanMs() <= KAPAN_MS;
+  if (!kapandi && gorAyar.otoGecis === false) return false;   // yönetici "açıldığı anda otomatik geçiş"i kapattıysa herkes eski tabloda kalır, kapanışta geçer
   const sayiVar = rows.some(x => x.user_id === myId() && COLS.some(k => x[k] != null && String(x[k]).trim() !== ""));
   if (!kapandi && (sayiVar || !rows.some(x => x.user_id === myId()))) return false;   // eski tabloda sayısı olan kişi, tablo kapanana dek yerinde kalır
   erkenGecisAnahtar = an;
