@@ -562,10 +562,9 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 .hd-t{display:flex;justify-content:space-between;gap:8px;font-size:14px;font-weight:650;margin-bottom:5px}
 .hd-bar{position:relative;height:16px;border-radius:8px;background:var(--card);border:1px solid var(--line);overflow:hidden}
 .hd-dol{height:100%;border-radius:8px;background:var(--blue);transition:width .4s ease}
-.hd-dol.son30{background:var(--son30,#8b5cf6) !important;animation:hdSon30 1.6s ease-in-out infinite}
-@keyframes hdSon30{50%{opacity:.6}}
+.hd-son30-seg{position:absolute;top:0;bottom:0;right:0;pointer-events:none;border-left:2px dashed #8b5cf6;background:repeating-linear-gradient(90deg,#8b5cf6 0 5px,transparent 5px 9px);opacity:.9}
 .hd-dol.ozel{background:var(--son30) !important}
-.hd-son30-yazi{font-size:13px;font-weight:700;color:var(--son30,#8b5cf6)}
+.hd-son30-yazi{font-size:13px;font-weight:700;color:#8b5cf6}
 .hd-dol.ok{background:var(--ok)}.hd-dol.bad{background:var(--warn)}.hd-dol.bek{background:var(--blue)}
 .hd-dinlen{font-size:13px;font-weight:700;margin-top:3px;color:var(--blue)}
 .hd-isaret{position:absolute;top:0;bottom:0;width:2px;background:var(--fg);opacity:.55}
@@ -662,7 +661,7 @@ td.rv-bar{min-width:90px;padding:0 10px}
     <label>İlerleme çubuğu rengi <input id="son30Renk" type="color" value="#8b5cf6"></label>
     <button id="son30Sifirla" type="button" class="alt sm">Varsayılan</button>
   </div>
-  <p class="mut">Seçtiğiniz renk, tüm ilerleme çubuklarında her zaman kullanılır. "Varsayılan" seçilirse çubuklar durumuna göre renklenir (yeşil / turuncu / mavi) ve son 30 dakikada mora döner. "Hedefleri kaydet" ile herkes için kaydedilir.</p>
+  <p class="mut">Seçtiğiniz renk, tüm ilerleme çubuklarında her zaman kullanılır. "Varsayılan" seçilirse çubuklar durumuna göre renklenir (yeşil / turuncu / mavi). Vardiyanın son 30 dakikası ise her zaman çubuğun sağ ucunda mor kesik şeritle gösterilir. "Hedefleri kaydet" ile herkes için kaydedilir.</p>
   <hr>
   <strong>Eski kayıtları düzelt</strong>
   <p class="mut">Mevcut kullanıcıların yalnızca soyadlarının son kelimesini büyük harfe çevirir. Kullanıcı hesapları ve diğer bilgiler silinmez.</p>
@@ -3317,14 +3316,15 @@ function xlsxBlob(sayfalar) {
           cls = "bad";
         }
       }
-      const s = el("div", "hd-satir"), t = el("div", "hd-t"), bar = el("div", "hd-bar"), dol = el("div", "hd-dol " + cls + (son30 ? " son30" : "") + ((gorAyar && gorAyar.son30Renk) ? " ozel" : ""));
+      const s = el("div", "hd-satir"), t = el("div", "hd-t"), bar = el("div", "hd-bar"), dol = el("div", "hd-dol " + cls + ((gorAyar && gorAyar.son30Renk) ? " ozel" : ""));
       t.append(el("span", "", fmt(hd) + " hedefi"), el("span", "", fmt(net) + " / " + fmt(hd) + " · %" + fmt(Math.round(pct))));
       dol.style.width = pct + "%"; bar.append(dol);
       const olmasi = Math.min(100, calDk / NET_DK * 100);   // eşit tempoyla gidilseydi şu an olunması gereken yer
       const isr = el("div", "hd-isaret"); isr.style.left = olmasi + "%"; isr.title = "Eşit tempoyla olunması gereken yer"; bar.append(isr);
+      const seg = el("div", "hd-son30-seg"); seg.style.left = ((VARDIYA_DK - 30) / VARDIYA_DK * 100) + "%"; seg.title = "Vardiyanın son 30 dakikası"; bar.append(seg);   // yalnızca görsel, mola hesabına dokunmaz
       s.append(t, bar, el("div", "hd-durum " + cls, durum)); if (dinlen) s.append(el("div", "hd-dinlen", dinlen)); liste.append(s);
     });
-    liste.append(el("div", "mut hd-not", "Dikey çizgi: vardiya boyunca eşit tempoyla gidilseydi şu an olunması gereken yer. Dinlenme payı, şu ana kadarki ortalama hızın devam edeceği varsayımıyla hesaplanır; vardiyadaki 35 dk mola payı zaten hesapta."));
+    liste.append(el("div", "mut hd-not", "Dikey çizgi: vardiya boyunca eşit tempoyla gidilseydi şu an olunması gereken yer. Mor kesik şerit: vardiyanın son 30 dakikası. Dinlenme payı, şu ana kadarki ortalama hızın devam edeceği varsayımıyla hesaplanır; vardiyadaki 35 dk mola payı zaten hesapta."));
   };
 
   // ---------- 2) Aralık analizi: toplam, ortalama, en iyi gün, grafik, vardiya karşılaştırması ----------
