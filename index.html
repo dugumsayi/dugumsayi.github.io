@@ -767,7 +767,7 @@ td.rv-bar{min-width:90px;padding:0 10px}
   <div class="sec-head" id="appHead"><h2>Benim girişlerim (bugün)</h2></div>
   <div id="hedefKutu" class="hedef-kutu hide"></div>
   <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="satirSilBtn" type="button" class="alt sm">− Satır sil</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
-  <div class="scroll"><table id="mineTbl"><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody></table></div>
+  <div class="scroll"><table id="mineTbl"><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody><tfoot><tr class="tot"><td>TOPLAM</td><td id="mineToplam">0</td><td></td></tr></tfoot></table></div>
 </div>
 
 <section class="panel" id="gunPanel">
@@ -1129,7 +1129,7 @@ function satirEkle(r) {
     if (isNaN(v)) { msg("Geçerli bir sayı yazın."); iSayi.value = ""; return; }
     const row = myRow(); if (!row) { msg("Satır henüz hazır değil, birkaç saniye sonra tekrar deneyin."); return; }
     row.n1 = Math.round((num(row.n1) + v) * 1e6) / 1e6;     // toplam n1'de birikir (eski n2-n6 değerleri de toplamda sayılır)
-    iSayi.value = ""; tt.textContent = fmt(rsum(row)); renderShared();
+    iSayi.value = ""; tt.textContent = fmt(rsum(row)); mineToplamGuncelle(); renderShared();
     kirli[r] = true; clearTimeout(otoTimer[r]); save(r).then(() => tabloDoluKontrol());
   };
   iSayi.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); ekle(); } };
@@ -1209,6 +1209,13 @@ async function satirSil() {
 $("satirSilBtn").onclick = satirSil;
 $("mine").addEventListener("focusout", e => { if (!$("mine").contains(e.relatedTarget)) setTimeout(siralaMine, 0); });
 
+// Giriş tablosunun altındaki genel toplam (tüm satırların toplamı)
+function mineToplamGuncelle() {
+  const el0 = document.getElementById("mineToplam"); if (!el0) return;
+  let t = 0;
+  try { rows.forEach(x => { if (x.user_id === myId() && x.satir < N) t += rsum(x); }); } catch (e) {}
+  el0.textContent = fmt(Math.round(t * 1e6) / 1e6);
+}
 function fillMine() {
   for (let r = 0; r < N; r++) {
     const row = rows.find(x => x.user_id === myId() && x.satir === r); if (!row) continue;
@@ -1216,6 +1223,7 @@ function fillMine() {
     if (document.activeElement !== f[0]) f[0].value = row.name || ""; else row.name = f[0].value;
     myTot[r].textContent = fmt(rsum(row));
   }
+  mineToplamGuncelle();
   siralaMine();
 }
 
@@ -2211,6 +2219,7 @@ async function benimSayilarimiSil() {
   rows.forEach(r => { if (r.user_id === myId()) COLS.forEach(k => { r[k] = null; }); });
   myInputs.forEach(f => { f[1].value = ""; });
   myTot.forEach(t => { t.textContent = "0"; });
+  mineToplamGuncelle();
   renderShared();
   msg("Sayılarınız silindi, makine adları korundu.");
   await load();
