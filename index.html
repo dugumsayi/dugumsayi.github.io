@@ -515,6 +515,7 @@ details[open]>summary::before{transform:rotate(45deg)}
 #hizliBilgi.ok{color:var(--ok);font-weight:650}
 #hizliBilgi.hata{color:var(--bad);font-weight:650}
 html.hz-kilit,html.hz-kilit body{overflow:hidden}
+#app.dondu .scroll{opacity:.65;pointer-events:none}
 
 /* ===== Kullanıcı kartı: tablo solda, giriş özeti (chip'ler) yanında ===== */
 .ugrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,640px),1fr))}
@@ -785,7 +786,8 @@ td.rv-bar{min-width:90px;padding:0 10px}
 <div id="app" class="hide">
   <div class="sec-head" id="appHead"><h2>Benim girişlerim (bugün)</h2></div>
   <div id="hedefKutu" class="hedef-kutu hide"></div>
-  <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="satirSilBtn" type="button" class="alt sm">− Satır sil</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
+  <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="satirSilBtn" type="button" class="alt sm">− Satır sil</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button><button id="gonderBtn" type="button" class="sm">Gönder</button></div>
+  <p id="gonderNot" class="mut hide">✓ Bu vardiyanın tablosu gönderildi ve donduruldu. Artık hiçbir değişiklik yapılamaz.</p>
   <div class="scroll"><table id="mineTbl"><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody><tfoot><tr class="tot"><td>TOPLAM</td><td id="mineToplam">0</td><td></td></tr></tfoot></table></div>
 </div>
 
@@ -878,7 +880,10 @@ let bugun = todayStr(), secili = bugun;
 const VNO_AD = ["00:00–08:00", "08:00–16:00", "16:00–24:00"];
 const vNoNow = () => Math.floor((((simdiMs() + 10800000) % 86400000) + 86400000) % 86400000 / 28800000);   // İstanbul saatine göre
 let gv = vNoNow(), sonV = gv;   // gv: görüntülenen vardiya, sonV: son bilinen güncel vardiya
-const duzenlenir = () => secili === bugun && gv === vNoNow();   // yalnızca bugünün şu anki vardiyası düzenlenir
+const vardiyaGuncel = () => secili === bugun && gv === vNoNow();   // bugünün şu anki vardiyası
+const gonderKey = () => "gonderildi:" + myId() + ":" + bugun + ":" + gv;
+const donduMu = () => !!me && vardiyaGuncel() && !!lsGet(gonderKey(), false);   // "Gönder" ile dondurulmuş mu
+const duzenlenir = () => vardiyaGuncel() && !donduMu();   // yalnızca bugünün şu anki vardiyası ve gönderilmemişse düzenlenir
 const vnoHata = m => /vno/i.test(m || "") ? " — Supabase'de vardiya-tablo.sql çalıştırılmalı." : "";
 let profil = null, adminList = [], sonBan = "", cikisYapiliyor = false;
 
@@ -1226,6 +1231,32 @@ async function satirSil() {
   satirEkleniyor = false;
 }
 $("satirSilBtn").onclick = satirSil;
+
+// "Gönder": bekleyen kayıtları sunucuya yazar, sonra bu vardiyanın tablosunu dondurur (hiçbir işlem yapılamaz)
+function dondurUygula() {
+  const d = donduMu();
+  myInputs.forEach(f => { f[0].disabled = d; f[1].disabled = d; });
+  document.querySelectorAll("#mine button").forEach(b => { b.disabled = d; });
+  ["satirBtn", "satirSilBtn", "sayiSil", "gonderBtn"].forEach(i => { const b = $(i); if (b) b.disabled = d; });
+  $("app").classList.toggle("dondu", d);
+  $("gonderNot").classList.toggle("hide", !d);
+  const fab = document.querySelector("#hizliFab"); if (fab && d) fab.classList.add("hide");
+}
+$("gonderBtn").onclick = async () => {
+  if (!me || !duzenlenir() || satirEkleniyor) return;
+  if (!navigator.onLine) { msg("İnternet yokken gönderilemez. Bağlantı gelince tekrar deneyin."); return; }
+  if (!confirm("Tablo gönderilsin mi? Gönderdikten sonra bu vardiyanın tablosu dondurulacak; hiçbir değişiklik yapılamayacak.")) return;
+  $("gonderBtn").disabled = true; msg("Gönderiliyor…");
+  try {
+    bekleyenleriKaydet();
+    await kayitZinciri;
+    if (Object.keys(kirli).some(r => kirli[r])) { msg("Bazı kayıtlar henüz yazılamadı. Birkaç saniye sonra tekrar deneyin."); $("gonderBtn").disabled = false; return; }
+    lsSet(gonderKey(), true);
+    dondurUygula();
+    msg("Tablo gönderildi ve donduruldu.");
+    await load();
+  } catch (e) { msg("Gönderilemedi: " + (e && e.message ? e.message : e)); $("gonderBtn").disabled = false; }
+};
 $("mine").addEventListener("focusout", e => { if (!$("mine").contains(e.relatedTarget)) setTimeout(siralaMine, 0); });
 
 // Giriş tablosunun altındaki genel toplam (tüm satırların toplamı)
@@ -1406,7 +1437,7 @@ async function load() {
     if (me && secili === bugun && gv === vNoNow()) for (let r = 0; r < N; r++) if (!rows.some(x => x.user_id === myId() && x.satir === r)) rows.push({ user_id: myId(), tarih: bugun, vno: gv, satir: r, name: "", n1: null, n2: null, n3: null, n4: null, n5: null, n6: null, kullanici: userName() });
     msg(navigator.onLine ? "Veriler yüklenemedi; cihazdaki son kayıtlar gösteriliyor." : "Çevrimdışı mod: cihazdaki kayıtlar gösteriliyor. İnternet gelince eşitlenecek.");
   }
-  if (me && duzenlenir()) fillMine(); renderShared();
+  if (me && vardiyaGuncel()) { fillMine(); dondurUygula(); } renderShared();
   try { if (typeof hedefCiz === "function") hedefCiz(); } catch (e) {}
   if (navigator.onLine) { offlineKuyrukGonder(); logYukle(); }
   haftaPlanla();
@@ -1428,7 +1459,7 @@ async function hazirla() {
   $("adminBtn").classList.toggle("hide", !isAdmin());
   if (!isAdmin()) $("admin").classList.add("hide");
   else if (!$("admin").classList.contains("hide")) adminYukle();
-  const duzenle = !!me && duzenlenir();
+  const duzenle = !!me && vardiyaGuncel();
   $("app").classList.toggle("hide", !duzenle);
   const ah = $("app").querySelector("h2"); if (ah) ah.textContent = "Benim girişlerim (bugün · " + VNO_AD[gv] + ")";
   if (me) kimYaz();
