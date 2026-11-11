@@ -564,6 +564,9 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 .hd-sec span{font-size:13px;color:var(--mut)}
 .hd-liste{display:flex;flex-direction:column;gap:14px}
 .hd-bas{display:flex;flex-direction:column;gap:2px}
+#hedefHead{margin:0}
+#hedefHead h3{margin:0;font-size:15px}
+.hedef-kutu.pen.kapali{gap:0}
 .hd-bas strong{font-size:15px}
 .hd-bas .mut{margin:0;font-size:13px}
 .hd-t{display:flex;justify-content:space-between;gap:8px;font-size:14px;font-weight:650;margin-bottom:5px}
@@ -820,7 +823,7 @@ td.rv-bar{min-width:90px;padding:0 10px}
 <div id="yeniVardBar" class="hide" style="margin:8px 0;padding:10px 12px;border:1px solid var(--line,#3b4a60);border-radius:10px"><span id="yeniVardMetin"></span> <button id="yeniVardGec" type="button" class="sm">Yeni tabloya geç</button></div>
 <div id="app" class="hide">
   <div class="sec-head" id="appHead"><h2>Benim girişlerim (bugün)</h2></div>
-  <div id="hedefKutu" class="hedef-kutu hide"></div>
+  <div id="hedefKutu" class="hedef-kutu hide"><div class="sec-head" id="hedefHead"><h3>Hedef takibi</h3></div></div>
   <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="satirSilBtn" type="button" class="alt sm">− Satır sil</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
   <p id="gonderNot" class="mut hide">✓ Tablonuzu resim olarak kaydettiniz; bu vardiyanın tablosu donduruldu. Artık hiçbir değişiklik yapılamaz.</p>
   <div class="scroll"><table id="mineTbl"><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody><tfoot><tr class="tot"><td>TOPLAM</td><td id="mineToplam">0</td><td></td></tr></tfoot></table></div>
@@ -2041,6 +2044,7 @@ const GOR = [
   ["sampiyon", "Aylık vardiya şampiyonu", ["vardiyaSamp"]],
   ["genel", "Genel toplam tablosu", ["genCard", "genel"]],
   ["tablolar", "Kullanıcıların tabloları", ["users"]],
+  ["hedef", "Hedef takibi penceresi (Benim girişlerim içinde)", ["hedefKutu"]],
   ["ozetyan", "Tabloların yanındaki giriş özeti (ilk/son giriş, ortalama, hedefler)", []],
   ["hafta", "Haftalık ortalama", ["haftaPanel"]],
   ["ay", "Aylık ve yıllık ortalama", ["ayPanel"]],
@@ -2115,6 +2119,7 @@ const gorunur = k => isAdmin() || (me ? gorAyar.uye[k] !== false : gorAyar.misaf
 const PEN = [
   ["vardiya", "vardiyaBox", "vardiyaHead", "Vardiya listesi"],
   ["benim", "app", "appHead", "Benim girişlerim"],
+  ["hedef", "hedefKutu", "hedefHead", "Hedef takibi"],
   ["gun", "gunPanel", null, "Kullanıcıların tabloları"],
   ["ort", "ortPanel", null, "Ortalama"],
   ["log", "logBox", null, "Giriş kayıtları ve süre farkı"]
@@ -3750,7 +3755,7 @@ function xlsxBlob(sayfalar) {
     const k = $("hedefKutu"); if (!k) return;
     if (!me || !duzenlenir()) { k.classList.add("hide"); return; }
     if (!k._kur) {   // sabit iskelet bir kez kurulur (her saniye yeniden çizilen kısım yalnızca liste ve özet)
-      k.textContent = "";
+      Array.from(k.children).forEach(c => { if (c.id !== "hedefHead") c.remove(); });   // aç/kapa başlığı korunur
       k._bas = el("div", "hd-bas"); k._sec = el("div", "hd-sec"); k._liste = el("div", "hd-liste");
       k.append(k._bas, k._sec, k._liste); k._kur = true;
     }
