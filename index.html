@@ -2022,7 +2022,7 @@ const saatOf = z => new Date(z).toLocaleTimeString("tr-TR", { timeZone: "Europe/
 // Şüphe durumu: vardiya boyunca girilen toplam sayı bu sınırı aşarsa "Şüpheli", aksi halde "Normal"
 const SUPHE_LIMIT = 700;
 // Giriş başına hız: eklenen sayı / bir önceki girişten bu yana geçen dakika (genel süre). Bu değerin üstü "Şüpheli"
-const SUPHE_DK_HIZ = 2;
+const SUPHE_DK_HIZ = 3;
 const toplamYaz = v => v == null ? "—" : fmt(parseFloat(v));
 // Log: bu girişte toplama ne eklendi / çıkarıldı (+16, −10, silindi)
 const logFark = l => l.sutun === "makine" ? null : (parseFloat(l.yeni) || 0) - (parseFloat(l.eski) || 0);
