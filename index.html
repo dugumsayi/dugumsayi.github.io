@@ -2511,6 +2511,10 @@ function ozetGrupla(list, sm) {
 }
 function ozetChipListesi(g) {
   const c = [];
+  try {   // yüklü vardiyanın toplamı log farkı yerine tablodaki gerçek toplamdan alınır
+    const tp = tabloToplami(g.uid), vbY = yukluVardiyaBas();
+    if (tp != null && !isNaN(vbY) && !g._dz) { g._dz = true; g.net = g.net - (g.vb.get(vbY) || 0) + tp; g.vb.set(vbY, tp); }
+  } catch (e) {}
   g.t.sort((a, b) => a - b);
   const n = g.t.length;
   if (!n) return c;
@@ -2586,6 +2590,10 @@ function ozetChipListesi(g) {
   if (n > 1) c.push(["Ort. aralık", sure(top / (n - 1))]);
   return c;
 }
+// Yüklü tablonun (seçili tarih + vardiya) başlangıç ms'i ve bir kullanıcının tablodaki GERÇEK toplamı.
+// Kayıt (log) farkları eski n2–n6 değerlerini ve kaçan kayıtları yakalayamaz; toplamlar bu yüzden tablodan alınır.
+function yukluVardiyaBas() { const [y, m, d] = String(secili).split("-").map(Number); if (!y) return NaN; return Date.UTC(y, m - 1, d, 0, 0, 0) - 3 * 3600000 + gv * 8 * 3600000; }
+function tabloToplami(uid) { const l = rows.filter(x => x.user_id === uid); return l.length ? l.reduce((a, r) => a + rsum(r), 0) : null; }
 const ozChip = ([k, v, vurgu, ek]) => { const e = el("span", "oz-chip" + (vurgu ? " vurgu" : "") + (ek ? " " + ek : "")); e.append(el("small", "", k), el("b", "", v)); return e; };
 // Kullanıcının özet kutularının altında hedef ilerleme çubukları (özeti görebilen herkes görür; yalnızca canlı vardiyada)
 function ozetHedefCubuklari(g) {
@@ -2742,6 +2750,7 @@ function benimGunCiz() {
     const vb = t - ((t + 3 * 3600000) % H8MS), no = Math.floor(((vb + 3 * 3600000) % 86400000) / H8MS);
     v[no] += logFark(l) || 0; if (l.yeni != null) gir[no]++;
   });
+  try { const tp = tabloToplami(myId()); if (tp != null && gv >= 0 && gv < 3) v[gv] = tp; } catch (e) {}   // yüklü vardiya: tablodaki gerçek toplam
   const top = v[0] + v[1] + v[2], r = x => fmt(Math.round(x * 100) / 100);
   const gunAd = new Date(secili + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "long" });
   k.append(el("strong", "", gunAd + " · attığım sayı"));
