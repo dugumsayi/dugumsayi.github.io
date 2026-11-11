@@ -706,6 +706,15 @@ td.rv-bar{min-width:90px;padding:0 10px}
     <button id="son30Sifirla" type="button" class="alt sm">Varsayılan</button>
   </div>
   <p class="mut">Seçtiğiniz renk, tüm ilerleme çubuklarında her zaman kullanılır. "Varsayılan" seçilirse çubuklar durumuna göre renklenir (yeşil / turuncu / mavi). Vardiyanın son 30 dakikası ise her zaman çubuğun sağ ucunda mor kesik şeritle gösterilir. "Hedefleri kaydet" ile herkes için kaydedilir.</p>
+  <strong>Hız ve dinlenme payı için ölçüm süresi</strong>
+  <p class="mut">Hız hesabı, ilk girişten sonra en az kaç dakikalık net çalışma ölçümü oluşunca başlasın; dinlenme payı ve vardiya sonu tahmini ise en az kaç dakika ölçümden sonra gösterilsin. Çok kısa sürelerde (ör. 4 dakikada 11 sayı) hız vardiyaya uzatılınca gerçekçi olmayan dinlenme süreleri çıkar; süre uzadıkça tahmin daha güvenilir olur. Kaydedince herkeste anında geçerli olur.</p>
+  <div class="row">
+    <label>Hız için en az (dk) <input id="olcumDkInp" type="number" min="1" max="120" step="1" value="5" style="width:80px"></label>
+    <label>Dinlenme payı / vardiya sonu tahmini için en az (dk) <input id="dinlenDkInp" type="number" min="1" max="120" step="1" value="30" style="width:80px"></label>
+    <button id="olcumSifirla" type="button" class="alt sm">Varsayılan (5 / 30)</button>
+    <button id="olcumKaydet" type="button">Ölçüm süresini kaydet</button>
+  </div>
+  <div class="mut" id="olcumDurum"></div>
   </div>
   <div class="adm-pane hide" data-pane="gorunum">
   <strong>Tabloyu dondurma</strong>
@@ -1727,8 +1736,8 @@ const VARDIYALAR = ["A", "B", "C", "D"];
 // Hesap başlangıcı: tabloya ilk yazılan an. İlk girişten henüz MIN_HIZ_DK dk çalışma süresi geçmediyse (ör. tek girişle 132 yazıldıysa)
 // hız ölçülemez; canlı veri boş kalmasın diye o ana kadar vardiya başı esas alınır, süre dolunca ilk girişe geçilir.
 const hesapBasi = (ilk, vb, simdi) => (ilk && ilk > vb && (simdi - ilk) / 60000 * (480 - 35) / 480 >= MIN_HIZ_DK) ? ilk : vb;
-const MIN_HIZ_DK = 5;   // hız/dinlenme hesabı için ilk girişten itibaren en az bu kadar çalışma dakikası ve pozitif toplam gerekir (çok kısa sürede saçma değerler çıkmasın)
-const MIN_DINLEN_DK = 30;   // dinlenme payı için en az bu kadar net çalışma dakikası ölçüm gerekir (kısa sürede ölçülen hız vardiyaya uzatılınca saatlerce dinlenme çıkmasın)
+let MIN_HIZ_DK = 5;   // hız/dinlenme hesabı için ilk girişten itibaren en az bu kadar çalışma dakikası ve pozitif toplam gerekir (çok kısa sürede saçma değerler çıkmasın)
+let MIN_DINLEN_DK = 30;   // dinlenme payı için en az bu kadar net çalışma dakikası ölçüm gerekir (kısa sürede ölçülen hız vardiyaya uzatılınca saatlerce dinlenme çıkmasın)
 const MAX_DINLEN_SN = 3600;   // gösterilen dinlenme payı en fazla 1 saat
 const HEDEF_BITIS_DK = 450;   // hedefe vardiya başından 450 dk (7,5 sa) sonra ulaşılmış olmalı: 08:00 vardiyasında 15:30
 const MOLA_DK = 35, VARDIYA_DK = 480, NET_DK = VARDIYA_DK - MOLA_DK;   // 8 saatlik vardiyada 35 dk mola: net çalışma 445 dk (7 sa 25 dk)
@@ -2038,9 +2047,10 @@ const GOR = [
   ["log", "Giriş kayıtları ve süre farkı", ["logBox"]]
 ];
 // misafir: giriş yapmadan (kayıt yoksa gizli) · uye: giriş yapınca (kayıt yoksa görünür)
-let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {}, sira: [], hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true, erkenDk: 0, kapanDk: 0, otoGecis: true };
+let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {}, sira: [], hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true, erkenDk: 0, kapanDk: 0, otoGecis: true, olcumDk: 5, dinlenDk: 30 };
+const olcumGecerli = (x, d) => (Number.isInteger(x) && x >= 1 && x <= 120) ? x : d;
 const vDkGecerli = (x, d) => (Number.isInteger(x) && x >= 0 && x <= 120) ? x : d;
-const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {}, neon: (d.neon && typeof d.neon === "object") ? d.neon : {}, sira: Array.isArray(d.sira) ? d.sira : [], hedefGizli: (d.hedefGizli && typeof d.hedefGizli === "object") ? d.hedefGizli : {}, son30Renk: /^#[0-9a-fA-F]{6}$/.test(d.son30Renk || "") ? d.son30Renk : "", tabloRenk: /^#[0-9a-fA-F]{6}$/.test(d.tabloRenk || "") ? d.tabloRenk : "", tabloIzin: d.tabloIzin === true, tabloDondur: d.tabloDondur !== false, erkenDk: vDkGecerli(d.erkenDk, 0), kapanDk: vDkGecerli(d.kapanDk, 0), otoGecis: d.otoGecis !== false } : { misafir: {}, uye: d || {}, kapali: {}, hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true, erkenDk: 0, kapanDk: 0, otoGecis: true };
+const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {}, neon: (d.neon && typeof d.neon === "object") ? d.neon : {}, sira: Array.isArray(d.sira) ? d.sira : [], hedefGizli: (d.hedefGizli && typeof d.hedefGizli === "object") ? d.hedefGizli : {}, son30Renk: /^#[0-9a-fA-F]{6}$/.test(d.son30Renk || "") ? d.son30Renk : "", tabloRenk: /^#[0-9a-fA-F]{6}$/.test(d.tabloRenk || "") ? d.tabloRenk : "", tabloIzin: d.tabloIzin === true, tabloDondur: d.tabloDondur !== false, erkenDk: vDkGecerli(d.erkenDk, 0), kapanDk: vDkGecerli(d.kapanDk, 0), otoGecis: d.otoGecis !== false, olcumDk: olcumGecerli(d.olcumDk, 5), dinlenDk: olcumGecerli(d.dinlenDk, 30) } : { misafir: {}, uye: d || {}, kapali: {}, hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true, erkenDk: 0, kapanDk: 0, otoGecis: true, olcumDk: 5, dinlenDk: 30 };
 // ---- Tablo rengi: yönetici herkes için renk belirler; izin verirse kullanıcı kendi cihazında kendi rengini seçer ----
 const TR_KEY = "dugum-tablo-renk-v1";
 const trGecerli = c => /^#[0-9a-fA-F]{6}$/.test(c || "");
@@ -2154,6 +2164,7 @@ function pCiz() {
   });
 }
 function gorUygula() {
+  try { olcumUygula(); } catch (e) {}
   try { vardiyaSureUygula(); } catch (e) {}
   try { tabloRenkUygula(); } catch (e) {}
   GOR.forEach(([k, , ids]) => ids.forEach(id => $(id).classList.toggle("gz", !gorunur(k))));
@@ -2280,7 +2291,7 @@ async function gorYukle() {
 }
 $("gKaydet").onclick = async () => {
   if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
-  const ayar = { misafir: {}, uye: {}, kapali: {}, neon: neonOku(), sira: siraTaslak.slice(), hedefGizli: gorAyar.hedefGizli || {}, son30Renk: gorAyar.son30Renk || "", tabloRenk: gorAyar.tabloRenk || "", tabloIzin: !!gorAyar.tabloIzin, tabloDondur: gorAyar.tabloDondur !== false, erkenDk: gorAyar.erkenDk, kapanDk: gorAyar.kapanDk, otoGecis: gorAyar.otoGecis !== false };
+  const ayar = { misafir: {}, uye: {}, kapali: {}, neon: neonOku(), sira: siraTaslak.slice(), hedefGizli: gorAyar.hedefGizli || {}, son30Renk: gorAyar.son30Renk || "", tabloRenk: gorAyar.tabloRenk || "", tabloIzin: !!gorAyar.tabloIzin, tabloDondur: gorAyar.tabloDondur !== false, erkenDk: gorAyar.erkenDk, kapanDk: gorAyar.kapanDk, otoGecis: gorAyar.otoGecis !== false, olcumDk: gorAyar.olcumDk, dinlenDk: gorAyar.dinlenDk };
   document.querySelectorAll("#gList input").forEach(i => { ayar[i.dataset.g][i.dataset.k] = i.checked; });
   document.querySelectorAll("#pList input").forEach(i => { ayar.kapali[i.dataset.k] = i.checked; });
   msg("Görünürlük kaydediliyor…");
@@ -2346,6 +2357,34 @@ $("vSureKaydet").onclick = async () => {
   try { if (gorKanal) gorKanal.send({ type: "broadcast", event: "guncelle", payload: { t: Date.now() } }); } catch (x) {}
   $("vSureDurum").textContent = "Kaydedildi.";
   msg("Vardiya saatleri kaydedildi: tablo başlamadan " + e + " dk önce açılır, bitmeden " + k + " dk önce kapanır.");
+};
+// ---- Hız / dinlenme ölçüm süreleri (yönetici ayarı) ----
+function olcumUygula() {
+  MIN_HIZ_DK = olcumGecerli(gorAyar.olcumDk, 5); MIN_DINLEN_DK = olcumGecerli(gorAyar.dinlenDk, 30);
+  const a = document.getElementById("olcumDkInp"), b = document.getElementById("dinlenDkInp");
+  if (a && document.activeElement !== a) a.value = MIN_HIZ_DK;
+  if (b && document.activeElement !== b) b.value = MIN_DINLEN_DK;
+  try { if (typeof hedefCiz === "function") hedefCiz(); } catch (e) {}
+}
+$("olcumSifirla").onclick = () => { $("olcumDkInp").value = 5; $("dinlenDkInp").value = 30; };
+$("olcumKaydet").onclick = async () => {
+  if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
+  const a = vDkOku("olcumDkInp"), b = vDkOku("dinlenDkInp");
+  if (!Number.isInteger(a) || !Number.isInteger(b) || a < 1 || b < 1 || a > 120 || b > 120) { msg("Süreler 1 ile 120 dakika arasında tam sayı olmalı (boş bırakılamaz)."); return; }
+  if (b < a) { msg("Dinlenme payı süresi, hız süresinden kısa olamaz (hız hesabı oluşmadan dinlenme payı gösterilemez)."); return; }
+  const ayar = Object.assign({}, gorAyar, { olcumDk: a, dinlenDk: b });
+  msg("Ölçüm süreleri kaydediliyor…"); $("olcumDurum").textContent = "";
+  const { error } = await sb.rpc("admin_gorunurluk_kaydet", { ayar });
+  if (error) { msg("Kaydedilemedi: " + error.message); return; }
+  const dog = await sb.from("site_ayar").select("deger").eq("anahtar", "gorunurluk").maybeSingle();
+  if (dog.error || !dog.data || !dog.data.deger || dog.data.deger.olcumDk !== a || dog.data.deger.dinlenDk !== b) {
+    const h = "Ayar sunucuda saklanamadı (gorunurluk kaydı olcumDk/dinlenDk alanlarını kabul etmiyor). admin_gorunurluk_kaydet fonksiyonu yeni alanları atıyor olabilir; bu uyarıyı geliştiriciye iletin.";
+    msg(h); alert(h); return;
+  }
+  gorAyar = gorNorm(ayar); lsSet(GOR_KEY, ayar); olcumUygula();
+  try { if (gorKanal) gorKanal.send({ type: "broadcast", event: "guncelle", payload: { t: Date.now() } }); } catch (x) {}
+  $("olcumDurum").textContent = "Kaydedildi.";
+  msg("Ölçüm süreleri kaydedildi: hız " + a + " dk, dinlenme payı / vardiya sonu tahmini " + b + " dk sonra gösterilir.");
 };
 $("tabloDondurKaydet").onclick = async () => {
   if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
@@ -3753,7 +3792,7 @@ function xlsxBlob(sayfalar) {
     const tahmin = net + hiz * kalanNetDk;   // mevcut toplam + hedeften önce kalan sürede beklenen gerçek üretim
     k._bas.textContent = "";
     k._bas.append(el("strong", "", VNO_AD[gv] + " vardiyası · hedef takibi"),
-      el("span", "mut", "Şu an " + fmt(net) + (hiz ? " · gerçek artış hızınız " + fmt(Math.round(hiz * 600) / 10) + " sayı/saat · " + hm(vb + HEDEF_BITIS_DK * 60000) + " tahmini ≈ " + fmt(Math.round(tahmin)) : " · ilk girişten sonra en az 5 dk arayla yeni sayı artışı gerekli; hız/dinlenme payı beklemede")));
+      el("span", "mut", "Şu an " + fmt(net) + (hiz ? " · gerçek artış hızınız " + fmt(Math.round(hiz * 600) / 10) + " sayı/saat · " + hm(vb + HEDEF_BITIS_DK * 60000) + " tahmini ≈ " + fmt(Math.round(tahmin)) : " · ilk girişten sonra en az " + MIN_HIZ_DK + " dk arayla yeni sayı artışı gerekli; hız/dinlenme payı beklemede")));
     // Vardiya sonu tahmini: mevcut toplam + bu hızla vardiya bitimine kadar kalan net çalışmada beklenen üretim (en az 30 dk ölçümden sonra)
     const vsKalanNetDk = Math.max(0, (vbit - simdi) / 60000 * (NET_DK / VARDIYA_DK));
     const vsTahmin = net + hiz * vsKalanNetDk;
@@ -3768,7 +3807,7 @@ function xlsxBlob(sayfalar) {
     let sonGirisMs = 0;
     try { logs.forEach(l => { if (l.user_id !== myId() || l.sutun === "makine" || l.yeni == null) return; const zt = new Date(l.zaman).getTime(); if (!isNaN(zt) && vbBul(zt) === vb && zt > sonGirisMs) sonGirisMs = zt; }); } catch (e) {}
     hedefSatirlari(liste, gorunen, net, calDk, hiz, tahmin, simdi, vbit, sonGirisMs || 0, basMs);
-    liste.append(el("div", "mut hd-not", "Dikey çizgi: hedefe vardiya bitiminden 30 dk önce (08:00 vardiyasında 15:30) ulaşılacak eşit tempoyla şu an olunması gereken yer. Mor kesik şerit: vardiyanın son 30 dakikası. İlk girilen toplam başlangıç değeri kabul edilir; üretim hızı ve dinlenme payı yalnızca ilk girişten sonraki gerçek sayı artışlarına göre hesaplanır. En az 5 dk ölçüm oluşmadan dinlenme payı gösterilmez. Vardiyadaki 35 dk mola payı zaten hesapta."));
+    liste.append(el("div", "mut hd-not", "Dikey çizgi: hedefe vardiya bitiminden 30 dk önce (08:00 vardiyasında 15:30) ulaşılacak eşit tempoyla şu an olunması gereken yer. Mor kesik şerit: vardiyanın son 30 dakikası. İlk girilen toplam başlangıç değeri kabul edilir; üretim hızı ve dinlenme payı yalnızca ilk girişten sonraki gerçek sayı artışlarına göre hesaplanır. En az " + MIN_HIZ_DK + " dk ölçüm oluşmadan hız, " + MIN_DINLEN_DK + " dk oluşmadan dinlenme payı gösterilmez. Vardiyadaki 35 dk mola payı zaten hesapta."));
   };
 
   // ---------- 2) Aralık analizi: toplam, ortalama, en iyi gün, grafik, vardiya karşılaştırması ----------
