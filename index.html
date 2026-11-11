@@ -564,6 +564,7 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 .hd-dol{height:100%;border-radius:8px;background:var(--blue);transition:width .4s ease}
 .hd-dol.son30{background:var(--son30,#8b5cf6) !important;animation:hdSon30 1.6s ease-in-out infinite}
 @keyframes hdSon30{50%{opacity:.6}}
+.hd-dol.ozel{background:var(--son30) !important}
 .hd-son30-yazi{font-size:13px;font-weight:700;color:var(--son30,#8b5cf6)}
 .hd-dol.ok{background:var(--ok)}.hd-dol.bad{background:var(--warn)}.hd-dol.bek{background:var(--blue)}
 .hd-dinlen{font-size:13px;font-weight:700;margin-top:3px;color:var(--blue)}
@@ -658,10 +659,10 @@ td.rv-bar{min-width:90px;padding:0 10px}
   </div>
   <p class="mut">Kutuyu kapatırsanız o hedef; ilerleme çubuğundan giriş özetine kadar herkesin ekranında gizlenir. "Hedefleri kaydet" düğmesiyle kaydedilir.</p>
   <div class="row">
-    <label>Son 30 dakika çubuk rengi <input id="son30Renk" type="color" value="#8b5cf6"></label>
+    <label>İlerleme çubuğu rengi <input id="son30Renk" type="color" value="#8b5cf6"></label>
     <button id="son30Sifirla" type="button" class="alt sm">Varsayılan</button>
   </div>
-  <p class="mut">Vardiya bitimine 30 dakika kala ilerleme çubuklarının alacağı renk. "Hedefleri kaydet" ile herkes için kaydedilir.</p>
+  <p class="mut">Seçtiğiniz renk, tüm ilerleme çubuklarında her zaman kullanılır. "Varsayılan" seçilirse çubuklar durumuna göre renklenir (yeşil / turuncu / mavi) ve son 30 dakikada mora döner. "Hedefleri kaydet" ile herkes için kaydedilir.</p>
   <hr>
   <strong>Eski kayıtları düzelt</strong>
   <p class="mut">Mevcut kullanıcıların yalnızca soyadlarının son kelimesini büyük harfe çevirir. Kullanıcı hesapları ve diğer bilgiler silinmez.</p>
@@ -3316,7 +3317,7 @@ function xlsxBlob(sayfalar) {
           cls = "bad";
         }
       }
-      const s = el("div", "hd-satir"), t = el("div", "hd-t"), bar = el("div", "hd-bar"), dol = el("div", "hd-dol " + cls + (son30 ? " son30" : ""));
+      const s = el("div", "hd-satir"), t = el("div", "hd-t"), bar = el("div", "hd-bar"), dol = el("div", "hd-dol " + cls + (son30 ? " son30" : "") + ((gorAyar && gorAyar.son30Renk) ? " ozel" : ""));
       t.append(el("span", "", fmt(hd) + " hedefi"), el("span", "", fmt(net) + " / " + fmt(hd) + " · %" + fmt(Math.round(pct))));
       dol.style.width = pct + "%"; bar.append(dol);
       const olmasi = Math.min(100, calDk / NET_DK * 100);   // eşit tempoyla gidilseydi şu an olunması gereken yer
