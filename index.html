@@ -1251,8 +1251,10 @@ function dondurUygula() {
   const fab = document.querySelector("#hizliFab"); if (fab && d) fab.classList.add("hide");
 }
 $("gonderBtn").onclick = async () => {
-  if (!me || !duzenlenir() || satirEkleniyor) return;
-  if (!navigator.onLine) { msg("İnternet yokken gönderilemez. Bağlantı gelince tekrar deneyin."); return; }
+  if (!me) return;
+  if (!duzenlenir()) { alert(donduMu() ? "Bu vardiyanın tablosu zaten gönderildi." : "Yalnızca şu anki vardiyanın tablosu gönderilebilir."); return; }
+  if (satirEkleniyor) { alert("Tablo şu an güncelleniyor, birkaç saniye sonra tekrar deneyin."); return; }
+  if (!navigator.onLine) { alert("İnternet yokken gönderilemez. Bağlantı gelince tekrar deneyin."); return; }
   if (!confirm("Tablo gönderilsin mi? Gönderdikten sonra bu vardiyanın tablosu dondurulacak; hiçbir değişiklik yapılamayacak.")) return;
   $("gonderBtn").disabled = true; msg("Gönderiliyor…");
   try {
@@ -1261,14 +1263,20 @@ $("gonderBtn").onclick = async () => {
     if (Object.keys(kirli).some(r => kirli[r])) { msg("Bazı kayıtlar henüz yazılamadı. Birkaç saniye sonra tekrar deneyin."); $("gonderBtn").disabled = false; return; }
     const ins = await sb.from("gonderimler").insert({ user_id: myId(), tarih: bugun, vno: gv });
     if (ins.error && ins.error.code !== "23505") {
-      msg("Gönderilemedi: " + ins.error.message + (/gonderimler|relation|schema|does not exist/i.test(ins.error.message) ? " — Supabase'de gonderim-dondur.sql çalıştırılmalı." : ""));
+      const h = "Gönderilemedi: " + ins.error.message + (/gonderimler|relation|schema|does not exist|permission|policy/i.test(ins.error.message) ? "\n\nSupabase'de gonderim-dondur.sql dosyasını çalıştırdığınızdan emin olun." : "");
+      msg(h); alert(h);
       $("gonderBtn").disabled = false; return;
+    }
+    const dog = await sb.from("gonderimler").select("vno").eq("user_id", myId()).eq("tarih", bugun).eq("vno", gv).maybeSingle();
+    if (dog.error || !dog.data) {
+      const h = "Gönderim sunucuya kaydedilemedi" + (dog.error ? ": " + dog.error.message : " (kayıt okunamadı).") + "\n\nTablo dondurulmadı.";
+      msg(h); alert(h); $("gonderBtn").disabled = false; return;
     }
     lsSet(gonderKey(), true);
     dondurUygula();
     msg("Tablo gönderildi ve donduruldu.");
     await load();
-  } catch (e) { msg("Gönderilemedi: " + (e && e.message ? e.message : e)); $("gonderBtn").disabled = false; }
+  } catch (e) { const h = "Gönderilemedi: " + (e && e.message ? e.message : e); msg(h); alert(h); $("gonderBtn").disabled = false; }
 };
 $("mine").addEventListener("focusout", e => { if (!$("mine").contains(e.relatedTarget)) setTimeout(siralaMine, 0); });
 
