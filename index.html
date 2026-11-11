@@ -664,9 +664,53 @@ td.rv-bar{min-width:90px;padding:0 10px}
 @keyframes rkDus{to{top:105%;transform:rotate(720deg) translateX(40px)}}
 @keyframes rkZip{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
 @media (prefers-reduced-motion:reduce){.rk-konfeti{display:none}.rk-kart{animation:none}}
+
+/* ---- Sohbet kutusu ---- */
+.sohbet-kok{position:fixed;right:16px;bottom:16px;z-index:900;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.sohbet-kok.hide{display:none}
+.sohbet-btn{height:48px;padding:0 18px;border-radius:24px;display:inline-flex;align-items:center;gap:8px;font-size:18px;box-shadow:0 6px 18px rgba(0,0,0,.25);position:relative}
+.sh-btn-yazi{font-size:15px}
+.sohbet-btn.yeni{animation:shNabiz 1.6s ease-in-out infinite}
+@keyframes shNabiz{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--btn) 30%,transparent),0 6px 18px rgba(0,0,0,.25)}}
+.sh-rozet{position:absolute;top:-6px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#ef4444;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.sh-rozet.hide{display:none}
+.sohbet-panel{width:min(380px,calc(100vw - 32px));height:min(540px,calc(100vh - 110px));background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.3);display:flex;flex-direction:column;overflow:hidden}
+.sohbet-panel.hide{display:none}
+.sh-bas{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.sh-bas strong{margin-right:auto;font-size:15px}
+.sh-liste{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
+.sh-bos{text-align:center;margin:auto 0}
+.sh-gun{align-self:center;font-size:12px;color:var(--mut);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:2px 10px}
+.sh-msj{max-width:85%;align-self:flex-start;background:var(--card);border:1px solid var(--line);border-radius:12px 12px 12px 4px;padding:6px 10px}
+.sh-msj.ben{align-self:flex-end;background:color-mix(in srgb,var(--btn) 16%,var(--card));border-color:color-mix(in srgb,var(--btn) 40%,var(--line));border-radius:12px 12px 4px 12px}
+.sh-ust{display:flex;align-items:center;gap:8px;font-size:12px}
+.sh-ust strong{font-size:13px}
+.sh-saat{color:var(--mut)}
+.sh-sil{margin-left:auto;height:20px;width:20px;padding:0;background:transparent;color:var(--mut);border:0;font-size:11px;line-height:1;cursor:pointer;opacity:.6}
+.sh-sil:hover{opacity:1;color:#ef4444}
+.sh-metin{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;margin-top:2px}
+.sh-durum{font-size:12px;color:#ef4444;padding:0 12px}
+.sh-durum:empty{display:none}
+.sh-alt{display:flex;gap:8px;padding:10px 12px 4px;border-top:1px solid var(--line)}
+.sh-alt textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);padding:8px 10px;font:inherit;font-size:14px}
+.sh-alt button{align-self:stretch;height:auto}
+.sh-not{display:flex;justify-content:space-between;padding:0 12px 8px;font-size:11px}
+.sh-not .asim{color:#ef4444}
+@media (max-width:640px){.sohbet-kok{right:10px;bottom:10px}.sh-btn-yazi{display:none}.sohbet-btn{width:52px;height:52px;padding:0;justify-content:center;border-radius:50%}.sohbet-panel{width:calc(100vw - 20px);height:calc(100vh - 90px)}}
+@media (prefers-reduced-motion:reduce){.sohbet-btn.yeni{animation:none}}
 </style>
 </head>
 <body>
+<div id="sohbetKok" class="sohbet-kok hide">
+  <div id="sohbetPanel" class="sohbet-panel hide" role="dialog" aria-label="Sohbet">
+    <div class="sh-bas"><strong>💬 Sohbet</strong><button id="sohbetTemizle" type="button" class="alt sm hide" title="Yönetici: tüm mesajları sil">Tümünü sil</button><button id="sohbetKapat" type="button" class="alt sm" aria-label="Sohbeti kapat">✕</button></div>
+    <div id="sohbetListe" class="sh-liste" aria-live="polite"></div>
+    <div id="sohbetDurum" class="sh-durum"></div>
+    <div class="sh-alt"><textarea id="sohbetGiris" rows="2" maxlength="600" placeholder="Mesaj yaz… (Enter: gönder, Shift+Enter: alt satır)"></textarea><button id="sohbetGonder" type="button">Gönder</button></div>
+    <div class="sh-not"><span class="mut">Mesajlar giriş yapan herkese görünür.</span><span id="sohbetSay" class="mut">0 / 500</span></div>
+  </div>
+  <button id="sohbetBtn" type="button" class="sohbet-btn" aria-expanded="false" aria-label="Sohbeti aç">💬<span class="sh-btn-yazi">Sohbet</span><span id="sohbetRozet" class="sh-rozet hide">0</span></button>
+</div>
 <div id="duyuruBant" class="duyuru-bant hide" role="status" aria-live="polite"><span id="dbIkon" class="db-ikon"></span><div class="db-ic"><strong id="dbBaslik">Yönetici duyurusu</strong><div id="dbMetin" class="db-metin"></div><small id="dbZaman" class="db-zaman"></small></div><button id="dbOkudum" type="button">Okudum</button></div>
 <header class="top">
   <div class="brand"><div><p id="st">Yükleniyor…</p></div></div>
@@ -2117,6 +2161,7 @@ const GOR = [
   ["tablolar", "Kullanıcıların tabloları", ["users"]],
   ["hedef", "Hedef takibi penceresi (Benim girişlerim içinde)", ["hedefKutu"]],
   ["kisisel", "Kişisel rekor ve özetim penceresi", ["kisiselKutu"]],
+  ["sohbet", "Sohbet kutusu (sağ alttaki sohbet düğmesi, yalnızca giriş yapanlar)", ["sohbetKok"]],
   ["ozetyan", "Tabloların yanındaki giriş özeti (ilk/son giriş, ortalama, hedefler)", []],
   ["hafta", "Haftalık ortalama", ["haftaPanel"]],
   ["ay", "Aylık ve yıllık ortalama", ["ayPanel"]],
@@ -4378,6 +4423,121 @@ function xlsxBlob(sayfalar) {
   const eskiHedefCiz = window.hedefCiz;
   if (typeof eskiHedefCiz === "function") window.hedefCiz = function () { const r = eskiHedefCiz.apply(this, arguments); try { kisiselCiz(); } catch (e) { console.error(e); } return r; };
   setInterval(() => { if (me) { kisiselYukle(false); kisiselCiz(); } }, 60000);   // 10 dk'da bir arka planda tazelenir
+})();
+</script>
+<script>
+// ================= SOHBET KUTUSU (sohbet.sql gerekir) =================
+(function () {
+  const MAX = 500, LIMIT = 150;
+  let mesajlar = [], kanal = null, yuklendi = false, acik = false, sonGonder = 0, kurUid = null;
+  const kok = $("sohbetKok"), btn = $("sohbetBtn"), pnl = $("sohbetPanel"), liste = $("sohbetListe"), inp = $("sohbetGiris"), say = $("sohbetSay"), rozet = $("sohbetRozet");
+  const ss = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } };
+  const sy = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const saat = ms => new Date(ms).toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit" });
+  const gunEt = ms => { const g = new Date(ms).toLocaleDateString("sv-SE", { timeZone: "Europe/Istanbul" }); return g === bugun ? "Bugün" : new Date(ms).toLocaleDateString("tr-TR", { timeZone: "Europe/Istanbul", day: "numeric", month: "long", weekday: "long" }); };
+  const sqlHata = m => /relation|does not exist|schema cache|permission|policy|row-level/i.test(m || "") ? " — Supabase'de sohbet.sql çalıştırılmalı." : "";
+  const gorulenKey = () => "sohbet_gorulen:" + (myId() || "");
+  function goster() {
+    const izin = !!me && (typeof gorunur !== "function" || gorunur("sohbet"));
+    kok.classList.toggle("hide", !izin);
+    if (!izin) { kapat(); return false; }
+    return true;
+  }
+  function rozetGuncelle() {
+    const son = Number(ss(gorulenKey(), "0")) || 0;
+    const n = acik ? 0 : mesajlar.filter(m => m.id > son && m.user_id !== myId()).length;
+    rozet.textContent = n > 99 ? "99+" : String(n); rozet.classList.toggle("hide", !n);
+    btn.classList.toggle("yeni", n > 0);
+  }
+  function gorulduIsaretle() { const s = mesajlar.length ? mesajlar[mesajlar.length - 1].id : 0; if (s) sy(gorulenKey(), String(s)); rozetGuncelle(); }
+  function ciz(asagi) {
+    const enAltta = liste.scrollHeight - liste.scrollTop - liste.clientHeight < 60;
+    liste.textContent = "";
+    if (!mesajlar.length) liste.append(el("p", "mut sh-bos", yuklendi ? "Henüz mesaj yok. İlk mesajı sen yaz." : "Mesajlar yükleniyor…"));
+    let sonGun = "";
+    mesajlar.forEach(m => {
+      const t = new Date(m.zaman).getTime(), g = gunEt(t);
+      if (g !== sonGun) { liste.append(el("div", "sh-gun", g)); sonGun = g; }
+      const benim = m.user_id === myId(), d = el("div", "sh-msj" + (benim ? " ben" : ""));
+      const ust = el("div", "sh-ust");
+      ust.append(el("strong", "", benim ? "Sen" : (m.ad || "Kullanıcı")), el("span", "sh-saat", saat(t)));
+      if (benim || (typeof isAdmin === "function" && isAdmin())) {
+        const x = el("button", "sh-sil", "✕"); x.type = "button"; x.title = "Mesajı sil"; x.setAttribute("aria-label", "Mesajı sil");
+        x.onclick = () => sil(m); ust.append(x);
+      }
+      d.append(ust, el("div", "sh-metin", m.mesaj)); liste.append(d);
+    });
+    if (asagi || enAltta) liste.scrollTop = liste.scrollHeight;
+    $("sohbetTemizle").classList.toggle("hide", !(typeof isAdmin === "function" && isAdmin()) || !mesajlar.length);
+  }
+  async function yukle() {
+    if (!sb || !me) return;
+    try {
+      const { data, error } = await sb.from("sohbet").select("id,user_id,ad,mesaj,zaman").order("id", { ascending: false }).limit(LIMIT);
+      if (error) throw error;
+      mesajlar = (data || []).reverse(); yuklendi = true; $("sohbetDurum").textContent = "";
+    } catch (e) { yuklendi = true; $("sohbetDurum").textContent = "Sohbet yüklenemedi: " + (e.message || e) + sqlHata(e.message); }
+    ciz(true); if (acik) gorulduIsaretle(); else rozetGuncelle();
+  }
+  function canliKur() {
+    if (kanal || !sb || typeof sb.channel !== "function") return;
+    try {
+      kanal = sb.channel("sohbet-canli")
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "sohbet" }, p => {
+          const m = p.new; if (!m || mesajlar.some(x => x.id === m.id)) return;
+          mesajlar.push(m); if (mesajlar.length > LIMIT) mesajlar.shift();
+          ciz(m.user_id === myId());
+          if (acik) gorulduIsaretle(); else { rozetGuncelle(); if (m.user_id !== myId()) { try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) {} } }
+        })
+        .on("postgres_changes", { event: "DELETE", schema: "public", table: "sohbet" }, p => {
+          const id = p.old && p.old.id; if (id == null) { yukle(); return; }
+          mesajlar = mesajlar.filter(x => x.id !== id); ciz(false); rozetGuncelle();
+        })
+        .subscribe();
+    } catch (e) { kanal = null; }
+  }
+  async function gonder() {
+    const metin = inp.value.trim();
+    if (!metin || !me) return;
+    if (metin.length > MAX) { $("sohbetDurum").textContent = "Mesaj en fazla " + MAX + " karakter olabilir."; return; }
+    if (Date.now() - sonGonder < 2000) { $("sohbetDurum").textContent = "Biraz yavaş: 2 saniyede bir mesaj gönderebilirsin."; return; }
+    if (!navigator.onLine) { $("sohbetDurum").textContent = "İnternet bağlantısı yok; mesaj gönderilemedi."; return; }
+    sonGonder = Date.now(); $("sohbetGonder").disabled = true;
+    const { data, error } = await sb.from("sohbet").insert({ user_id: myId(), ad: userName(), mesaj: metin }).select("id,user_id,ad,mesaj,zaman").maybeSingle();
+    $("sohbetGonder").disabled = false;
+    if (error) { $("sohbetDurum").textContent = "Mesaj gönderilemedi: " + error.message + sqlHata(error.message); return; }
+    inp.value = ""; sayGuncelle(); $("sohbetDurum").textContent = "";
+    if (data && !mesajlar.some(x => x.id === data.id)) { mesajlar.push(data); ciz(true); }
+    gorulduIsaretle(); inp.focus();
+  }
+  async function sil(m) {
+    if (!confirm("Bu mesaj silinsin mi?")) return;
+    const { error } = await sb.from("sohbet").delete().eq("id", m.id);
+    if (error) { $("sohbetDurum").textContent = "Silinemedi: " + error.message + sqlHata(error.message); return; }
+    mesajlar = mesajlar.filter(x => x.id !== m.id); ciz(false);
+  }
+  async function temizle() {
+    if (!isAdmin() || !confirm("Sohbetteki TÜM mesajlar herkes için silinsin mi? Bu işlem geri alınamaz.")) return;
+    const { error } = await sb.from("sohbet").delete().gt("id", 0);
+    if (error) { $("sohbetDurum").textContent = "Temizlenemedi: " + error.message + sqlHata(error.message); return; }
+    mesajlar = []; ciz(false); msg("Sohbet temizlendi.");
+  }
+  function sayGuncelle() { say.textContent = inp.value.length + " / " + MAX; say.classList.toggle("asim", inp.value.length > MAX); }
+  function ac() { if (!goster()) return; acik = true; pnl.classList.remove("hide"); btn.setAttribute("aria-expanded", "true"); ciz(true); gorulduIsaretle(); setTimeout(() => inp.focus(), 50); }
+  function kapat() { acik = false; pnl.classList.add("hide"); btn.setAttribute("aria-expanded", "false"); rozetGuncelle(); }
+  btn.onclick = () => (acik ? kapat() : ac());
+  $("sohbetKapat").onclick = kapat;
+  $("sohbetGonder").onclick = gonder;
+  $("sohbetTemizle").onclick = temizle;
+  inp.oninput = sayGuncelle;
+  inp.onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); gonder(); } else if (e.key === "Escape") kapat(); };
+  // Oturum değişince (giriş/çıkış) kendini kur
+  setInterval(() => {
+    if (!goster()) { if (!me) { mesajlar = []; yuklendi = false; kurUid = null; } return; }
+    if (kurUid !== myId() && sb) { kurUid = myId(); canliKur(); yukle(); }
+  }, 1000);
+  setInterval(() => { if (me && document.visibilityState === "visible") yukle(); }, 120000);   // canlı bağlantı koparsa yedek yenileme
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && me) yukle(); });
 })();
 </script>
 </body>
