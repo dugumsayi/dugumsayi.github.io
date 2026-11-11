@@ -2600,7 +2600,7 @@ function ozetHedefCubuklari(g) {
   const kalanVrd = (vbit - simdi) / 60000;
   if (kalanVrd > 0 && kalanVrd <= 30) kutu.append(el("span", "hd-son30-yazi", "⏰ Vardiya bitimine " + Math.max(1, Math.ceil(kalanVrd)) + " dakika kaldı"));
   kutu.append(liste);
-  hedefSatirlari(liste, hedefler, net, calDk, hiz, tahmin, simdi, vbit);
+  hedefSatirlari(liste, hedefler, net, calDk, hiz, tahmin, simdi, vbit, son);
   liste.lastChild && liste.lastChild.classList && liste.lastChild.classList.contains("hd-not") && liste.lastChild.remove();
   return kutu;
 }
@@ -3654,9 +3654,15 @@ function xlsxBlob(sayfalar) {
   const hgYaz = o => { try { localStorage.setItem(HG_KEY, JSON.stringify(o)); } catch (e) {} };
   let hdSecImza = "";
   // Hedef çubukları: hem 'Benim girişlerim' kutusunda hem de herkesin görebildiği kullanıcı özetlerinde kullanılır
-  window.hedefSatirlari = function (liste, gorunen, net, calDk, hiz, tahmin, simdi, vbit) {
+  window.hedefSatirlari = function (liste, gorunen, net, calDk, hiz, tahmin, simdi, vbit, sonMs) {
     const hbit = vbit - (VARDIYA_DK - HEDEF_BITIS_DK) * 60000;   // hedefin bitmiş olması gereken an (vardiya bitiminden 30 dk önce)
     tahmin = hiz * HEDEF_NET_DK;                                  // hedef saatindeki tahmini sayı
+    // Dinlenme payı için hız: vardiya başından SON GİRİŞE kadar hesaplanır. "Şu ana kadar" ortalaması kullanılırsa
+    // dinlendikçe ortalama düşer ve kalan süre gerçek zamandan kat kat hızlı erirdi (15 dk → 2 dk'da 0).
+    const vbas = vbit - VARDIYA_DK * 60000;
+    const sonT = sonMs ? Math.min(Math.max(sonMs, vbas), simdi) : simdi;
+    const calDkSon = Math.max(0, (sonT - vbas) / 60000) * (NET_DK / VARDIYA_DK);
+    const hizC = calDkSon >= 1 && net > 0 ? Math.max(hiz, net / calDkSon) : hiz;
     gorunen.forEach(hd => {
       const kalan = hd - net, pct = Math.max(0, Math.min(100, net / hd * 100));
       let durum, cls, dinlen = "";
@@ -3664,7 +3670,7 @@ function xlsxBlob(sayfalar) {
       else if (!hiz) { durum = fmt(yuv(kalan)) + " sayı kaldı · tahmin için veri bekleniyor"; cls = "bek"; }
       else {
         const bit = simdi + kalan / hiz * (VARDIYA_DK / NET_DK) * 60000;
-        if (bit <= hbit) { durum = "Bu hızla yetişir · tahmini bitiş " + hm(bit) + " (" + fmt(yuv(kalan)) + " sayı kaldı)"; cls = "ok"; const pay = Math.floor((hbit - bit) / 60000); dinlen = pay >= 1 ? "☕ Dinlenebileceğin süre: ≈ " + sure(pay * 60) + " (sonra yine aynı hızla devam)" : "☕ Dinlenme payı yok · tam sınırda yetişiyor"; }
+        if (bit <= hbit) { durum = "Bu hızla yetişir · tahmini bitiş " + hm(bit) + " (" + fmt(yuv(kalan)) + " sayı kaldı)"; cls = "ok"; const pay = Math.floor((hbit - simdi) / 60000 - kalan / hizC * (VARDIYA_DK / NET_DK)); dinlen = pay >= 1 ? "☕ Dinlenebileceğin süre: ≈ " + sure(pay * 60) + " (sonra yine aynı hızla devam)" : "☕ Dinlenme payı yok · tam sınırda yetişiyor"; }
         else {
           const kalanDk = Math.max(0, (hbit - simdi) / 60000 * (NET_DK / VARDIYA_DK));
           durum = "Bu hızla yetişmez · " + hm(hbit) + " itibarıyla ≈ " + fmt(Math.round(tahmin)) + " (" + fmt(Math.max(0, Math.round(hd - tahmin))) + " eksik)" +
@@ -3707,8 +3713,10 @@ function xlsxBlob(sayfalar) {
     const liste = k._liste; liste.textContent = "";
     const gorunen = hedefler.filter(hd => !gizli[hd]);
     if (!gorunen.length) { liste.append(el("div", "mut hd-not", "Tüm hedefler gizli. Yukarıdaki düğmelerden açabilirsiniz.")); return; }
-    hedefSatirlari(liste, gorunen, net, calDk, hiz, tahmin, simdi, vbit);
-    liste.append(el("div", "mut hd-not", "Dikey çizgi: hedefe vardiya bitiminden 30 dk önce (08:00 vardiyasında 15:30) ulaşılacak eşit tempoyla şu an olunması gereken yer. Mor kesik şerit: vardiyanın son 30 dakikası. Dinlenme payı, şu ana kadarki ortalama hızın devam edeceği varsayımıyla hesaplanır; vardiyadaki 35 dk mola payı zaten hesapta."));
+    let sonGirisMs = 0;
+    try { logs.forEach(l => { if (l.user_id !== myId() || l.sutun === "makine" || l.yeni == null) return; const zt = new Date(l.zaman).getTime(); if (!isNaN(zt) && vbBul(zt) === vb && zt > sonGirisMs) sonGirisMs = zt; }); } catch (e) {}
+    hedefSatirlari(liste, gorunen, net, calDk, hiz, tahmin, simdi, vbit, sonGirisMs || 0);
+    liste.append(el("div", "mut hd-not", "Dikey çizgi: hedefe vardiya bitiminden 30 dk önce (08:00 vardiyasında 15:30) ulaşılacak eşit tempoyla şu an olunması gereken yer. Mor kesik şerit: vardiyanın son 30 dakikası. Dinlenme payı, vardiya başından son girişinize kadarki ortalama hızın devam edeceği varsayımıyla hesaplanır ve gerçek zamanla birebir azalır; vardiyadaki 35 dk mola payı zaten hesapta."));
   };
 
   // ---------- 2) Aralık analizi: toplam, ortalama, en iyi gün, grafik, vardiya karşılaştırması ----------
