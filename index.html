@@ -1223,14 +1223,23 @@ function fillMine() {
 function tabloResim(tbl, baslik, dosya) {
   if (!tbl) { msg("Kaydedilecek tablo yok."); return; }
   const r0 = tbl.getBoundingClientRect(), m = 6, sc = 4;           // m: ince kenar payı, sc: çözünürlük çarpanı
-  const W = Math.ceil(r0.width + m * 2), H = Math.ceil(r0.height + m * 2);
+  const bh = baslik ? 38 : 0;                                       // üstte kullanıcı adı şeridi (resimde ad görünsün)
+  const W = Math.ceil(r0.width + m * 2), H = Math.ceil(r0.height + m * 2 + bh);
   const cv = document.createElement("canvas"); cv.width = W * sc; cv.height = H * sc;
   const c = cv.getContext("2d"); c.scale(sc, sc);
   c.fillStyle = getComputedStyle(document.body).backgroundColor; c.fillRect(0, 0, W, H);
   c.textAlign = "center"; c.textBaseline = "middle";
+  if (baslik) {
+    const th0 = tbl.querySelector("th"), ts = th0 ? getComputedStyle(th0) : null;
+    c.fillStyle = ts ? ts.backgroundColor : "#263650"; c.fillRect(m, m, r0.width, bh);
+    c.strokeStyle = ts ? ts.borderTopColor : "#3b4a60"; c.lineWidth = 1.5; c.strokeRect(m, m, r0.width, bh);
+    const t = (secili || "").split("-"), tarih = t.length === 3 ? t[2] + "." + t[1] + "." + t[0] : "";
+    c.fillStyle = ts ? ts.color : "#fff"; c.font = "800 17px system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif";
+    c.fillText(baslik + (tarih ? " · " + tarih : ""), m + r0.width / 2, m + bh / 2, r0.width - 12);
+  }
   tbl.querySelectorAll("th,td").forEach(cell => {
     const rc = cell.getBoundingClientRect(), cs = getComputedStyle(cell);
-    const x = rc.left - r0.left + m, y = rc.top - r0.top + m, w = rc.width, h = rc.height;
+    const x = rc.left - r0.left + m, y = rc.top - r0.top + m + bh, w = rc.width, h = rc.height;
     c.fillStyle = cs.backgroundColor; c.fillRect(x, y, w, h);
     c.strokeStyle = cs.borderTopColor; c.lineWidth = 1.5; c.strokeRect(x, y, w, h);
     c.fillStyle = cs.color; c.font = "800 " + Math.round(parseFloat(cs.fontSize) * 1.12) + "px system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif"; // kalın ve biraz büyük yazı
@@ -1288,7 +1297,7 @@ function renderShared() {
     ft.append(el("td", "", "TOPLAM"), el("td", "", fmt(total))); body.append(ft);
     tbl.append(body); wrap.append(tbl);
     const rb = el("button", "alt sm", "Resim olarak kaydet"); rb.type = "button";
-    rb.onclick = () => tabloResim(tbl, "", "makine-tablosu");
+    rb.onclick = () => tabloResim(tbl, u.ad || "", "makine-tablosu-" + (u.ad || ""));
     const satirKutu = el("div", "u-row"), sol = el("div", "u-sol"), sag = el("div", "u-ozet hide");
     sag.dataset.uid = uid;
     sol.append(wrap, rb); satirKutu.append(sol, sag); card.append(satirKutu); box.append(card);
