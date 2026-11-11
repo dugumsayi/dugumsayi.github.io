@@ -425,15 +425,15 @@ details>summary::before{content:"";width:7px;height:7px;border-right:2px solid v
 details[open]>summary::before{transform:rotate(45deg)}
 /* vardiya kartları */
 /* aylık vardiya şampiyonu */
-#vardiyaSamp{position:relative;overflow:hidden;margin:0;padding:14px 16px 14px 19px;border-radius:var(--r,10px);border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow)}
+#vardiyaSamp{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;grid-column:span 2;margin:0;padding:14px 16px 14px 19px;border-radius:var(--r,10px);border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow)}
 #vardiyaSamp::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--vc,#f59e0b);opacity:.9}
 #vardiyaSamp.hide{display:none}
 #vardiyaSamp .sp-ikon{font-size:30px;line-height:1;display:none}
-#vardiyaSamp .sp-ana{min-width:0}
+#vardiyaSamp .sp-ana{flex:1 1 200px;min-width:0}
 #vardiyaSamp .sp-k{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
 #vardiyaSamp .sp-ad{font-size:28px;font-weight:800;margin-top:2px;letter-spacing:-.02em;color:var(--vc,#f59e0b)}
 #vardiyaSamp .sp-s{font-size:12px;color:var(--mut)}
-#vardiyaSamp .sp-sira{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+#vardiyaSamp .sp-sira{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex:0 1 auto;margin-top:0}
 #vardiyaSamp .sp-chip{display:flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border-radius:999px;background:var(--bg);border:1px solid var(--line);font-size:13px}
 #vardiyaSamp .sp-chip b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:12px;background:var(--c)}
 #vardiyaSamp .sp-chip.ilk{border-color:var(--c)}
@@ -617,8 +617,8 @@ table.sp td.why{min-width:220px}
   <p class="mut">Pencereler başlığındaki ok ile açılıp kapanır. Burada işaretlediğiniz pencereler, kullanıcı kendisi değiştirmedikçe <b>kapalı</b> açılır. Kullanıcının kendi açıp kapattığı pencere o cihazda hatırlanır.</p>
   <div id="pList"></div>
   <strong>Şu anki vardiya butonu (neon) ayarı</strong>
-  <p class="mut">"Kullanıcıların tabloları" bölümündeki <b>· şimdi canlı</b> butonunun renklerini, ışığını ve hızını belirleyin. Değişiklikler burada anında görünür; aşağıdaki kaydet düğmesine basınca herkeste güncellenir.</p>
-  <div class="neon-onizle"><button type="button" class="alt sm simdi" id="neonOnizle">08:00–16:00 · şimdi canlı</button></div>
+  <p class="mut">"Kullanıcıların tabloları" bölümündeki <b>· şimdi</b> butonunun renklerini, ışığını ve hızını belirleyin. Değişiklikler burada anında görünür; aşağıdaki kaydet düğmesine basınca herkeste güncellenir.</p>
+  <div class="neon-onizle"><button type="button" class="alt sm simdi" id="neonOnizle">08:00–16:00 · şimdi</button></div>
   <div class="neon-grid">
     <label>Parlak anın rengi<input type="color" id="neonBg"></label>
     <label>Parlak anın yazı rengi<input type="color" id="neonFg"></label>
