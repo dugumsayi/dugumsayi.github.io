@@ -2557,7 +2557,7 @@ function ozetChipListesi(g) {
 
   c.push([
     "8 saatlik baz (35 dk mola payı orantılı düşülmüş, tahmini" + (canli ? ", canlı" : "") + ")",
-    hesapHazir ? fmt(Math.round(g.net / calDk * NET_DK * 10) / 10) + " sayı" : "Hesaplanıyor (mola süresi bekleniyor)",
+    (hesapHazir && calDk >= MIN_DINLEN_DK) ? fmt(Math.round(g.net / calDk * NET_DK * 10) / 10) + " sayı" : "Hesaplanıyor (en az " + MIN_DINLEN_DK + " dk ölçüm gerekli)",
     canli
   ]);
   c.push([
@@ -3754,6 +3754,12 @@ function xlsxBlob(sayfalar) {
     k._bas.textContent = "";
     k._bas.append(el("strong", "", VNO_AD[gv] + " vardiyası · hedef takibi"),
       el("span", "mut", "Şu an " + fmt(net) + (hiz ? " · gerçek artış hızınız " + fmt(Math.round(hiz * 600) / 10) + " sayı/saat · " + hm(vb + HEDEF_BITIS_DK * 60000) + " tahmini ≈ " + fmt(Math.round(tahmin)) : " · ilk girişten sonra en az 5 dk arayla yeni sayı artışı gerekli; hız/dinlenme payı beklemede")));
+    // Vardiya sonu tahmini: mevcut toplam + bu hızla vardiya bitimine kadar kalan net çalışmada beklenen üretim (en az 30 dk ölçümden sonra)
+    const vsKalanNetDk = Math.max(0, (vbit - simdi) / 60000 * (NET_DK / VARDIYA_DK));
+    const vsTahmin = net + hiz * vsKalanNetDk;
+    k._bas.append(el("span", "mut", hiz && olcumNetDk >= MIN_DINLEN_DK
+      ? "Vardiya sonu (" + hm(vbit) + ") tahmini ≈ " + fmt(Math.round(vsTahmin)) + " sayı"
+      : "Vardiya sonu tahmini için en az " + MIN_DINLEN_DK + " dk ölçüm gerekli"));
     const kalanVrd = (vbit - simdi) / 60000, son30 = kalanVrd > 0 && kalanVrd <= 30;   // mola hesabına dokunmaz
     if (son30) k._bas.append(el("span", "hd-son30-yazi", "⏰ Vardiya bitimine " + Math.max(1, Math.ceil(kalanVrd)) + " dakika kaldı"));
     const liste = k._liste; liste.textContent = "";
