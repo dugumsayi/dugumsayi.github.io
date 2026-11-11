@@ -629,8 +629,6 @@ td.rv-bar{min-width:90px;padding:0 10px}
 .dy-mevcut{display:flex;flex-direction:column;gap:4px;padding:10px 12px;margin:0 0 10px;border:1px dashed var(--line);border-radius:8px}
 .dy-metin{white-space:pre-wrap;overflow-wrap:anywhere}
 /* ---- Kişisel rekor ve özet ---- */
-#kisiselHead{margin:0}
-#kisiselHead h3{margin:0;font-size:15px}
 .hedef-kutu.pen.kapali{gap:0}
 #kisiselIc{display:flex;flex-direction:column;gap:10px}
 .ks-rekor{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
@@ -647,7 +645,7 @@ td.rv-bar{min-width:90px;padding:0 10px}
 .ks-kart .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
 .ks-kart .s{font-size:12px;color:var(--mut)}
 .ks-saatler{display:flex;flex-direction:column;gap:4px}
-.ks-saat{display:grid;grid-template-columns:96px 1fr 64px;gap:8px;align-items:center;font-size:13px}
+.ks-saat{display:grid;grid-template-columns:96px 1fr 72px;gap:8px;align-items:center;font-size:13px}
 .ks-saat-ad{font-variant-numeric:tabular-nums;color:var(--mut)}
 .ks-saat-v{text-align:right;font-variant-numeric:tabular-nums}
 .ks-saat-cub{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
@@ -892,7 +890,6 @@ td.rv-bar{min-width:90px;padding:0 10px}
 <div id="app" class="hide">
   <div class="sec-head" id="appHead"><h2>Benim girişlerim (bugün)</h2></div>
   <div id="hedefKutu" class="hedef-kutu hide"><div class="sec-head" id="hedefHead"><h3>Hedef takibi</h3></div></div>
-  <div id="kisiselKutu" class="hedef-kutu kisisel-kutu hide"><div class="sec-head" id="kisiselHead"><h3>Kişisel rekor ve özetim</h3></div><div id="kisiselIc"></div></div>
   <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="satirSilBtn" type="button" class="alt sm">− Satır sil</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
   <p id="gonderNot" class="mut hide">✓ Tablonuzu resim olarak kaydettiniz; bu vardiyanın tablosu donduruldu. Artık hiçbir değişiklik yapılamaz.</p>
   <div class="scroll"><table id="mineTbl"><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody><tfoot><tr class="tot"><td>TOPLAM</td><td id="mineToplam">0</td><td></td></tr></tfoot></table></div>
@@ -951,6 +948,11 @@ td.rv-bar{min-width:90px;padding:0 10px}
     <div id="yStat" class="stats"></div>
     <div class="ucard"><div id="yGrafik"></div></div>
   </div>
+</section>
+
+<section class="panel hide" id="kisiselKutu">
+  <div class="sec-head" id="kisiselHead"><h2>Kişisel rekor ve özetim</h2></div>
+  <div id="kisiselIc"></div>
 </section>
 
 <details id="logBox" class="hide">
@@ -2114,7 +2116,7 @@ const GOR = [
   ["genel", "Genel toplam tablosu", ["genCard", "genel"]],
   ["tablolar", "Kullanıcıların tabloları", ["users"]],
   ["hedef", "Hedef takibi penceresi (Benim girişlerim içinde)", ["hedefKutu"]],
-  ["kisisel", "Kişisel rekor ve özet kartı (Benim girişlerim içinde)", ["kisiselKutu"]],
+  ["kisisel", "Kişisel rekor ve özetim penceresi", ["kisiselKutu"]],
   ["ozetyan", "Tabloların yanındaki giriş özeti (ilk/son giriş, ortalama, hedefler)", []],
   ["hafta", "Haftalık ortalama", ["haftaPanel"]],
   ["ay", "Aylık ve yıllık ortalama", ["ayPanel"]],
@@ -2255,14 +2257,20 @@ function gorUygula() {
   try { if (typeof hedefCiz === "function") hedefCiz(); } catch (e) {}
 }
 // ---- Pencere sırası: yönetici belirler ----
-var SIRA_VARS = ["benim", "gun", "vardiya", "ort", "log"];
-var SIRA_AD = { benim: "Benim girişlerim (hızlı sayı girişi)", gun: "Kullanıcıların tabloları", vardiya: "Özet kutuları ve vardiya listesi", ort: "Ortalama", log: "Giriş kayıtları ve süre farkı" };
-var SIRA_ID = { benim: "app", gun: "gunPanel", vardiya: "vardiyaBox", ort: "ortPanel", log: "logBox" };
+var SIRA_VARS = ["benim", "gun", "vardiya", "ort", "kisisel", "log"];
+var SIRA_AD = { benim: "Benim girişlerim (hızlı sayı girişi)", gun: "Kullanıcıların tabloları", vardiya: "Özet kutuları ve vardiya listesi", ort: "Ortalama", kisisel: "Kişisel rekor ve özetim", log: "Giriş kayıtları ve süre farkı" };
+var SIRA_ID = { benim: "app", gun: "gunPanel", vardiya: "vardiyaBox", ort: "ortPanel", kisisel: "kisiselKutu", log: "logBox" };
 var siraTaslak = SIRA_VARS.slice();
 function siraBirles(a) {
   const o = [];
   (Array.isArray(a) ? a : []).forEach(k => { if (SIRA_VARS.includes(k) && !o.includes(k)) o.push(k); });
-  SIRA_VARS.forEach(k => { if (!o.includes(k)) o.push(k); });
+  // Kayıtlı sırada olmayan (yeni eklenen) pencere varsayılan yerine girer: varsayılan sırada kendinden önceki pencerenin hemen altına
+  SIRA_VARS.forEach((k, i) => {
+    if (o.includes(k)) return;
+    let at = o.length;
+    for (let j = i - 1; j >= 0; j--) { const x = o.indexOf(SIRA_VARS[j]); if (x >= 0) { at = x + 1; break; } }
+    o.splice(at, 0, k);
+  });
   return o;
 }
 function siraUygula() {
@@ -4299,10 +4307,11 @@ function xlsxBlob(sayfalar) {
 
   function kisiselCiz() {
     const ic = $("kisiselIc"), kutu = $("kisiselKutu"); if (!ic || !kutu) return;
-    if (!me || typeof vardiyaGuncel !== "function" || !vardiyaGuncel()) { kutu.classList.add("hide"); return; }
+    if (!me) { kutu.classList.add("hide"); return; }
+    const canli = typeof vardiyaGuncel === "function" && vardiyaGuncel();   // şu anki vardiya ekranda mı (canlı toplam yalnızca o zaman eklenir)
     kutu.classList.remove("hide");
     if (gecmisUid !== myId()) { kisiselYukle(true); }
-    const simdiK = anahtar(secili, gv), net = anlikNet();
+    const simdiK = canli ? anahtar(secili, gv) : "", net = canli ? anlikNet() : 0;
     // Rekor: şu anki vardiya hariç geçmiş vardiyaların en iyisi
     let rekor = 0, rekorK = "";
     if (gecmis) gecmis.forEach((v, k) => { if (k !== simdiK && v > rekor) { rekor = v; rekorK = k; } });
@@ -4316,7 +4325,7 @@ function xlsxBlob(sayfalar) {
     if (gecmis) gecmis.forEach((v, k) => { if (k.slice(0, 7) === ay && k !== simdiK && v > 0) ayV.push(v); });
     const ayTop = yuv(ayV.reduce((a, v) => a + v, 0) + net), vSay = ayV.length + (net > 0 ? 1 : 0), ayOrt = vSay ? yuv(ayTop / vSay) : 0;
     const hedefler = (typeof HEDEFLER !== "undefined" ? HEDEFLER : []).filter(h => !(typeof hedefGizliMi === "function" && hedefGizliMi(h))).sort((a, b) => a - b);
-    const imza = [myId(), simdiK, net, rekor, rekorK, ayTop, vSay, hedefler.join(","), saatVeri ? saatVeri.length + ":" + (saatVeri[0] ? saatVeri[0].h : "") : "-", !!gecmis].join("|");
+    const imza = [myId(), simdiK, net, rekor, rekorK, ayTop, vSay, hedefler.join(","), saatVeri ? saatVeri.length + ":" + (saatVeri[0] ? saatVeri[0].h : "") : "-", !!gecmis, canli].join("|");
     if (imza === sonImza) return; sonImza = imza;
     ic.textContent = "";
     if (!gecmis) { ic.append(el("p", "mut", yukleniyor ? "Kişisel verileriniz yükleniyor…" : "Kişisel veriler yüklenemedi; internet bağlantısını kontrol edin.")); return; }
@@ -4326,9 +4335,11 @@ function xlsxBlob(sayfalar) {
     if (rekor > 0) {
       const [t, v] = rekorK.split("|");
       rk.append(el("div", "ks-rk-bas", "🏆 Bugüne kadarki en iyi vardiyan: " + fmt(rekor)), el("div", "mut", gunTrUzun(t) + " · " + VNO_AD[Number(v)] + " vardiyası"));
+      if (canli) {
       const pct = Math.max(0, Math.min(100, net / rekor * 100)), bar = el("div", "hd-bar ks-rk-bar"), dol = el("div", "hd-dol " + (net > rekor ? "ok" : "rk"));
       dol.style.width = pct + "%"; bar.append(dol); rk.append(bar);
       rk.append(el("div", "ks-rk-durum" + (net > rekor ? " ok" : ""), net > rekor ? "🎉 Yeni rekor! Bu vardiya " + fmt(net) + " · önceki rekoru " + fmt(yuv(net - rekor)) + " geçtin" : "Bu vardiya " + fmt(net) + " · rekora " + fmt(yuv(rekor - net)) + " sayı kaldı"));
+      }
     } else rk.append(el("div", "ks-rk-bas", "🏆 Henüz rekor yok"), el("div", "mut", "İlk tamamladığın vardiya rekorun olacak."));
     ic.append(rk);
 
@@ -4366,7 +4377,7 @@ function xlsxBlob(sayfalar) {
   // Mevcut hedef çizimine bağlan: sayı girildikçe ve her saniyelik yenilemede kart da güncellensin
   const eskiHedefCiz = window.hedefCiz;
   if (typeof eskiHedefCiz === "function") window.hedefCiz = function () { const r = eskiHedefCiz.apply(this, arguments); try { kisiselCiz(); } catch (e) { console.error(e); } return r; };
-  setInterval(() => { if (me) kisiselYukle(false); }, 60000);   // 10 dk'da bir arka planda tazelenir
+  setInterval(() => { if (me) { kisiselYukle(false); kisiselCiz(); } }, 60000);   // 10 dk'da bir arka planda tazelenir
 })();
 </script>
 </body>
