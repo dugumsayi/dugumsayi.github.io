@@ -1724,6 +1724,7 @@ $("aAra").oninput = () => adminCiz();
 // ---- Vardiya sistemi (A, B, C, D) ----
 // Veritabanı: profiles.vardiya + vardiya_listesi() + admin_vardiya() (vardiya.sql)
 const VARDIYALAR = ["A", "B", "C", "D"];
+const MIN_HIZ_DK = 5;   // hız/dinlenme hesabı için ilk girişten itibaren en az bu kadar çalışma dakikası ve pozitif toplam gerekir (çok kısa sürede saçma değerler çıkmasın)
 const HEDEF_BITIS_DK = 450;   // hedefe vardiya başından 450 dk (7,5 sa) sonra ulaşılmış olmalı: 08:00 vardiyasında 15:30
 const MOLA_DK = 35, VARDIYA_DK = 480, NET_DK = VARDIYA_DK - MOLA_DK;   // 8 saatlik vardiyada 35 dk mola: net çalışma 445 dk (7 sa 25 dk)
 const HEDEF_NET_DK = HEDEF_BITIS_DK * NET_DK / VARDIYA_DK;   // hedef saatine kadar net çalışma ≈ 417,2 dk
@@ -2529,8 +2530,8 @@ function ozetChipListesi(g) {
   // Mola payını 8 saatlik vardiyaya orantılı dağıt: 8 saatin sonunda
   // toplam net çalışma süresi yine 445 dakika olur.
   const calDk = Math.max(0, vSaat * 60 * (NET_DK / VARDIYA_DK));
-  const hesapHazir = calDk >= 1;
-  const hizDk = hesapHazir && g.net > 0 ? g.net / calDk : 0;
+  const hesapHazir = calDk >= MIN_HIZ_DK && g.net > 0;
+  const hizDk = hesapHazir ? g.net / calDk : 0;
 
   // Bu kart bütün kullanıcılar için aynı alanları gösterir.
   c.push(["Atılan toplam sayı", fmt(Math.round(g.net * 100) / 100), true]);
@@ -2595,7 +2596,7 @@ function ozetHedefCubuklari(g) {
   const vb = ilk - ((ilk + 3 * 3600000) % H8), simdi = Math.max(simdiMs(), son), vbit = vb + H8;
   if (secili !== bugun || simdi >= vbit) return null;   // geçmiş gün ya da biten vardiyada çubuk gösterilmez
   const net = yuv(g.net), calDk = Math.max(0, (simdi - ilk) / 60000) * (NET_DK / VARDIYA_DK);   // ilk girişten itibaren
-  const hiz = calDk >= 1 && net > 0 ? net / calDk : 0, tahmin = 0;
+  const hiz = calDk >= MIN_HIZ_DK && net > 0 ? net / calDk : 0, tahmin = 0;
   const kutu = el("div", "hedef-kutu hd-ozet"), liste = el("div", "hd-liste");
   const kalanVrd = (vbit - simdi) / 60000;
   if (kalanVrd > 0 && kalanVrd <= 30) kutu.append(el("span", "hd-son30-yazi", "⏰ Vardiya bitimine " + Math.max(1, Math.ceil(kalanVrd)) + " dakika kaldı"));
@@ -3664,7 +3665,7 @@ function xlsxBlob(sayfalar) {
     // dinlendikçe ortalama düşer ve kalan süre gerçek zamandan kat kat hızlı erirdi (15 dk → 2 dk'da 0).
     const sonT = sonMs ? Math.min(Math.max(sonMs, vbas), simdi) : simdi;
     const calDkSon = Math.max(0, (sonT - vbas) / 60000) * (NET_DK / VARDIYA_DK);
-    const hizC = calDkSon >= 1 && net > 0 ? Math.max(hiz, net / calDkSon) : hiz;
+    const hizC = calDkSon >= MIN_HIZ_DK && net > 0 ? Math.max(hiz, net / calDkSon) : hiz;
     gorunen.forEach(hd => {
       const kalan = hd - net, pct = Math.max(0, Math.min(100, net / hd * 100));
       let durum, cls, dinlen = "";
@@ -3709,7 +3710,7 @@ function xlsxBlob(sayfalar) {
     try { logs.forEach(l => { if (l.user_id !== myId() || l.sutun === "makine" || l.yeni == null) return; const zt = new Date(l.zaman).getTime(); if (!isNaN(zt) && vbBul(zt) === vb && (!ilkGirisMs || zt < ilkGirisMs)) ilkGirisMs = zt; }); } catch (e) {}
     const basMs = ilkGirisMs ? Math.min(ilkGirisMs, simdi) : vb;                   // tabloya ilk yazılan an (yoksa vardiya başı)
     const calDk = Math.max(0, (simdi - basMs) / 60000) * (NET_DK / VARDIYA_DK);   // ilk girişten itibaren, mola payı orantılı düşülmüş çalışma dk
-    const hiz = calDk >= 1 && net > 0 ? net / calDk : 0;                         // sayı / çalışma dakikası
+    const hiz = calDk >= MIN_HIZ_DK && net > 0 ? net / calDk : 0;                // sayı / çalışma dakikası
     const hbitK = vbit - (VARDIYA_DK - HEDEF_BITIS_DK) * 60000;
     const tahmin = hiz * Math.max(1, (hbitK - basMs) / 60000 * (NET_DK / VARDIYA_DK));   // hedef sınırındaki tahmin
     k._bas.textContent = "";
