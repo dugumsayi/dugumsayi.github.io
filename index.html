@@ -165,6 +165,8 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 .oz-chip b{font-size:14px;color:var(--fg)}
 .oz-chip.vurgu{border-color:var(--blue)}
 .oz-chip.vurgu b{color:var(--blue)}
+.benim-gun{margin:8px 0 10px}
+.benim-gun>strong{font-size:14px}
 .lg-dr{display:inline-block;border-radius:999px;padding:1px 10px;font-size:12px;font-weight:700;border:1px solid}
 .lg-dr.nor{color:#1a8f4c;border-color:#1a8f4c;background:#1a8f4c22}
 .lg-dr.sup{color:#d93025;border-color:#d93025;background:#d9302222}
@@ -678,6 +680,7 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 
 <section class="panel" id="gunPanel">
   <div class="sec-head"><h2>Kullanıcıların tabloları</h2><div class="bar"><input type="date" id="tarih"><button id="bugunBtn" class="alt">Bugün</button><span id="gunAd"></span></div></div>
+  <div id="benimGun" class="oz-card benim-gun"></div>
   <div class="bar" id="vnoSekme"></div>
   <p id="genel" class="mut"></p>
   <div class="ugrid">
@@ -2270,7 +2273,29 @@ function logCizAsil() {
   tbl.append(body); box2.append(tbl);
 }
 
-function logCiz() { logCizAsil(); }
+// Seçili tarihte (yukarıdaki tarih seçici) benim attığım sayı: gün toplamı + vardiya dağılımı
+function benimGunCiz() {
+  const k = $("benimGun"); if (!k) return;
+  k.textContent = "";
+  if (!logOk) { k.classList.add("hide"); return; }
+  k.classList.remove("hide");
+  const H8MS = 8 * 3600000;
+  const ben = logs.filter(l => l.sutun !== "makine" && l.user_id === myId());
+  const v = [0, 0, 0], gir = [0, 0, 0];
+  ben.forEach(l => {
+    const t = new Date(l.zaman).getTime(); if (isNaN(t)) return;
+    const vb = t - ((t + 3 * 3600000) % H8MS), no = Math.floor(((vb + 3 * 3600000) % 86400000) / H8MS);
+    v[no] += logFark(l) || 0; if (l.yeni != null) gir[no]++;
+  });
+  const top = v[0] + v[1] + v[2], r = x => fmt(Math.round(x * 100) / 100);
+  const gunAd = new Date(secili + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "long" });
+  k.append(el("strong", "", gunAd + " · attığım sayı"));
+  const chips = el("div", "oz-chips");
+  chips.append(ozChip(["Gün toplamı", ben.length ? r(top) : "kayıt yok", true]));
+  VNO_AD.forEach((a, i) => { if (gir[i]) chips.append(ozChip([a, r(v[i]) + " sayı (" + gir[i] + " giriş)"])); });
+  k.append(chips);
+}
+function logCiz() { logCizAsil(); try { benimGunCiz(); } catch (e) { console.error(e); } }
 
 function logCsv() {
   const list = logGorunen(), sm = sicilHarita();
