@@ -886,14 +886,28 @@ let bugun = todayStr(), secili = bugun;
 const VNO_AD = ["00:00–08:00", "08:00–16:00", "16:00–24:00"];
 const vNoNow = () => Math.floor((((simdiMs() + 10800000) % 86400000) + 86400000) % 86400000 / 28800000);   // İstanbul saatine göre
 let gv = vNoNow(), sonV = gv;   // gv: görüntülenen vardiya, sonV: son bilinen güncel vardiya
-const vardiyaGuncel = () => secili === bugun && gv === vNoNow();   // bugünün şu anki vardiyası
-const gonderKey = () => "gonderildi:" + myId() + ":" + bugun + ":" + gv;
+// Erken giriş: bir sonraki vardiya başlamadan ERKEN_DK dakika önce (örn. 15:45) o vardiyanın tablosu da açılır;
+// bu aralıkta girilen sayılar yeni vardiyaya yazılır. (Gece yarısı 00:00 geçişi kapsam dışı: gün değişir.)
+const ERKEN_DK = 15, ERKEN_MS = ERKEN_DK * 60000;
+// Sonraki vardiya başlamadan ERKEN_DK dk önceyse o vardiyanın {t: tarih, v: vardiya no} bilgisi (23:45'te: ertesi günün 00:00 vardiyası), değilse null
+const erkenSlot = () => {
+  const v = vNoNow(), gunMs = (((simdiMs() + 10800000) % 86400000) + 86400000) % 86400000;
+  if (((v + 1) * 28800000 - gunMs) > ERKEN_MS) return null;
+  return { t: new Date(simdiMs() + ERKEN_MS).toLocaleDateString("sv-SE", { timeZone: "Europe/Istanbul" }), v: (v + 1) % 3 };
+};
+const vardiyaGuncel = () => {   // bugünün şu anki vardiyası ya da erken girişe açılmış sonraki vardiya
+  if (secili === bugun && gv === vNoNow()) return true;
+  const e = erkenSlot(); return !!e && secili === e.t && gv === e.v;
+};
+// Girişin yazılacağı tarih: düzenlenen (güncel ya da erken açılmış) vardiyanın tarihi
+const girT = () => vardiyaGuncel() ? secili : bugun;
+const gonderKey = () => "gonderildi:" + myId() + ":" + girT() + ":" + gv;
 const donduMu = () => !!me && vardiyaGuncel() && gorAyar.tabloDondur !== false && !!lsGet(gonderKey(), false);   // "Gönder" ile dondurulmuş mu (gerçek durum sunucuda: gonderimler tablosu; burası cihaz önbelleği)
 async function gonderYukle() {   // dondurma durumunu sunucudan al: her cihazda aynı olsun
   if (!me || !navigator.onLine || cevrimdisiOturum || !vardiyaGuncel()) return;
   try {
     const k = gonderKey();
-    const { data, error } = await sb.from("gonderimler").select("vno").eq("user_id", myId()).eq("tarih", bugun).eq("vno", gv).maybeSingle();
+    const { data, error } = await sb.from("gonderimler").select("vno").eq("user_id", myId()).eq("tarih", girT()).eq("vno", gv).maybeSingle();
     if (!error) lsSet(k, !!data);
   } catch (e) {}
 }
@@ -1136,7 +1150,7 @@ function vnoCiz() {
 function buildMine() {
   const body = $("mine"); body.textContent = ""; myInputs = []; myTot = []; myTr = [];
   for (let r = 0; r < N; r++) satirEkle(r);
-  if (me) lsSet(N_KEY + ":" + myId() + ":" + bugun + ":" + gv, N);
+  if (me) lsSet(N_KEY + ":" + myId() + ":" + girT() + ":" + gv, N);
 }
 
 // Tabloya tek satır (r numaralı) çizer ve en alta ekler
@@ -1191,11 +1205,11 @@ async function tabloDoluKontrol(zorla) {
   satirEkleniyor = true;
   const r = N; N++; satirEkle(r);
   if (!navigator.onLine) {
-    rows.push({ user_id: myId(), tarih: bugun, vno: gv, satir: r, name: "", n1: null, n2: null, n3: null, n4: null, n5: null, n6: null, kullanici: userName() });
+    rows.push({ user_id: myId(), tarih: girT(), vno: gv, satir: r, name: "", n1: null, n2: null, n3: null, n4: null, n5: null, n6: null, kullanici: userName() });
     cacheYaz(); satirEkleniyor = false; msg("İnternet yok. Yeni satır cihazda açıldı; girdiğinizde bağlantı gelince gönderilecek."); return;
   }
   try {
-    const { error } = await sb.from("sayilar").upsert([{ satir: r, tarih: bugun, vno: gv, kullanici: userName() }], { onConflict: "user_id,tarih,vno,satir", ignoreDuplicates: true });
+    const { error } = await sb.from("sayilar").upsert([{ satir: r, tarih: girT(), vno: gv, kullanici: userName() }], { onConflict: "user_id,tarih,vno,satir", ignoreDuplicates: true });
     if (error) {
       N--; myTr.pop().remove(); myInputs.pop(); myTot.pop();
       msg("Yeni satır eklenemedi: " + error.message +
@@ -1234,7 +1248,7 @@ async function satirSil() {
   satirEkleniyor = true;
   try {
     clearTimeout(otoTimer[r]); kirli[r] = false;
-    const { error } = await sb.from("sayilar").delete().eq("user_id", myId()).eq("tarih", bugun).eq("vno", gv).eq("satir", r);
+    const { error } = await sb.from("sayilar").delete().eq("user_id", myId()).eq("tarih", girT()).eq("vno", gv).eq("satir", r);
     if (error) { msg("Satır silinemedi: " + error.message + " — Supabase'de satir-sil.sql çalıştırılmalı (silme izni)."); }
     else {
       N--; myTr.pop().remove(); myInputs.pop(); myTot.pop();
@@ -1263,12 +1277,12 @@ async function tabloyuDondur() {
     bekleyenleriKaydet();
     await kayitZinciri;
     if (Object.keys(kirli).some(r => kirli[r])) { const h = "Bazı kayıtlar henüz yazılamadı, tablo dondurulmadı. Birkaç saniye sonra resmi tekrar kaydedin."; msg(h); alert(h); return false; }
-    const ins = await sb.from("gonderimler").insert({ user_id: myId(), tarih: bugun, vno: gv });
+    const ins = await sb.from("gonderimler").insert({ user_id: myId(), tarih: girT(), vno: gv });
     if (ins.error && ins.error.code !== "23505") {
       const h = "Tablo dondurulamadı: " + ins.error.message + (/gonderimler|relation|schema|does not exist|permission|policy/i.test(ins.error.message) ? "\n\nSupabase'de gonderim-dondur.sql dosyasını çalıştırdığınızdan emin olun." : "");
       msg(h); alert(h); return false;
     }
-    const dog = await sb.from("gonderimler").select("vno").eq("user_id", myId()).eq("tarih", bugun).eq("vno", gv).maybeSingle();
+    const dog = await sb.from("gonderimler").select("vno").eq("user_id", myId()).eq("tarih", girT()).eq("vno", gv).maybeSingle();
     if (dog.error || !dog.data) {
       const h = "Dondurma sunucuya kaydedilemedi" + (dog.error ? ": " + dog.error.message : " (kayıt okunamadı).") + "\n\nTablo dondurulmadı.";
       msg(h); alert(h); return false;
@@ -1418,7 +1432,7 @@ function queueYaz(q) { try { localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.string
 function cacheAnahtar() { return OFFLINE_CACHE_KEY + ":" + (myId() || "anon") + ":" + secili + ":" + gv; }
 function cacheYaz() { try { localStorage.setItem(cacheAnahtar(), JSON.stringify(rows)); } catch (_) {} }
 function offlineSatirKaydet(row) {
-  const item = { user_id: myId(), tarih: bugun, vno: gv, satir: row.satir, name: row.name || "", kullanici: userName() };
+  const item = { user_id: myId(), tarih: girT(), vno: gv, satir: row.satir, name: row.name || "", kullanici: userName() };
   COLS.forEach(k => { const v = String(row[k] ?? "").trim(); item[k] = v === "" ? null : num(v); });
   const q = queueOku(), key = x => [x.user_id,x.tarih,x.vno,x.satir].join("|");
   const i = q.findIndex(x => key(x) === key(item)); if (i >= 0) q[i] = item; else q.push(item);
@@ -1450,7 +1464,7 @@ async function kaydet(r) {
   const row = rows.find(x => x.user_id === myId() && x.satir === r); if (!row) return;
   if (!navigator.onLine) { offlineSatirKaydet(row); msg("İnternet yok. Kayıt bu cihazda saklandı; bağlantı gelince gönderilecek."); return; }
   msg("Kaydediliyor…");
-  const body = { user_id: myId(), tarih: bugun, vno: gv, satir: r, name: row.name || "", kullanici: userName() };
+  const body = { user_id: myId(), tarih: girT(), vno: gv, satir: r, name: row.name || "", kullanici: userName() };
   COLS.forEach(k => { const v = String(row[k] ?? "").trim(); body[k] = v === "" ? null : num(v); });
   try {
     const { error } = await sb.from("sayilar").upsert([body], { onConflict: "user_id,tarih,vno,satir" });
@@ -1467,18 +1481,19 @@ async function load() {
     rows = data || []; cacheYaz();
   } catch (error) {
     try { rows = JSON.parse(localStorage.getItem(cacheAnahtar()) || "[]"); } catch (_) { rows = []; }
-    if (!rows.some(x => x.user_id === myId() && x.satir === 0) && me && secili === bugun && gv === vNoNow()) rows.push({ user_id: myId(), tarih: bugun, vno: gv, satir: 0, name: "", n1: null, n2: null, n3: null, n4: null, n5: null, n6: null, kullanici: userName() });
-    if (me && secili === bugun && gv === vNoNow()) for (let r = 0; r < N; r++) if (!rows.some(x => x.user_id === myId() && x.satir === r)) rows.push({ user_id: myId(), tarih: bugun, vno: gv, satir: r, name: "", n1: null, n2: null, n3: null, n4: null, n5: null, n6: null, kullanici: userName() });
+    if (!rows.some(x => x.user_id === myId() && x.satir === 0) && me && vardiyaGuncel()) rows.push({ user_id: myId(), tarih: girT(), vno: gv, satir: 0, name: "", n1: null, n2: null, n3: null, n4: null, n5: null, n6: null, kullanici: userName() });
+    if (me && vardiyaGuncel()) for (let r = 0; r < N; r++) if (!rows.some(x => x.user_id === myId() && x.satir === r)) rows.push({ user_id: myId(), tarih: girT(), vno: gv, satir: r, name: "", n1: null, n2: null, n3: null, n4: null, n5: null, n6: null, kullanici: userName() });
     msg(navigator.onLine ? "Veriler yüklenemedi; cihazdaki son kayıtlar gösteriliyor." : "Çevrimdışı mod: cihazdaki kayıtlar gösteriliyor. İnternet gelince eşitlenecek.");
   }
   if (me && vardiyaGuncel()) { await gonderYukle(); fillMine(); dondurUygula(); } renderShared();
+  if (erkenOtoGecis()) return;
   try { if (typeof hedefCiz === "function") hedefCiz(); } catch (e) {}
   if (navigator.onLine) { offlineKuyrukGonder(); logYukle(); }
   haftaPlanla();
 }
 
 async function hazirla() {
-  $("tarih").value = secili;
+  $("tarih").max = secili > bugun ? secili : bugun; $("tarih").value = secili;
   $("gunAd").textContent = new Date(secili + "T12:00:00").toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   $("tGun").textContent = $("gunAd").textContent;
   vnoCiz();
@@ -1495,7 +1510,7 @@ async function hazirla() {
   else if (!$("admin").classList.contains("hide")) adminYukle();
   const duzenle = !!me && vardiyaGuncel();
   $("app").classList.toggle("hide", !duzenle);
-  const ah = $("app").querySelector("h2"); if (ah) ah.textContent = "Benim girişlerim (bugün · " + VNO_AD[gv] + ")";
+  const ah = $("app").querySelector("h2"); if (ah) ah.textContent = "Benim girişlerim (" + (secili === bugun ? "bugün" : "yeni vardiya") + " · " + VNO_AD[gv] + ")";
   if (me) kimYaz();
   await gorYukle();
   await hedefYukle();
@@ -1504,23 +1519,23 @@ async function hazirla() {
   if (duzenle) await gonderYukle();
   if (duzenle) {
     N = N0;
-    const nAnahtar = N_KEY + ":" + myId() + ":" + bugun + ":" + gv;
+    const nAnahtar = N_KEY + ":" + myId() + ":" + girT() + ":" + gv;
     let ag = !navigator.onLine || cevrimdisiOturum;
     if (!ag) {
-      const mx = await sb.from("sayilar").select("satir").eq("user_id", myId()).eq("tarih", bugun).eq("vno", gv).order("satir", { ascending: false }).limit(1);
+      const mx = await sb.from("sayilar").select("satir").eq("user_id", myId()).eq("tarih", girT()).eq("vno", gv).order("satir", { ascending: false }).limit(1);
       if (mx.error && agHatasi(mx.error.message)) ag = true;
       else {
         if (mx.error) { msg("Tablo okunamadı: " + mx.error.message + vnoHata(mx.error.message)); return; }
         const adlar = new Map();
         if (mx.data && mx.data.length) N = Math.min(NMAX, Math.max(N0, mx.data[0].satir + 1));
         else {   // Vardiya tablosu yeni açılıyor: önceki vardiyadaki makine adları taşınır, sayılar sıfırdan başlar
-          const pv = gv > 0 ? gv - 1 : 2, pt = gv > 0 ? bugun : tarihStr(new Date(new Date(bugun + "T12:00:00").getTime() - 86400000));
+          const pv = gv > 0 ? gv - 1 : 2, pt = gv > 0 ? girT() : tarihStr(new Date(new Date(girT() + "T12:00:00").getTime() - 86400000));
           const pr = await sb.from("sayilar").select("satir,name").eq("user_id", myId()).eq("tarih", pt).eq("vno", pv).order("satir");
           if (!pr.error && pr.data) pr.data.forEach(x => { if ((x.name || "").trim() && x.satir < NMAX) adlar.set(x.satir, x.name); });
           if (adlar.size) N = Math.min(NMAX, Math.max(N0, Math.max(...adlar.keys()) + 1));
         }
         buildMine();
-        const seed = Array.from({length: N}, (_, i) => { return { satir: i, tarih: bugun, vno: gv, kullanici: userName(), name: adlar.get(i) || "" }; });
+        const seed = Array.from({length: N}, (_, i) => { return { satir: i, tarih: girT(), vno: gv, kullanici: userName(), name: adlar.get(i) || "" }; });
         const ins = donduMu() ? {} : await sb.from("sayilar").upsert(seed, { onConflict: "user_id,tarih,vno,satir", ignoreDuplicates: true });
         if (ins.error) {
           if (agHatasi(ins.error.message)) ag = true;
@@ -2337,7 +2352,7 @@ async function benimSayilarimiSil() {
   msg("Sayılarınız siliniyor…");
   Object.keys(kirli).forEach(r => { kirli[r] = false; clearTimeout(otoTimer[r]); });
   const { error } = await sb.from("sayilar").update({ n1: null, n2: null, n3: null, n4: null, n5: null, n6: null })
-    .eq("user_id", myId()).eq("tarih", bugun).eq("vno", gv);
+    .eq("user_id", myId()).eq("tarih", girT()).eq("vno", gv);
   if (error) { msg("Sayılar silinemedi: " + error.message); return; }
   rows.forEach(r => { if (r.user_id === myId()) COLS.forEach(k => { r[k] = null; }); });
   myInputs.forEach(f => { f[1].value = ""; });
@@ -3139,6 +3154,14 @@ setInterval(async () => {
   if (profil && profil.banli) banliCikis();
 }, 30000);
 
+let erkenGecisAnahtar = "";
+function erkenOtoGecis() {   // pencere açıldığında, mevcut vardiyada henüz sayı girmemiş kullanıcıyı yeni vardiyanın tablosuna alır (bir kez)
+  if (!me || secili !== bugun || gv !== vNoNow()) return false;
+  const e = erkenSlot(); if (!e) return false;
+  const an = e.t + ":" + e.v; if (erkenGecisAnahtar === an) return false;
+  if (rows.some(x => x.user_id === myId() && COLS.some(k => x[k] != null && String(x[k]).trim() !== ""))) return false;   // mevcut vardiyada sayı girmiş: yerinde kalır
+  erkenGecisAnahtar = an; secili = e.t; gv = e.v; hazirla(); return true;
+}
 function gunVardiyaKontrol() {
   const yeni = todayStr(), yv = vNoNow();
   if (yeni !== bugun || yv !== sonV) {   // gün ya da vardiya değişti: yeni vardiyanın tablosu açılır
@@ -3148,7 +3171,7 @@ function gunVardiyaKontrol() {
     if (sb) hazirla();
   }
 }
-setInterval(gunVardiyaKontrol, 60000);
+setInterval(() => { gunVardiyaKontrol(); try { erkenOtoGecis(); } catch (e) {} }, 60000);
 
 // Sunucu saatini al: önce Supabase yanıtındaki Date başlığı, olmazsa herkese açık saat servisi.
 async function saatSenkron() {
