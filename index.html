@@ -48,6 +48,12 @@ tr.tot td{background:var(--tot)!important;color:#111;font-weight:600;text-align:
 #admin .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
 #admin input:not([type=checkbox]),#admin select{height:38px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);padding:0 10px;font:inherit}
 #admin hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+.adm-tabs{display:flex;gap:4px;padding:4px;margin:10px 0 14px;background:var(--bg);border:1px solid var(--line);border-radius:10px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.adm-tabs button{flex:1 0 auto;height:34px;padding:0 14px;background:transparent;color:var(--mut);border:0;border-radius:7px;font-weight:600;white-space:nowrap}
+.adm-tabs button.on{background:var(--card);color:var(--fg);box-shadow:var(--shadow)}
+.adm-tabs button:hover{filter:none;color:var(--fg)}
+.adm-pane.hide{display:none!important}
+
 table.at th{min-width:0;font-size:14px;padding:0 10px}
 table.at td{padding:4px 10px;font-size:14px;height:auto;text-align:left;background:var(--cell)}
 table.at tr.ban td{background:#ff7c8030}
@@ -648,6 +654,26 @@ td.rv-bar{min-width:90px;padding:0 10px}
 <div id="admin" class="hide">
   <div class="p-head"><strong>Yönetim paneli</strong><button id="adminKapat" type="button" class="red sm">✕ Kapat</button></div>
   <p class="mut">Kullanıcıları banlayabilir, silebilir, yönetici yapabilir veya yeni kullanıcı ekleyebilirsiniz.</p>
+  <div class="adm-tabs" id="admTabs" role="tablist">
+    <button type="button" role="tab" data-tab="kul" class="on">Kullanıcılar</button>
+    <button type="button" role="tab" data-tab="hedef">Hedefler</button>
+    <button type="button" role="tab" data-tab="gorunum">Görünüm</button>
+    <button type="button" role="tab" data-tab="ana">Ana sayfa</button>
+    <button type="button" role="tab" data-tab="veri">Denetim &amp; silme</button>
+  </div>
+  <div class="adm-pane" data-pane="kul">
+  <strong>Yeni kullanıcı ekle</strong>
+  <div class="row">
+    <input id="aAd" placeholder="Ad Soyad">
+    <input id="aSicil" placeholder="Sicil numarası">
+    <input id="aSifre" type="text" placeholder="Şifre" autocomplete="off">
+    <select id="aRol"><option value="user">Kullanıcı</option><option value="admin">Yönetici</option></select>
+    <button id="aEkle">Kullanıcı ekle</button>
+  </div>
+  <hr>
+  <div class="row"><strong>Kullanıcılar</strong><input id="aAra" placeholder="Ad veya sicil ara…"><button id="aYenile" class="alt">Yenile</button><span id="aSayi" class="mut"></span></div>
+  <div id="aListe" class="scroll"></div>
+  <hr>
   <strong>Kullanıcı kayıt ayarı</strong>
   <p class="mut">Yeni kullanıcıların kendi kendine kayıt olmasını buradan açıp kapatabilirsiniz. Kapatıldığında mevcut kullanıcıların girişi etkilenmez.</p>
   <div class="row">
@@ -655,6 +681,11 @@ td.rv-bar{min-width:90px;padding:0 10px}
     <button id="kayitAcKapat" type="button" class="alt">Kayıt ayarını yükle</button>
   </div>
   <hr>
+  <strong>Eski kayıtları düzelt</strong>
+  <p class="mut">Mevcut kullanıcıların yalnızca soyadlarının son kelimesini büyük harfe çevirir. Kullanıcı hesapları ve diğer bilgiler silinmez.</p>
+  <div class="row"><button id="eskiSoyadlariBuyut" type="button" class="alt">Eski kayıtların soyadlarını büyüt</button></div>
+  </div>
+  <div class="adm-pane hide" data-pane="hedef">
   <strong>Günlük hedef sayıları</strong>
   <p class="mut">Burada belirlediğiniz iki hedef, tüm kullanıcıların giriş özeti ve hedef hesaplamalarında ortak kullanılır.</p>
   <div class="row">
@@ -673,7 +704,8 @@ td.rv-bar{min-width:90px;padding:0 10px}
     <button id="son30Sifirla" type="button" class="alt sm">Varsayılan</button>
   </div>
   <p class="mut">Seçtiğiniz renk, tüm ilerleme çubuklarında her zaman kullanılır. "Varsayılan" seçilirse çubuklar durumuna göre renklenir (yeşil / turuncu / mavi). Vardiyanın son 30 dakikası ise her zaman çubuğun sağ ucunda mor kesik şeritle gösterilir. "Hedefleri kaydet" ile herkes için kaydedilir.</p>
-  <hr>
+  </div>
+  <div class="adm-pane hide" data-pane="gorunum">
   <strong>Tablo rengi</strong>
   <p class="mut">Kullanıcı tablolarının ve genel toplam tablosunun rengi. İsterseniz herkes için tek renk belirleyin, isterseniz kullanıcıların kendi tablo rengini (kendi cihazlarında) seçmesine izin verin.</p>
   <div class="row">
@@ -683,20 +715,8 @@ td.rv-bar{min-width:90px;padding:0 10px}
     <button id="tabloRenkKaydet" type="button">Tablo rengini kaydet</button>
   </div>
   <div id="tabloOrnekAdmin" class="tr-ornek-kap"></div>
-  <hr>
-  <strong>Eski kayıtları düzelt</strong>
-  <p class="mut">Mevcut kullanıcıların yalnızca soyadlarının son kelimesini büyük harfe çevirir. Kullanıcı hesapları ve diğer bilgiler silinmez.</p>
-  <div class="row"><button id="eskiSoyadlariBuyut" type="button" class="alt">Eski kayıtların soyadlarını büyüt</button></div>
-  <hr>
-  <strong>Yeni kullanıcı ekle</strong>
-  <div class="row">
-    <input id="aAd" placeholder="Ad Soyad">
-    <input id="aSicil" placeholder="Sicil numarası">
-    <input id="aSifre" type="text" placeholder="Şifre" autocomplete="off">
-    <select id="aRol"><option value="user">Kullanıcı</option><option value="admin">Yönetici</option></select>
-    <button id="aEkle">Kullanıcı ekle</button>
   </div>
-  <hr>
+  <div class="adm-pane hide" data-pane="ana">
   <strong>Ana sayfa görünürlüğü</strong>
   <p class="mut">Her pencere için iki ayrı seçim yapın: giriş yapmadan gelen ziyaretçiler ve giriş yapmış kullanıcılar ne görsün. Varsayılan: ziyaretçiye hiçbiri, kullanıcıya hepsi. Yöneticiler her zaman hepsini görür.</p>
   <div id="gList"></div>
@@ -725,18 +745,17 @@ td.rv-bar{min-width:90px;padding:0 10px}
   <ul id="siraListe" class="sira-liste"></ul>
   <div class="row"><button id="siraSifirla" type="button" class="alt">Varsayılan sıraya dön</button></div>
   <div class="row"><button id="gKaydet">Görünürlüğü ve açılış durumunu kaydet</button></div>
+  </div>
+  <div class="adm-pane hide" data-pane="veri">
+  <strong>Şüpheli vardiyalar</strong>
+  <p class="mut">Seçili tarihte (<b id="sGun"></b>) vardiya boyunca girilen toplamı limiti (<b id="sLimit"></b>) aşan kullanıcılar. Bitmiş vardiyalar "Şüpheli", sürenler "Sürüyor" olarak görünür.</p>
+  <div id="supheliListe" class="scroll"></div>
   <hr>
   <strong>Toplu silme (tüm kullanıcılar)</strong>
   <p class="mut">Aşağıdaki tarihte (<b id="tGun"></b>) tüm kullanıcıların girdiği makine adlarını ve sayıları siler. Kullanıcılar ve giriş kayıtları (log) silinmez. Geri alınamaz.</p>
   <div class="row"><button id="tumSayiSil" class="red">Tüm kullanıcıların yalnızca sayılarını sil (makine adları kalır)</button></div>
   <div class="row"><button id="tumSil" class="red">Tüm kullanıcıların makine adı ve sayılarını sil</button></div>
-  <hr>
-  <strong>Şüpheli vardiyalar</strong>
-  <p class="mut">Seçili tarihte (<b id="sGun"></b>) vardiya boyunca girilen toplamı limiti (<b id="sLimit"></b>) aşan kullanıcılar. Bitmiş vardiyalar "Şüpheli", sürenler "Sürüyor" olarak görünür.</p>
-  <div id="supheliListe" class="scroll"></div>
-  <hr>
-  <div class="row"><strong>Kullanıcılar</strong><input id="aAra" placeholder="Ad veya sicil ara…"><button id="aYenile" class="alt">Yenile</button><span id="aSayi" class="mut"></span></div>
-  <div id="aListe" class="scroll"></div>
+  </div>
 </div>
 
 <div id="auth" class="hide">
@@ -2171,6 +2190,24 @@ $("tabloRenkKaydet").onclick = async () => {
 $("tabloRenkKisisel").oninput = () => { try { localStorage.setItem(TR_KEY, $("tabloRenkKisisel").value); } catch (e) {} tabloRenkUygula(); };
 $("tabloRenkSifirlaKisisel").onclick = () => { try { localStorage.removeItem(TR_KEY); } catch (e) {} tabloRenkUygula(); };
 gorUygula();   // sayfa açılır açılmaz varsayılan (misafir) görünümü uygula
+
+// ---- Yönetim paneli sekmeleri ----
+(function () {
+  const bar = document.getElementById("admTabs"); if (!bar) return;
+  const KEY = "dugum-admin-sekme-v1";
+  const btns = [...bar.querySelectorAll("button")], panes = [...document.querySelectorAll("#admin .adm-pane")];
+  function sec(k) {
+    if (!panes.some(p => p.dataset.pane === k)) k = "kul";
+    btns.forEach(b => { const on = b.dataset.tab === k; b.classList.toggle("on", on); b.setAttribute("aria-selected", on ? "true" : "false"); });
+    panes.forEach(p => p.classList.toggle("hide", p.dataset.pane !== k));
+    try { localStorage.setItem(KEY, k); } catch (e) {}
+    try { if (typeof trOrnekGuncelle === "function") trOrnekGuncelle(); } catch (e) {}
+  }
+  btns.forEach(b => b.onclick = () => sec(b.dataset.tab));
+  let k0 = "kul"; try { k0 = localStorage.getItem(KEY) || "kul"; } catch (e) {}
+  sec(k0);
+})();
+
 
 // ================= TOPLU SİLME (TÜM KULLANICILAR) =================
 // Asıl yetki kontrolü veritabanındaki admin_sayilar_temizle fonksiyonunda (toplu-silme.sql)
