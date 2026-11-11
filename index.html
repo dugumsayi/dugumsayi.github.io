@@ -33,7 +33,7 @@ td input{width:100%;height:39px;border:0;background:transparent;color:var(--fg);
 td.m input{color:#fff;font-weight:600}
 td.m input::placeholder{color:#ffffffaa;font-weight:400}
 td input:focus{outline:2px solid #1a73e8;outline-offset:-2px}
-td.v,td.t{text-align:c;font-size:17px;padding:0 12px}
+td.v,td.t{text-align:center;font-size:17px;padding:0 12px}
 td.sn{background:var(--blue);color:#fff;font-weight:600;padding:0 12px;min-width:150px;text-align:center}
 tr.tot td{background:var(--tot)!important;color:#111;font-weight:600;text-align:center;padding:0 12px}
 #admin{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px;margin:12px 0}
@@ -516,11 +516,6 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 }
 @media (prefers-reduced-motion:reduce){#vnoSekme button.simdi:not(.neon-durgun),.neon-onizle button.simdi:not(.neon-durgun){animation:vYanSade var(--n-hiz) ease-in-out infinite}}
 :root{--n-bg:#39ff14;--n-fg:#041a06;--n-dim:#0b3d12;--n-dimfg:#7dff6a;--n-glow:#39ff14;--n-glow2:#0aff6a;--n-border:#b6ff9e;--n-int:1;--n-hiz:.9s;--n-scale:1.06}
-.hizli{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px;padding:10px;border:1px solid var(--line);border-radius:var(--r,10px);background:var(--card)}
-.hizli input[type=text]{flex:1 1 160px;min-width:0}
-.hizli #hzSayi{flex:1 1 140px;font-size:18px;font-weight:700}
-.hizli button{flex:0 0 auto}
-.hizli label.mut{flex:1 1 100%;display:flex;gap:6px;align-items:center;font-size:12px;margin:0}
 .sira-liste{list-style:none;margin:8px 0;padding:0;display:grid;gap:6px}
 .sira-liste li{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
 .sira-liste li span{flex:1}
@@ -683,13 +678,6 @@ table.sp td.why{min-width:220px}
 
 <div id="app" class="hide">
   <div class="sec-head" id="appHead"><h2>Benim girişlerim (bugün)</h2></div>
-  <div class="hizli" id="hizliGiris">
-    <input id="hzMakine" type="text" list="hzMakineListe" placeholder="Makine (seç veya yaz)" autocomplete="off">
-    <datalist id="hzMakineListe"></datalist>
-    <input id="hzSayi" type="text" inputmode="decimal" placeholder="Sayıyı yaz → " autocomplete="off">
-    <button id="hzEkle" type="button">Ekle</button>
-    <label class="mut"><input type="checkbox" id="hzGit"> Ekleyince kullanıcı tablosunu göster</label>
-  </div>
   <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="satirSilBtn" type="button" class="alt sm">− Satır sil</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
   <div class="scroll"><table><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody></table></div>
 </div>
@@ -1126,63 +1114,7 @@ async function satirSil() {
 $("satirSilBtn").onclick = satirSil;
 $("mine").addEventListener("focusout", e => { if (!$("mine").contains(e.relatedTarget)) setTimeout(siralaMine, 0); });
 
-// ---- Hızlı giriş: makineyi seç, sayıyı yaz, Enter ----
-var hzOdak = false;
-function hzListe() {
-  const dl = $("hzMakineListe"); if (!dl) return; dl.textContent = "";
-  const gor = new Set();
-  rows.filter(x => x.user_id === myId() && (x.name || "").trim()).forEach(x => { const a = x.name.trim(); if (!gor.has(a.toLowerCase())) { gor.add(a.toLowerCase()); const o = el("option"); o.value = a; dl.append(o); } });
-}
-function hzHazir() {
-  if (!me || !$("hzSayi") || $("app").classList.contains("hide")) return;
-  hzListe();
-  if (!hzOdak) {
-    hzOdak = true;
-    let son = ""; try { son = localStorage.getItem("hz_makine") || ""; } catch (e) {}
-    if (son && !$("hzMakine").value) $("hzMakine").value = son;
-    try { $("hzGit").checked = localStorage.getItem("hz_git") === "1"; } catch (e) {}
-    try { ($("hzMakine").value ? $("hzSayi") : $("hzMakine")).focus({ preventScroll: true }); } catch (e) {}
-  }
-}
-async function hzEkle() {
-  if (!me || !duzenlenir()) { msg("Bu günün tablosu düzenlenemez."); return; }
-  const ham = $("hzSayi").value.trim(); if (!ham) { $("hzSayi").focus(); return; }
-  const v = parseFloat(ham.replace(",", "."));
-  if (isNaN(v)) { msg("Geçerli bir sayı yazın."); $("hzSayi").value = ""; return; }
-  let ad = $("hzMakine").value.trim();
-  const mine = () => rows.filter(x => x.user_id === myId() && x.satir < N);
-  if (!ad) { const adli = mine().filter(x => (x.name || "").trim()); if (adli.length === 1) ad = adli[0].name.trim(); }
-  if (!ad) { msg("Önce makine adını seçin veya yazın."); $("hzMakine").focus(); return; }
-  let r = -1;
-  const ayni = mine().find(x => (x.name || "").trim().toLowerCase() === ad.toLowerCase());
-  if (ayni) r = ayni.satir;
-  else { for (let i = 0; i < N; i++) if (!satirDolu(i)) { r = i; break; } }
-  if (r < 0) { await tabloDoluKontrol(true); for (let i = 0; i < N; i++) if (!satirDolu(i)) { r = i; break; } }
-  const row = r >= 0 ? rows.find(x => x.user_id === myId() && x.satir === r) : null;
-  if (!row) { msg("Satır henüz hazır değil, birkaç saniye sonra tekrar deneyin."); return; }
-  row.name = ayni ? row.name : ad;
-  row.n1 = Math.round((num(row.n1) + v) * 1e6) / 1e6;
-  if (myInputs[r]) myInputs[r][0].value = row.name;
-  if (myTot[r]) myTot[r].textContent = fmt(rsum(row));
-  renderShared();
-  kirli[r] = true; clearTimeout(otoTimer[r]);
-  $("hzSayi").value = "";
-  try { localStorage.setItem("hz_makine", ad); } catch (e) {}
-  msg(ad + ": +" + fmt(v) + " eklendi.");
-  await save(r); tabloDoluKontrol();
-  if ($("hzGit").checked) $("gunPanel").scrollIntoView({ behavior: "smooth", block: "start" });
-  else $("hzSayi").focus({ preventScroll: true });
-}
-if ($("hzEkle")) {
-  $("hzEkle").onmousedown = e => e.preventDefault();
-  $("hzEkle").onclick = hzEkle;
-  $("hzSayi").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); hzEkle(); } };
-  $("hzMakine").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); $("hzSayi").focus(); } };
-  $("hzMakine").onfocus = hzListe;
-  $("hzGit").onchange = () => { try { localStorage.setItem("hz_git", $("hzGit").checked ? "1" : "0"); } catch (e) {} };
-}
 function fillMine() {
-  hzHazir();
   for (let r = 0; r < N; r++) {
     const row = rows.find(x => x.user_id === myId() && x.satir === r); if (!row) continue;
     const f = myInputs[r];
