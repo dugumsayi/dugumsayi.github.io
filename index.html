@@ -567,6 +567,7 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 .hd-ozet{margin:8px 0 0}
 .tr-ornek-kap{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0}
 .tr-ornek th,.tr-ornek td{height:30px;min-width:70px!important;font-size:14px!important;padding:0 10px!important}
+.tr-ornek th.tr-ad{text-transform:none;letter-spacing:0;white-space:nowrap}
 .tr-ornek tr.tot td{border-top-color:var(--tr-c,var(--blue))!important}
 .hd-son30-yazi{font-size:13px;font-weight:700;color:#8b5cf6}
 .hd-dol.ok{background:var(--ok)}.hd-dol.bad{background:var(--warn)}.hd-dol.bek{background:var(--blue)}
@@ -1906,6 +1907,7 @@ function tabloRenkEtkin() { const k = trKisisel(); if (gorAyar.tabloIzin && k) r
 function trOrnekKur(kap) {
   if (!kap || kap.firstChild) return;
   const tbl = el("table", "tr-ornek"), h = el("thead"), hr = el("tr"), b = el("tbody");
+  const ar = el("tr"), ath = el("th", "tr-ad", "Ad Soyad"); ath.colSpan = 2; ar.append(ath); h.append(ar);
   ["MAKİNE", "SAYI"].forEach(x => hr.append(el("th", "", x))); h.append(hr);
   [["1", "430"], ["2", "120"]].forEach(([a, n]) => { const tr = el("tr"); tr.append(el("td", "sn", a), el("td", "t", n)); b.append(tr); });
   const ft = el("tr", "tot"); ft.append(el("td", "", "TOPLAM"), el("td", "", "550")); b.append(ft);
@@ -1922,6 +1924,8 @@ function trOrnekBoya(kap, c) {
 function trOrnekGuncelle() {
   const kk = document.getElementById("tabloOrnekKisisel"), ak = document.getElementById("tabloOrnekAdmin"), ai = document.getElementById("tabloRenkAdmin");
   trOrnekKur(kk); trOrnekKur(ak);
+  let ad = ""; try { ad = (typeof userName === "function" ? userName() : "") || ""; } catch (e) {}
+  document.querySelectorAll(".tr-ornek th.tr-ad").forEach(x => { x.textContent = ad || "Ad Soyad"; });
   trOrnekBoya(kk, tabloRenkEtkin());
   if (ai) { const d = ai.dataset; trOrnekBoya(ak, d.varsayilan === "1" ? "" : (d.dokunuldu === "1" ? ai.value : (trGecerli(gorAyar.tabloRenk) ? gorAyar.tabloRenk : ""))); }
 }
