@@ -612,9 +612,64 @@ td.rv-bar{min-width:90px;padding:0 10px}
   #yazdirAlan tr.top td{background:#eef1f7;font-weight:700}
   #yazdirAlan tr{break-inside:avoid}
 }
+
+/* ---- Yönetici duyurusu bandı ---- */
+.duyuru-bant{position:sticky;top:0;z-index:50;display:flex;gap:12px;align-items:flex-start;margin:0 0 12px;padding:12px 14px;border-radius:var(--r);border:1px solid;box-shadow:var(--shadow)}
+.duyuru-bant.hide{display:none}
+.duyuru-bant.db-bilgi{background:color-mix(in srgb,#3b82f6 14%,var(--card));border-color:#3b82f6}
+.duyuru-bant.db-uyari{background:color-mix(in srgb,#f59e0b 18%,var(--card));border-color:#f59e0b}
+.duyuru-bant.db-onemli{background:color-mix(in srgb,#ef4444 16%,var(--card));border-color:#ef4444}
+.db-ikon{font-size:22px;line-height:1.2;flex:none}
+.db-ic{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.db-metin{white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px}
+.db-zaman{color:var(--mut);font-size:12px}
+.duyuru-bant button{flex:none;align-self:center}
+@media (max-width:640px){.duyuru-bant{flex-wrap:wrap}.duyuru-bant button{width:100%}}
+#dyMetin{width:100%;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);padding:10px;font:inherit;resize:vertical}
+.dy-mevcut{display:flex;flex-direction:column;gap:4px;padding:10px 12px;margin:0 0 10px;border:1px dashed var(--line);border-radius:8px}
+.dy-metin{white-space:pre-wrap;overflow-wrap:anywhere}
+/* ---- Kişisel rekor ve özet ---- */
+#kisiselHead{margin:0}
+#kisiselHead h3{margin:0;font-size:15px}
+.hedef-kutu.pen.kapali{gap:0}
+#kisiselIc{display:flex;flex-direction:column;gap:10px}
+.ks-rekor{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.ks-rk-bas{font-weight:700;font-size:15px}
+.ks-rekor .mut{margin:0;font-size:13px}
+.ks-rk-bar{margin-top:4px}
+.hd-dol.rk{background:#f59e0b}
+.ks-rk-durum{font-size:13px;color:var(--mut)}
+.ks-rk-durum.ok{color:#16a34a;font-weight:600}
+.ks-alt{font-size:13px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}
+.ks-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.ks-kart{padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);display:flex;flex-direction:column;gap:2px;min-width:0}
+.ks-kart .k{font-size:12px;color:var(--mut)}
+.ks-kart .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.ks-kart .s{font-size:12px;color:var(--mut)}
+.ks-saatler{display:flex;flex-direction:column;gap:4px}
+.ks-saat{display:grid;grid-template-columns:96px 1fr 64px;gap:8px;align-items:center;font-size:13px}
+.ks-saat-ad{font-variant-numeric:tabular-nums;color:var(--mut)}
+.ks-saat-v{text-align:right;font-variant-numeric:tabular-nums}
+.ks-saat-cub{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.ks-saat-cub i{display:block;height:100%;background:var(--blue);border-radius:5px}
+.ks-saat.en .ks-saat-cub i{background:#16a34a}
+.ks-saat.en .ks-saat-ad,.ks-saat.en .ks-saat-v{color:var(--fg);font-weight:700}
+/* ---- Rekor kutlaması ---- */
+.rk-ortu{position:fixed;inset:0;z-index:1000;background:rgba(10,16,28,.55);display:flex;align-items:center;justify-content:center;overflow:hidden;padding:16px}
+.rk-kart{position:relative;z-index:2;background:var(--card);color:var(--fg);border-radius:16px;padding:24px 28px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center;max-width:340px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.35);animation:rkZip .5s cubic-bezier(.2,1.4,.4,1)}
+.rk-kupa{font-size:52px;line-height:1}
+.rk-bas{font-size:18px}
+.rk-sayi{font-size:44px;font-weight:800;color:#f59e0b;font-variant-numeric:tabular-nums;line-height:1.1}
+.rk-kart .mut{margin:0}
+.rk-kart button{margin-top:6px;min-width:120px}
+.rk-konfeti{position:absolute;top:-12px;width:9px;height:14px;border-radius:2px;z-index:1;animation:rkDus linear forwards}
+@keyframes rkDus{to{top:105%;transform:rotate(720deg) translateX(40px)}}
+@keyframes rkZip{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.rk-konfeti{display:none}.rk-kart{animation:none}}
 </style>
 </head>
 <body>
+<div id="duyuruBant" class="duyuru-bant hide" role="status" aria-live="polite"><span id="dbIkon" class="db-ikon"></span><div class="db-ic"><strong id="dbBaslik">Yönetici duyurusu</strong><div id="dbMetin" class="db-metin"></div><small id="dbZaman" class="db-zaman"></small></div><button id="dbOkudum" type="button">Okudum</button></div>
 <header class="top">
   <div class="brand"><div><p id="st">Yükleniyor…</p></div></div>
   <div class="online-pill" aria-live="polite" title="Şu anda siteyi açık tutan ziyaretçiler">
@@ -664,6 +719,7 @@ td.rv-bar{min-width:90px;padding:0 10px}
     <button type="button" role="tab" data-tab="gorunum">Görünüm</button>
     <button type="button" role="tab" data-tab="vardiya">Vardiya tabloları</button>
     <button type="button" role="tab" data-tab="ana">Ana sayfa</button>
+    <button type="button" role="tab" data-tab="duyuru">Duyuru</button>
     <button type="button" role="tab" data-tab="veri">Denetim &amp; silme</button>
   </div>
   <div class="adm-pane" data-pane="kul">
@@ -754,6 +810,18 @@ td.rv-bar{min-width:90px;padding:0 10px}
     <span id="vSureDurum" class="mut"></span>
   </div>
   </div>
+  <div class="adm-pane hide" data-pane="duyuru">
+  <strong>Yönetici duyurusu</strong>
+  <p class="mut">Yazdığınız mesaj sitedeki herkesin ekranının en üstünde bant olarak görünür. Kişi "Okudum" deyince o cihazda kapanır; yeni bir duyuru yayınlarsanız herkese yeniden çıkar.</p>
+  <div id="dyMevcut" class="dy-mevcut"></div>
+  <textarea id="dyMetin" maxlength="1000" rows="4" placeholder="Duyuru metni… (ör. Yarın 08:00 vardiyasında 3 numaralı makine bakımda olacak.)"></textarea>
+  <div class="row">
+    <span id="dySay" class="mut">0 / 1000</span>
+    <label>Önem <select id="dySeviye"><option value="bilgi">Bilgi (mavi)</option><option value="uyari">Uyarı (sarı)</option><option value="onemli">Önemli (kırmızı)</option></select></label>
+    <label>Bitiş (isteğe bağlı) <input id="dyBitis" type="datetime-local"></label>
+  </div>
+  <div class="row"><button id="dyYayinla" type="button">Duyuruyu yayınla</button><button id="dyKaldir" type="button" class="red">Duyuruyu kaldır</button></div>
+  </div>
   <div class="adm-pane hide" data-pane="ana">
   <strong>Ana sayfa görünürlüğü</strong>
   <p class="mut">Her pencere için iki ayrı seçim yapın: giriş yapmadan gelen ziyaretçiler ve giriş yapmış kullanıcılar ne görsün. Varsayılan: ziyaretçiye hiçbiri, kullanıcıya hepsi. Yöneticiler her zaman hepsini görür.</p>
@@ -824,6 +892,7 @@ td.rv-bar{min-width:90px;padding:0 10px}
 <div id="app" class="hide">
   <div class="sec-head" id="appHead"><h2>Benim girişlerim (bugün)</h2></div>
   <div id="hedefKutu" class="hedef-kutu hide"><div class="sec-head" id="hedefHead"><h3>Hedef takibi</h3></div></div>
+  <div id="kisiselKutu" class="hedef-kutu kisisel-kutu hide"><div class="sec-head" id="kisiselHead"><h3>Kişisel rekor ve özetim</h3></div><div id="kisiselIc"></div></div>
   <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="satirSilBtn" type="button" class="alt sm">− Satır sil</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
   <p id="gonderNot" class="mut hide">✓ Tablonuzu resim olarak kaydettiniz; bu vardiyanın tablosu donduruldu. Artık hiçbir değişiklik yapılamaz.</p>
   <div class="scroll"><table id="mineTbl"><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody><tfoot><tr class="tot"><td>TOPLAM</td><td id="mineToplam">0</td><td></td></tr></tfoot></table></div>
@@ -2045,6 +2114,7 @@ const GOR = [
   ["genel", "Genel toplam tablosu", ["genCard", "genel"]],
   ["tablolar", "Kullanıcıların tabloları", ["users"]],
   ["hedef", "Hedef takibi penceresi (Benim girişlerim içinde)", ["hedefKutu"]],
+  ["kisisel", "Kişisel rekor ve özet kartı (Benim girişlerim içinde)", ["kisiselKutu"]],
   ["ozetyan", "Tabloların yanındaki giriş özeti (ilk/son giriş, ortalama, hedefler)", []],
   ["hafta", "Haftalık ortalama", ["haftaPanel"]],
   ["ay", "Aylık ve yıllık ortalama", ["ayPanel"]],
@@ -2120,6 +2190,7 @@ const PEN = [
   ["vardiya", "vardiyaBox", "vardiyaHead", "Vardiya listesi"],
   ["benim", "app", "appHead", "Benim girişlerim"],
   ["hedef", "hedefKutu", "hedefHead", "Hedef takibi"],
+  ["kisisel", "kisiselKutu", "kisiselHead", "Kişisel rekor ve özetim"],
   ["gun", "gunPanel", null, "Kullanıcıların tabloları"],
   ["ort", "ortPanel", null, "Ortalama"],
   ["log", "logBox", null, "Giriş kayıtları ve süre farkı"]
@@ -2279,8 +2350,8 @@ function gorCanliKur() {
   try {
     // Yönetici kaydedince yayın (broadcast) gönderir; tablo realtime'a açıksa veritabanı değişikliği de tetikler.
     gorKanal = sb.channel("gorunurluk-canli", { config: { broadcast: { self: false } } })
-      .on("broadcast", { event: "guncelle" }, () => { gorYukle(); hedefYukle(); })
-      .on("postgres_changes", { event: "*", schema: "public", table: "site_ayar" }, () => { gorYukle(); hedefYukle(); })
+      .on("broadcast", { event: "guncelle" }, () => { gorYukle(); hedefYukle(); try { if (window.duyuruYukle) duyuruYukle(); } catch (e) {} })
+      .on("postgres_changes", { event: "*", schema: "public", table: "site_ayar" }, () => { gorYukle(); hedefYukle(); try { if (window.duyuruYukle) duyuruYukle(); } catch (e) {} })
       .subscribe();
   } catch (e) { gorKanal = null; }
 }
@@ -4058,6 +4129,244 @@ function xlsxBlob(sayfalar) {
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
     window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(bosFn); });
   }
+})();
+</script>
+<script>
+// ================= YÖNETİCİ DUYURUSU · KİŞİSEL REKOR · KİŞİSEL ÖZET =================
+(function () {
+  const IST = 3 * 3600000;   // Türkiye saati (UTC+3)
+  const saatTr = ms => new Date(ms).toLocaleString("tr-TR", { timeZone: "Europe/Istanbul", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  const gunTrUzun = t => new Date(t + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+  const ss = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } };
+  const sy = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const hazir = () => !!sb && typeof sb.from === "function";
+  const dbHata = m => /could not find|schema cache|does not exist|function/i.test(m || "") ? " — Supabase SQL Editor'de duyuru.sql dosyasını çalıştırın." : "";
+
+  // ---------- 1) YÖNETİCİ DUYURUSU ----------
+  let duyuru = null;
+  const SEV_AD = { bilgi: "Bilgi", uyari: "Uyarı", onemli: "Önemli" };
+  const SEV_IKON = { bilgi: "ℹ️", uyari: "⚠️", onemli: "📢" };
+  function duyuruGecerli(d) {
+    if (!d || !d.id || !d.metin) return false;
+    if (d.bitis) { const b = new Date(d.bitis).getTime(); if (Number.isFinite(b) && b < Date.now()) return false; }
+    return true;
+  }
+  function duyuruCiz() {
+    const bant = $("duyuruBant"); if (!bant) return;
+    const d = duyuru, goster = duyuruGecerli(d) && ss("duyuru_okundu", "") !== d.id;
+    bant.classList.toggle("hide", !goster);
+    if (goster) {
+      const sev = SEV_AD[d.seviye] ? d.seviye : "bilgi";
+      bant.className = "duyuru-bant db-" + sev;
+      $("dbIkon").textContent = SEV_IKON[sev];
+      $("dbBaslik").textContent = "Yönetici duyurusu · " + SEV_AD[sev];
+      $("dbMetin").textContent = d.metin;
+      const t = new Date(d.zaman).getTime();
+      $("dbZaman").textContent = (Number.isFinite(t) ? saatTr(t) : "") + (d.bitis ? " · " + saatTr(new Date(d.bitis).getTime()) + " tarihine kadar geçerli" : "");
+    }
+    // Yönetim paneli: mevcut duyuru önizlemesi
+    const on = $("dyMevcut");
+    if (on) {
+      on.textContent = "";
+      if (duyuruGecerli(d)) {
+        const t = new Date(d.zaman).getTime();
+        on.append(el("strong", "", "Yayındaki duyuru (" + (SEV_AD[d.seviye] || "Bilgi") + ")"), el("div", "dy-metin", d.metin),
+          el("span", "mut", (Number.isFinite(t) ? saatTr(t) + " tarihinde yayınlandı" : "") + (d.bitis ? " · bitiş: " + saatTr(new Date(d.bitis).getTime()) : " · süresiz")));
+      } else on.append(el("span", "mut", d && d.id ? "Duyurunun süresi dolmuş; kimseye gösterilmiyor." : "Şu anda yayında duyuru yok."));
+    }
+  }
+  window.duyuruYukle = async function () {
+    if (!hazir()) return;
+    try {
+      const { data, error } = await sb.from("site_ayar").select("deger").eq("anahtar", "duyuru").maybeSingle();
+      if (error) throw error;
+      duyuru = data && data.deger && typeof data.deger === "object" ? data.deger : null;
+      sy("duyuru_onbellek", JSON.stringify(duyuru));
+    } catch (e) { try { duyuru = JSON.parse(ss("duyuru_onbellek", "null")); } catch (_) { duyuru = null; } }
+    duyuruCiz();
+  };
+  try { duyuru = JSON.parse(ss("duyuru_onbellek", "null")); } catch (e) {}
+  duyuruCiz();
+  $("dbOkudum").onclick = () => { if (duyuru && duyuru.id) sy("duyuru_okundu", duyuru.id); duyuruCiz(); };
+  const dyMetin = $("dyMetin"), dySay = $("dySay");
+  dyMetin.oninput = () => { dySay.textContent = dyMetin.value.length + " / 1000"; };
+  async function duyuruGonder(metin) {
+    if (!isAdmin()) { msg("Duyuru için yönetici olmalısınız."); return; }
+    let bitis = null;
+    if (metin && $("dyBitis").value) {
+      const b = new Date($("dyBitis").value);
+      if (!Number.isFinite(b.getTime()) || b.getTime() <= Date.now()) { msg("Bitiş zamanı ileri bir tarih olmalı."); return; }
+      bitis = b.toISOString();
+    }
+    const { error } = await sb.rpc("admin_duyuru_kaydet", { metin: metin || null, seviye: $("dySeviye").value, bitis });
+    if (error) { msg("Duyuru kaydedilemedi: " + error.message + dbHata(error.message)); return; }
+    try { if (gorKanal) gorKanal.send({ type: "broadcast", event: "guncelle", payload: { duyuru: true, t: Date.now() } }); } catch (e) {}
+    await duyuruYukle();
+    if (metin) { dyMetin.value = ""; dySay.textContent = "0 / 1000"; $("dyBitis").value = ""; }
+    msg(metin ? "Duyuru yayınlandı; herkesin ekranının üstünde görünecek." : "Duyuru kaldırıldı.");
+  }
+  $("dyYayinla").onclick = () => {
+    const m = dyMetin.value.trim();
+    if (!m) { msg("Duyuru metni boş olamaz."); return; }
+    if (m.length > 1000) { msg("Duyuru en fazla 1000 karakter olabilir."); return; }
+    duyuruGonder(m);
+  };
+  $("dyKaldir").onclick = () => { if (confirm("Yayındaki duyuru herkesten kaldırılsın mı?")) duyuruGonder(""); };
+  // Veritabanı hazır olunca yükle; ardından canlı güncelleme ve 45 sn yedek yoklama
+  const bekle = setInterval(() => { if (hazir()) { clearInterval(bekle); duyuruYukle(); } }, 300);
+  setInterval(() => { duyuruYukle(); }, 45000);
+  setInterval(duyuruCiz, 60000);   // süresi dolan duyuru kendiliğinden kalksın
+
+  // ---------- 2) KİŞİSEL REKOR + 3) KİŞİSEL ÖZET ----------
+  let gecmis = null, gecmisUid = null, saatVeri = null, yukleniyor = false, sonYukleme = 0, sonImza = "";
+  const anahtar = (t, v) => t + "|" + v;
+  async function kisiselYukle(zorla) {
+    if (!hazir() || !me || yukleniyor) return;
+    if (!zorla && gecmisUid === myId() && Date.now() - sonYukleme < 10 * 60000) return;
+    yukleniyor = true;
+    try {
+      const vard = new Map();
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await sb.from("sayilar").select("tarih,vno,n1,n2,n3,n4,n5,n6")
+          .eq("user_id", myId()).order("tarih").order("vno").order("satir").range(from, from + 999);
+        if (error) throw error;
+        (data || []).forEach(r => { const k = anahtar(r.tarih, Number(r.vno) || 0); vard.set(k, (vard.get(k) || 0) + rsum(r)); });
+        if (!data || data.length < 1000) break;
+      }
+      gecmis = vard; gecmisUid = myId(); sonYukleme = Date.now();
+      sy("kisisel_gecmis:" + myId(), JSON.stringify([...vard]));
+    } catch (e) {
+      try { const c = JSON.parse(ss("kisisel_gecmis:" + myId(), "null")); if (c) gecmis = new Map(c); } catch (_) {}
+      gecmisUid = myId();   // başarısızsa her saniye yeniden denenmesin; dakikalık yoklama tekrar dener
+    }
+    // En verimli saat: bu ayın giriş kayıtlarından
+    try {
+      const bas = bugun.slice(0, 7) + "-01", list = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await sb.from("sayi_log").select("zaman,sutun,eski,yeni")
+          .eq("user_id", myId()).gte("tarih", bas).lte("tarih", bugun).order("zaman").range(from, from + 999);
+        if (error) throw error;
+        (data || []).forEach(l => { if (l.sutun === "makine" || l.yeni == null) return; const t = new Date(l.zaman).getTime(); if (Number.isFinite(t)) list.push({ t, f: Number(logFark(l)) || 0 }); });
+        if (!data || data.length < 1000) break;
+      }
+      saatVeri = saatHesapla(list);
+    } catch (e) { saatVeri = null; }
+    yukleniyor = false; sonImza = "";
+    kisiselCiz();
+  }
+  // Her vardiyada ilk giriş başlangıç bakiyesidir (sayılmaz). Sonraki her artış, bir önceki girişten bu girişe kadar
+  // geçen süreye eşit dağıtılır; böylece saatlik üretim, giriş anına yığılmaz.
+  function saatHesapla(list) {
+    const sayi = new Array(24).fill(0), dk = new Array(24).fill(0), vGrup = new Map();
+    list.forEach(l => { const v = vbBul(l.t); if (!vGrup.has(v)) vGrup.set(v, []); vGrup.get(v).push(l); });
+    vGrup.forEach(g => {
+      g.sort((a, b) => a.t - b.t);
+      for (let i = 1; i < g.length; i++) {
+        const a = g[i - 1].t, b = g[i].t, f = g[i].f; if (b <= a) continue;
+        if (b - a > 4 * 3600000) continue;   // 4 saatten uzun boşluk: güvenilir değil
+        for (let t = a; t < b;) {
+          const sinir = Math.min(b, t - ((t + IST) % 3600000) + 3600000), h = Math.floor(((t + IST) % 86400000) / 3600000), pay = (sinir - t) / (b - a);
+          dk[h] += (sinir - t) / 60000; if (f > 0) sayi[h] += f * pay; t = sinir;
+        }
+      }
+    });
+    const saatler = [];
+    for (let h = 0; h < 24; h++) if (dk[h] >= 60) saatler.push({ h, hiz: sayi[h] / (dk[h] / 60), dk: dk[h] });
+    saatler.sort((a, b) => b.hiz - a.hiz);
+    return saatler;
+  }
+  const hAd = h => String(h).padStart(2, "0") + ":00–" + String((h + 1) % 24).padStart(2, "0") + ":00";
+  function anlikNet() { try { return yuv(rows.filter(x => x.user_id === myId()).reduce((a, r) => a + rsum(r), 0)); } catch (e) { return 0; } }
+
+  function kutla(yeni, eski) {
+    if (document.getElementById("rekorKutlama")) return;
+    const o = el("div", "rk-ortu"); o.id = "rekorKutlama"; o.setAttribute("role", "dialog"); o.setAttribute("aria-label", "Yeni kişisel rekor");
+    const kart = el("div", "rk-kart");
+    kart.append(el("div", "rk-kupa", "🏆"), el("strong", "rk-bas", "Yeni kişisel rekor"), el("div", "rk-sayi", fmt(yeni)),
+      el("div", "mut", eski > 0 ? "Önceki rekorun " + fmt(eski) + " idi · +" + fmt(yuv(yeni - eski)) : "İlk rekorun kaydedildi"));
+    const b = el("button", "", "Harika"); b.type = "button"; b.onclick = () => o.remove(); kart.append(b);
+    const renk = ["#f59e0b", "#22c55e", "#3b82f6", "#ef4444", "#a855f7", "#eab308"];
+    for (let i = 0; i < 60; i++) {
+      const c = el("i", "rk-konfeti"); c.style.left = Math.random() * 100 + "%"; c.style.background = renk[i % renk.length];
+      c.style.animationDelay = (Math.random() * 0.8) + "s"; c.style.animationDuration = (2.2 + Math.random() * 1.6) + "s"; c.style.transform = "rotate(" + Math.random() * 360 + "deg)";
+      o.append(c);
+    }
+    o.append(kart); o.onclick = e => { if (e.target === o) o.remove(); };
+    document.body.append(o);
+    try { if (navigator.vibrate) navigator.vibrate([120, 60, 120]); } catch (e) {}
+    setTimeout(() => { try { o.remove(); } catch (e) {} }, 9000);
+  }
+
+  function kisiselCiz() {
+    const ic = $("kisiselIc"), kutu = $("kisiselKutu"); if (!ic || !kutu) return;
+    if (!me || typeof vardiyaGuncel !== "function" || !vardiyaGuncel()) { kutu.classList.add("hide"); return; }
+    kutu.classList.remove("hide");
+    if (gecmisUid !== myId()) { kisiselYukle(true); }
+    const simdiK = anahtar(secili, gv), net = anlikNet();
+    // Rekor: şu anki vardiya hariç geçmiş vardiyaların en iyisi
+    let rekor = 0, rekorK = "";
+    if (gecmis) gecmis.forEach((v, k) => { if (k !== simdiK && v > rekor) { rekor = v; rekorK = k; } });
+    // Kutlama: rekor kırılınca bu vardiyada bir kez
+    if (gecmis && rekor > 0 && net > rekor) {
+      const kk = "rekor_kutlandi:" + myId();
+      if (ss(kk, "") !== simdiK) { sy(kk, simdiK); kutla(net, rekor); }
+    }
+    // Bu ay: geçmiş vardiyalar + şu anki vardiyanın canlı toplamı
+    const ay = bugun.slice(0, 7), ayV = [];
+    if (gecmis) gecmis.forEach((v, k) => { if (k.slice(0, 7) === ay && k !== simdiK && v > 0) ayV.push(v); });
+    const ayTop = yuv(ayV.reduce((a, v) => a + v, 0) + net), vSay = ayV.length + (net > 0 ? 1 : 0), ayOrt = vSay ? yuv(ayTop / vSay) : 0;
+    const hedefler = (typeof HEDEFLER !== "undefined" ? HEDEFLER : []).filter(h => !(typeof hedefGizliMi === "function" && hedefGizliMi(h))).sort((a, b) => a - b);
+    const imza = [myId(), simdiK, net, rekor, rekorK, ayTop, vSay, hedefler.join(","), saatVeri ? saatVeri.length + ":" + (saatVeri[0] ? saatVeri[0].h : "") : "-", !!gecmis].join("|");
+    if (imza === sonImza) return; sonImza = imza;
+    ic.textContent = "";
+    if (!gecmis) { ic.append(el("p", "mut", yukleniyor ? "Kişisel verileriniz yükleniyor…" : "Kişisel veriler yüklenemedi; internet bağlantısını kontrol edin.")); return; }
+
+    // Rekor satırı
+    const rk = el("div", "ks-rekor");
+    if (rekor > 0) {
+      const [t, v] = rekorK.split("|");
+      rk.append(el("div", "ks-rk-bas", "🏆 Bugüne kadarki en iyi vardiyan: " + fmt(rekor)), el("div", "mut", gunTrUzun(t) + " · " + VNO_AD[Number(v)] + " vardiyası"));
+      const pct = Math.max(0, Math.min(100, net / rekor * 100)), bar = el("div", "hd-bar ks-rk-bar"), dol = el("div", "hd-dol " + (net > rekor ? "ok" : "rk"));
+      dol.style.width = pct + "%"; bar.append(dol); rk.append(bar);
+      rk.append(el("div", "ks-rk-durum" + (net > rekor ? " ok" : ""), net > rekor ? "🎉 Yeni rekor! Bu vardiya " + fmt(net) + " · önceki rekoru " + fmt(yuv(net - rekor)) + " geçtin" : "Bu vardiya " + fmt(net) + " · rekora " + fmt(yuv(rekor - net)) + " sayı kaldı"));
+    } else rk.append(el("div", "ks-rk-bas", "🏆 Henüz rekor yok"), el("div", "mut", "İlk tamamladığın vardiya rekorun olacak."));
+    ic.append(rk);
+
+    // Bu ayki özet kartları
+    const ayAd = new Date(bugun + "T12:00:00").toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
+    ic.append(el("div", "ks-alt", ayAd + " özetim"));
+    const grid = el("div", "ks-grid");
+    const kart = (k, v, s) => { const c = el("div", "ks-kart"); c.append(el("div", "k", k), el("div", "v", v), el("div", "s", s || "")); grid.append(c); };
+    kart("Bu ayki toplam", fmt(ayTop), vSay + " vardiya" + (net > 0 ? " (şu anki dahil)" : ""));
+    kart("Vardiya ortalaması", vSay ? fmt(Math.round(ayOrt)) : "—", "sayı girilen vardiyalar");
+    // Hedef tutturma: yalnızca tamamlanmış vardiyalar (+ hedefi şimdiden geçen şu anki vardiya)
+    hedefler.forEach(h => {
+      const tamam = ayV.length + (net >= h ? 1 : 0), tut = ayV.filter(v => v >= h).length + (net >= h ? 1 : 0);
+      kart(fmt(h) + " hedefi", tamam ? "%" + Math.round(tut / tamam * 100) : "—", tamam ? tut + " / " + tamam + " vardiyada tutturuldu" : "tamamlanan vardiya yok");
+    });
+    if (saatVeri && saatVeri.length) {
+      const e = saatVeri[0];
+      kart("En verimli saat aralığı", hAd(e.h), "saatte ort. " + fmt(Math.round(e.hiz)) + " sayı");
+    } else kart("En verimli saat aralığı", "—", "en az 1 saatlik ölçüm gerekli");
+    ic.append(grid);
+    if (saatVeri && saatVeri.length > 1) {
+      const enY = saatVeri[0].hiz || 1, lst = el("div", "ks-saatler");
+      [...saatVeri].sort((a, b) => a.h - b.h).forEach(s => {
+        const sat = el("div", "ks-saat" + (s.h === saatVeri[0].h ? " en" : "")), cub = el("div", "ks-saat-cub"), dol = el("i");
+        dol.style.width = Math.max(3, s.hiz / enY * 100) + "%"; cub.append(dol);
+        sat.append(el("span", "ks-saat-ad", hAd(s.h)), cub, el("span", "ks-saat-v", fmt(Math.round(s.hiz)) + "/sa"));
+        lst.append(sat);
+      });
+      ic.append(el("div", "ks-alt", "Saatlere göre ortalama hızım (bu ay)"), lst);
+    }
+    ic.append(el("p", "mut hd-not", "Rekor, şu anki vardiya hariç tüm vardiyalarınızın en yükseğidir. Hedef tutturma oranı tamamlanan vardiyalara göre hesaplanır. Saatlik hız, her vardiyanın ilk girişinden (başlangıç bakiyesi) sonraki artışların girişler arasına eşit dağıtılmasıyla bulunur."));
+  }
+  window.kisiselCiz = kisiselCiz;
+  window.kisiselYukle = kisiselYukle;
+  // Mevcut hedef çizimine bağlan: sayı girildikçe ve her saniyelik yenilemede kart da güncellensin
+  const eskiHedefCiz = window.hedefCiz;
+  if (typeof eskiHedefCiz === "function") window.hedefCiz = function () { const r = eskiHedefCiz.apply(this, arguments); try { kisiselCiz(); } catch (e) { console.error(e); } return r; };
+  setInterval(() => { if (me) kisiselYukle(false); }, 60000);   // 10 dk'da bir arka planda tazelenir
 })();
 </script>
 </body>
