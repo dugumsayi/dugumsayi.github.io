@@ -2024,8 +2024,10 @@ const sure = sn => {
 const saatOf = z => new Date(z).toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit", second: "2-digit" });
 // Şüphe durumu: vardiya boyunca girilen toplam sayı bu sınırı aşarsa "Şüpheli", aksi halde "Normal"
 const SUPHE_LIMIT = 700;
-// Giriş başına hız: eklenen sayı / bir önceki girişten bu yana geçen dakika (genel süre). Bu değerin üstü "Şüpheli"
-const SUPHE_DK_HIZ = 3;
+// Vardiya (İstanbul saatine göre 8 saatlik) yardımcıları
+const vbBul = t => t - ((t + 3 * 3600000) % (8 * 3600000));
+const vnoBul = vb => Math.floor(((vb + 3 * 3600000) % 86400000) / (8 * 3600000));
+const vardiyaBittiMi = vb => simdiMs() >= vb + 8 * 3600000;
 const toplamYaz = v => v == null ? "—" : fmt(parseFloat(v));
 // Log: bu girişte toplama ne eklendi / çıkarıldı (+16, −10, silindi)
 const logFark = l => l.sutun === "makine" ? null : (parseFloat(l.yeni) || 0) - (parseFloat(l.eski) || 0);
@@ -2076,8 +2078,9 @@ function logGorunen() {
 function ozetGrupla(list, sm) {
   const grp = new Map();
   list.filter(l => l.sutun !== "makine").forEach(l => {
-    if (!grp.has(l.user_id)) grp.set(l.user_id, { uid: l.user_id, ad: logAd(l, sm) + (l.user_id === myId() ? " (siz)" : ""), t: [], net: 0 });
+    if (!grp.has(l.user_id)) grp.set(l.user_id, { uid: l.user_id, ad: logAd(l, sm) + (l.user_id === myId() ? " (siz)" : ""), t: [], net: 0, vb: new Map() });
     const g = grp.get(l.user_id);
+    { const zt = new Date(l.zaman).getTime(), vb = vbBul(zt); if (!isNaN(zt)) g.vb.set(vb, (g.vb.get(vb) || 0) + (logFark(l) || 0)); }
     g.net += logFark(l) || 0;                                     // girilen toplam (silinenler düşer)
     if (l.yeni != null) g.t.push(new Date(l.zaman).getTime());   // giriş zamanları
   });
@@ -2109,7 +2112,13 @@ function ozetChipListesi(g) {
 
   // Bu kart bütün kullanıcılar için aynı alanları gösterir.
   c.push(["Atılan toplam sayı", fmt(Math.round(g.net * 100) / 100), true]);
-  { const supheli = g.net > SUPHE_LIMIT; c.push(["Şüphe durumu", supheli ? "Şüpheli (limit " + fmt(SUPHE_LIMIT) + ")" : "Normal", false, supheli ? "oz-supheli" : "oz-normal"]); }
+  { // Şüphe durumu: vardiya bitince, o vardiyada girilen toplama göre
+    const bitenler = [...g.vb.entries()].filter(([vb]) => vardiyaBittiMi(vb)), suruyor = [...g.vb.keys()].some(vb => !vardiyaBittiMi(vb));
+    const sup = bitenler.filter(([, top]) => top > SUPHE_LIMIT);
+    if (sup.length) c.push(["Şüphe durumu", "Şüpheli · " + sup.map(([vb, top]) => VNO_AD[vnoBul(vb)] + ": " + fmt(Math.round(top))).join(", ") + " (limit " + fmt(SUPHE_LIMIT) + ")", false, "oz-supheli"]);
+    else if (suruyor && !bitenler.length) c.push(["Şüphe durumu", "Vardiya bitince belli olur", false]);
+    else c.push(["Şüphe durumu", "Normal", false, "oz-normal"]);
+  }
   c.push(["İlk giriş", saatOf(ilk)]);
   c.push(["Son giriş", saatOf(son)]);
   c.push(["İlk girişten sona", n > 1 ? sure(top) + " (" + fmt(Math.round(saat * 100) / 100) + " saat)" : "tek giriş", true]);
@@ -2243,6 +2252,8 @@ function logCizAsil() {
     if (u.son !== null && u.son !== k && u.gor.has(k)) tekrar.add(l.id);
     u.gor.add(k); u.son = k;
   });
+  const vTop = new Map();   // kullanıcı|vardiya -> vardiya boyunca girilen toplam
+  logs.filter(l => l.sutun !== "makine").forEach(l => { const zt = new Date(l.zaman).getTime(); if (isNaN(zt)) return; const k = l.user_id + "|" + vbBul(zt); vTop.set(k, (vTop.get(k) || 0) + (logFark(l) || 0)); });
   list.forEach(l => {
     const hs = th.get(l.id) || [], ad = l.sutun === "makine", d = logFark(l);
     const tr = el("tr", ad ? "lg-ad" : "");
@@ -2256,9 +2267,10 @@ function logCizAsil() {
     if (!ad && tekrar.has(l.id)) tdS.append(el("div", "lg-ayni", "↺ Aynı makineye daha önce girdin"));   // SÜRE sütununda: aynı kullanıcı bu makineye daha önce girmiş, arada başka makineye geçip geri dönmüş
     if (gn !== "—" && gn !== mk) tdS.append(el("div", "lg-alt", "genel: " + gn));
     const tdD = el("td", "lg-d");
-    if (!ad && d != null && d > 0 && l.yeni != null && l.fark_genel_sn != null) {
-      const dkm = Math.max(l.fark_genel_sn, 60) / 60, hiz = d / dkm, sup = hiz > SUPHE_DK_HIZ;
-      tdD.append(el("span", "lg-dr " + (sup ? "sup" : "nor"), sup ? "Şüpheli" : "Normal"), el("div", "lg-alt", (Math.round(hiz * 10) / 10).toString().replace(".", ",") + " sayı/dk"));
+    if (!ad && d != null && d > 0 && l.yeni != null) {
+      const vb = vbBul(new Date(l.zaman).getTime());
+      if (!vardiyaBittiMi(vb)) tdD.append(el("span", "lg-alt", "Vardiya sürüyor"));
+      else { const top = vTop.get(l.user_id + "|" + vb) || 0, sup = top > SUPHE_LIMIT; tdD.append(el("span", "lg-dr " + (sup ? "sup" : "nor"), sup ? "Şüpheli" : "Normal"), el("div", "lg-alt", "vardiya: " + fmt(Math.round(top * 100) / 100))); }
     } else tdD.append(el("span", "lg-alt", "—"));
     tr.append(el("td", "lg-t", saatOf(l.zaman)),
       el("td", "", (adBuyut(l.kullanici) || "?") + (isAdmin() && sm.get(l.user_id) ? " [" + sm.get(l.user_id) + "]" : "") + (l.user_id === myId() ? " (siz)" : "")),
