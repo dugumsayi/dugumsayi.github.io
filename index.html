@@ -3674,11 +3674,9 @@ function xlsxBlob(sayfalar) {
     const vbas = ilkMs ? Math.min(Math.max(ilkMs, vbit - VARDIYA_DK * 60000), vbit) : vbit - VARDIYA_DK * 60000;
     const hedefNetDk = Math.max(1, (hbit - vbas) / 60000 * (NET_DK / VARDIYA_DK));   // ilk girişten hedef sınırına kadar net çalışma dk
     tahmin = hiz * hedefNetDk;                                    // hedef sınırındaki tahmini sayı
-    // Dinlenme payı için hız: vardiya başından SON GİRİŞE kadar hesaplanır. "Şu ana kadar" ortalaması kullanılırsa
-    // dinlendikçe ortalama düşer ve kalan süre gerçek zamandan kat kat hızlı erirdi (15 dk → 2 dk'da 0).
-    const sonT = sonMs ? Math.min(Math.max(sonMs, vbas), simdi) : simdi;
-    const calDkSon = Math.max(0, (sonT - vbas) / 60000) * (NET_DK / VARDIYA_DK);
-    const hizC = calDkSon >= MIN_HIZ_DK && net > 0 ? Math.max(hiz, net / calDkSon) : hiz;
+    // Dinlenme payı yalnızca ilk toplu girişten SONRA üretilen gerçek artış hızına dayanır.
+    // İlk girilen toplam (ör. 132) başlangıç bakiyesidir; vardiya boyunca üretilmiş gibi hıza eklenmez.
+    const hizC = hiz;
     gorunen.forEach(hd => {
       const kalan = hd - net, pct = Math.max(0, Math.min(100, net / hd * 100));
       let durum, cls, dinlen = "";
@@ -3719,16 +3717,39 @@ function xlsxBlob(sayfalar) {
     if (k._sec) k._sec.textContent = "";
     const net = yuv(rows.filter(x => x.user_id === myId()).reduce((a, r) => a + rsum(r), 0));
     const simdi = simdiMs(), vb = vbBul(simdi), vbit = vb + 8 * 3600000;
-    let ilkGirisMs = 0;
-    try { logs.forEach(l => { if (l.user_id !== myId() || l.sutun === "makine" || l.yeni == null) return; const zt = new Date(l.zaman).getTime(); if (!isNaN(zt) && vbBul(zt) === vb && (!ilkGirisMs || zt < ilkGirisMs)) ilkGirisMs = zt; }); } catch (e) {}
-    const basMs = hesapBasi(ilkGirisMs, vb, simdi);                                // ilk giriş (yeterli süre geçtiyse), yoksa vardiya başı
-    const calDk = Math.max(0, (simdi - basMs) / 60000) * (NET_DK / VARDIYA_DK);   // ilk girişten itibaren, mola payı orantılı düşülmüş çalışma dk
-    const hiz = calDk >= MIN_HIZ_DK && net > 0 ? net / calDk : 0;                // sayı / çalışma dakikası
+    // Vardiya içindeki ilk kayıt başlangıç/baz değeridir. Üretim hızı için bu ilk toplu sayı sayılmaz;
+    // yalnızca ilk kayıttan sonraki pozitif sayı artışları ve bu artışların gerçek zaman aralığı kullanılır.
+    const vardiyaLoglari = [];
+    try {
+      logs.forEach(l => {
+        if (l.user_id !== myId() || l.sutun === "makine" || l.yeni == null) return;
+        const zt = new Date(l.zaman).getTime();
+        if (Number.isFinite(zt) && vbBul(zt) === vb) vardiyaLoglari.push({ t: zt, fark: Number(logFark(l)) || 0 });
+      });
+    } catch (e) {}
+    vardiyaLoglari.sort((a, b) => a.t - b.t);
+    const ilkGirisMs = vardiyaLoglari.length ? vardiyaLoglari[0].t : 0;
+    const basMs = ilkGirisMs || vb;
+    const calDk = Math.max(0, (simdi - basMs) / 60000) * (NET_DK / VARDIYA_DK);
+    let uretimArtisi = 0, sonUretimMs = 0;
+    if (ilkGirisMs) {
+      vardiyaLoglari.forEach(l => {
+        if (l.t > ilkGirisMs && l.fark > 0) {
+          uretimArtisi += l.fark;
+          sonUretimMs = Math.max(sonUretimMs, l.t);
+        }
+      });
+    }
+    const olcumNetDk = sonUretimMs > ilkGirisMs
+      ? (sonUretimMs - ilkGirisMs) / 60000 * (NET_DK / VARDIYA_DK)
+      : 0;
+    const hiz = olcumNetDk >= MIN_HIZ_DK && uretimArtisi > 0 ? uretimArtisi / olcumNetDk : 0;
     const hbitK = vbit - (VARDIYA_DK - HEDEF_BITIS_DK) * 60000;
-    const tahmin = hiz * Math.max(1, (hbitK - basMs) / 60000 * (NET_DK / VARDIYA_DK));   // hedef sınırındaki tahmin
+    const kalanNetDk = Math.max(0, (hbitK - simdi) / 60000 * (NET_DK / VARDIYA_DK));
+    const tahmin = net + hiz * kalanNetDk;   // mevcut toplam + hedeften önce kalan sürede beklenen gerçek üretim
     k._bas.textContent = "";
     k._bas.append(el("strong", "", VNO_AD[gv] + " vardiyası · hedef takibi"),
-      el("span", "mut", "Şu an " + fmt(net) + (hiz ? " · hız " + fmt(Math.round(hiz * 600) / 10) + " sayı/saat · " + hm(vb + HEDEF_BITIS_DK * 60000) + " tahmini ≈ " + fmt(Math.round(tahmin)) : " · hız hesabı için biraz veri gerekli")));
+      el("span", "mut", "Şu an " + fmt(net) + (hiz ? " · gerçek artış hızınız " + fmt(Math.round(hiz * 600) / 10) + " sayı/saat · " + hm(vb + HEDEF_BITIS_DK * 60000) + " tahmini ≈ " + fmt(Math.round(tahmin)) : " · ilk girişten sonra en az 5 dk arayla yeni sayı artışı gerekli; hız/dinlenme payı beklemede")));
     const kalanVrd = (vbit - simdi) / 60000, son30 = kalanVrd > 0 && kalanVrd <= 30;   // mola hesabına dokunmaz
     if (son30) k._bas.append(el("span", "hd-son30-yazi", "⏰ Vardiya bitimine " + Math.max(1, Math.ceil(kalanVrd)) + " dakika kaldı"));
     const liste = k._liste; liste.textContent = "";
@@ -3737,7 +3758,7 @@ function xlsxBlob(sayfalar) {
     let sonGirisMs = 0;
     try { logs.forEach(l => { if (l.user_id !== myId() || l.sutun === "makine" || l.yeni == null) return; const zt = new Date(l.zaman).getTime(); if (!isNaN(zt) && vbBul(zt) === vb && zt > sonGirisMs) sonGirisMs = zt; }); } catch (e) {}
     hedefSatirlari(liste, gorunen, net, calDk, hiz, tahmin, simdi, vbit, sonGirisMs || 0, basMs);
-    liste.append(el("div", "mut hd-not", "Dikey çizgi: hedefe vardiya bitiminden 30 dk önce (08:00 vardiyasında 15:30) ulaşılacak eşit tempoyla şu an olunması gereken yer. Mor kesik şerit: vardiyanın son 30 dakikası. Hız ve dinlenme payı, tabloya ilk yazdığınız andan itibaren hesaplanır (tüm vardiyalarda aynı); dinlenme payı, ilk girişinizden son girişinize kadarki ortalama hızın devam edeceği varsayımıyla hesaplanır ve gerçek zamanla birebir azalır; vardiyadaki 35 dk mola payı zaten hesapta."));
+    liste.append(el("div", "mut hd-not", "Dikey çizgi: hedefe vardiya bitiminden 30 dk önce (08:00 vardiyasında 15:30) ulaşılacak eşit tempoyla şu an olunması gereken yer. Mor kesik şerit: vardiyanın son 30 dakikası. İlk girilen toplam başlangıç değeri kabul edilir; üretim hızı ve dinlenme payı yalnızca ilk girişten sonraki gerçek sayı artışlarına göre hesaplanır. En az 5 dk ölçüm oluşmadan dinlenme payı gösterilmez. Vardiyadaki 35 dk mola payı zaten hesapta."));
   };
 
   // ---------- 2) Aralık analizi: toplam, ortalama, en iyi gün, grafik, vardiya karşılaştırması ----------
