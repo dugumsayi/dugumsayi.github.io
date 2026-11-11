@@ -165,6 +165,9 @@ input:focus,select:focus{outline:2px solid var(--blue);outline-offset:0}
 .oz-chip b{font-size:14px;color:var(--fg)}
 .oz-chip.vurgu{border-color:var(--blue)}
 .oz-chip.vurgu b{color:var(--blue)}
+.oz-chip.oz-normal b{color:#1a8f4c}
+.oz-chip.oz-supheli{border-color:#d93025}
+.oz-chip.oz-supheli b{color:#d93025}
 table.lg{width:100%;font-size:14px}
 table.lg th{position:sticky;top:0;font-size:12px;letter-spacing:.04em;padding:8px 10px;text-align:left}
 table.lg td{padding:7px 10px;vertical-align:middle;height:auto}
@@ -527,19 +530,6 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 .neon-onizle{margin:8px 0}
 .neon-onizle button{pointer-events:none}
 
-/* ===== Şüpheli giriş analizi ===== */
-#suphelBox{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:10px 14px;margin:12px 0}
-#suphelBox summary{cursor:pointer;font-size:16px}
-#suphelBox .bar label{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--mut)}
-#suphelBox .bar input[type=number]{width:90px;height:34px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg);padding:0 8px;font:inherit}
-#suphelBox .bar input[type=checkbox]{width:18px;height:18px}
-table.sp td,table.sp th{font-size:13px;padding:5px 9px;height:auto;text-align:left;min-width:0}
-table.sp td.n{text-align:right;white-space:nowrap}
-table.sp td.k{color:var(--bad);font-weight:700}
-table.sp td.u{color:var(--warn);font-weight:700}
-table.sp td.why{min-width:220px}
-.sp-rozet{display:inline-block;border-radius:999px;padding:1px 10px;font-size:12px;font-weight:700;color:#fff;background:#777;white-space:nowrap}
-.sp-rozet.y{background:var(--bad)}.sp-rozet.o{background:#c27a0e}.sp-rozet.d{background:#6b7a90}.sp-rozet.t{background:var(--ok)}
 
  .online-pill{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:7px 11px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--fg);font-size:13px;font-weight:650;max-width:min(520px,100%)}
 .online-head{display:flex;align-items:center;gap:8px;white-space:nowrap}
@@ -727,17 +717,6 @@ table.sp td.why{min-width:220px}
   <div class="bar"><select id="logKul" class="hide"></select><select id="logSira"><option value="">Saate göre</option><option value="kb">Makine adı: küçükten büyüğe</option></select><button id="logCsv" class="alt">CSV indir</button><button id="logSil" class="red hide">Görüntülenen kayıtları sil</button></div>
   <p id="logMsg" class="mut hide"></p>
   <div id="logOzet" class="mut"></div>
-<details id="suphelBox" class="hide" open>
-  <summary><strong>Şüpheli giriş analizi</strong> <span id="supheSayi" class="mut"></span></summary>
-  <p class="mut">Seçili günün giriş kayıtlarını her kullanıcı ve vardiya için ayrı ayrı inceler. Sonuç bir <b>uyarıdır</b>, kanıt değildir: yüksek puanlı kayıtları makine sayacı veya amir ile yerinde doğrulayın.</p>
-  <p class="mut"><b>Kurallar:</b> (1) tek girişin toplam içindeki payı ≥%40 (+1), ≥%60 (+2); (2) vardiyanın son 30 dakikasındaki giriş payı ≥%25 (+1), ≥%40 (+2) — yalnızca biten vardiyalarda; (3) ardışık girişler arasındaki en uzun boşluk ≥2 saat (+1), ≥3 saat (+2); (4) aşağıdaki azami hızı aşan giriş (+2). Toplamı 20'nin altındaki vardiyalar atlanır. Puan: 4+ yüksek, 2–3 orta, 1 düşük.</p>
-  <div class="bar">
-    <label>Azami hız (sayı/saat) <input id="supheHiz" type="number" min="10" step="5"></label>
-    <label><input id="supheYalniz" type="checkbox"> Yalnızca şüphelileri göster</label>
-  </div>
-  <div id="supheOzet" class="mut"></div>
-  <div id="supheTbl" class="scroll"></div>
-</details>
   <div id="logTbl" class="scroll"></div>
 </details>
 <span id="siraSon" hidden></span>
@@ -1435,7 +1414,7 @@ async function profilYukleAsil() {
   if (!error) { profil = data; if (data) lsSet(PROFIL_KEY + ":" + myId(), data); }
   else profil = (!navigator.onLine || cevrimdisiOturum || agHatasi(error.message)) ? lsGet(PROFIL_KEY + ":" + myId(), null) : null;   // tablo yoksa/hata olursa normal kullanıcı gibi devam
 }
-async function profilYukle() { await profilYukleAsil(); try { suphelCiz(); } catch (e) {} }
+async function profilYukle() { await profilYukleAsil(); }
 const isAdmin = () => !!profil && profil.rol === "admin" && !profil.banli;
 
 async function banliCikis() {
@@ -2036,6 +2015,8 @@ const sure = sn => {
   return dk + " dk" + (sc ? " " + sc + " sn" : "");
 };
 const saatOf = z => new Date(z).toLocaleTimeString("tr-TR", { timeZone: "Europe/Istanbul", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+// Şüphe durumu: vardiya boyunca girilen toplam sayı bu sınırı aşarsa "Şüpheli", aksi halde "Normal"
+const SUPHE_LIMIT = 700;
 const toplamYaz = v => v == null ? "—" : fmt(parseFloat(v));
 // Log: bu girişte toplama ne eklendi / çıkarıldı (+16, −10, silindi)
 const logFark = l => l.sutun === "makine" ? null : (parseFloat(l.yeni) || 0) - (parseFloat(l.eski) || 0);
@@ -2119,6 +2100,7 @@ function ozetChipListesi(g) {
 
   // Bu kart bütün kullanıcılar için aynı alanları gösterir.
   c.push(["Atılan toplam sayı", fmt(Math.round(g.net * 100) / 100), true]);
+  { const supheli = g.net > SUPHE_LIMIT; c.push(["Şüphe durumu", supheli ? "Şüpheli (limit " + fmt(SUPHE_LIMIT) + ")" : "Normal", false, supheli ? "oz-supheli" : "oz-normal"]); }
   c.push(["İlk giriş", saatOf(ilk)]);
   c.push(["Son giriş", saatOf(son)]);
   c.push(["İlk girişten sona", n > 1 ? sure(top) + " (" + fmt(Math.round(saat * 100) / 100) + " saat)" : "tek giriş", true]);
@@ -2163,7 +2145,7 @@ function ozetChipListesi(g) {
   if (n > 1) c.push(["Ort. aralık", sure(top / (n - 1))]);
   return c;
 }
-const ozChip = ([k, v, vurgu]) => { const e = el("span", "oz-chip" + (vurgu ? " vurgu" : "")); e.append(el("small", "", k), el("b", "", v)); return e; };
+const ozChip = ([k, v, vurgu, ek]) => { const e = el("span", "oz-chip" + (vurgu ? " vurgu" : "") + (ek ? " " + ek : "")); e.append(el("small", "", k), el("b", "", v)); return e; };
 // Kullanıcı tablolarının yanındaki özet kutuları (log özetiyle aynı veri)
 function ozetKartlar() {
   const kutular = document.querySelectorAll("#users .u-ozet");
@@ -2277,93 +2259,7 @@ function logCizAsil() {
   tbl.append(body); box2.append(tbl);
 }
 
-// ================= ŞÜPHELİ GİRİŞ ANALİZİ (yalnızca yönetici) =================
-// Veritabanında değişiklik gerekmez: mevcut sayi_log kayıtlarından tarayıcıda hesaplanır.
-const SUPHE_KEY = "dugum-suphe-v1", H8MS = 8 * 3600000, DKMS = 60000, SUPHE_MIN_TOPLAM = 20;
-const suphe = Object.assign({ azamiHiz: 120, yalnizSupheli: true }, lsGet(SUPHE_KEY, {}));
-
-function supheHesapla(list, sm) {
-  const grp = new Map();
-  list.forEach(l => {
-    const t = new Date(l.zaman).getTime(); if (isNaN(t)) return;
-    const vb = t - ((t + 3 * 3600000) % H8MS), key = l.user_id + "|" + vb;   // İstanbul saatine göre vardiya başı
-    let g = grp.get(key);
-    if (!g) { g = { uid: l.user_id, ad: logAd(l, sm), vb, e: [], duz: 0, adDeg: 0 }; grp.set(key, g); }
-    if (l.sutun === "makine") { g.adDeg++; return; }
-    const d = logFark(l);
-    if (d > 0) g.e.push({ t, d }); else if (d < 0) g.duz++;
-  });
-  const sonuc = []; let atlanan = 0;
-  grp.forEach(g => {
-    g.e.sort((a, b) => a.t - b.t);
-    const n = g.e.length, top = g.e.reduce((a, x) => a + x.d, 0);
-    if (!n || top < SUPHE_MIN_TOPLAM) { atlanan++; return; }
-    const enBuyuk = Math.max(...g.e.map(x => x.d)), pay = enBuyuk / top;
-    const vSon = g.vb + H8MS, bitti = simdiMs() >= vSon;
-    const son30 = g.e.filter(x => x.t >= vSon - 30 * 60000).reduce((a, x) => a + x.d, 0);
-    const payS = bitti ? son30 / top : null;
-    let bosluk = 0, maxHiz = 0, hizIhlal = 0;
-    for (let i = 1; i < n; i++) {
-      const gap = (g.e[i].t - g.e[i - 1].t) / DKMS, hiz = g.e[i].d / Math.max(gap, 1) * 60;
-      if (gap > bosluk) bosluk = gap;
-      if (hiz > maxHiz) maxHiz = hiz;
-      if (hiz > suphe.azamiHiz && g.e[i].d >= 10) hizIhlal++;
-    }
-    let puan = 0; const neden = [], isaret = {};
-    const yuz = x => Math.round(x * 100) + "%";
-    if (pay >= 0.6) { puan += 2; isaret.pay = "k"; neden.push(n === 1 ? "Tüm toplam tek girişte" : "Toplamın " + yuz(pay) + "'i tek girişte"); }
-    else if (pay >= 0.4) { puan += 1; isaret.pay = "u"; neden.push("Toplamın " + yuz(pay) + "'i tek girişte"); }
-    if (payS != null) {
-      if (payS >= 0.4) { puan += 2; isaret.payS = "k"; neden.push("Toplamın " + yuz(payS) + "'i vardiyanın son 30 dk'sında"); }
-      else if (payS >= 0.25) { puan += 1; isaret.payS = "u"; neden.push("Toplamın " + yuz(payS) + "'i vardiyanın son 30 dk'sında"); }
-    }
-    if (bosluk >= 180) { puan += 2; isaret.bosluk = "k"; neden.push("En uzun boşluk " + sure(bosluk * 60)); }
-    else if (bosluk >= 120) { puan += 1; isaret.bosluk = "u"; neden.push("En uzun boşluk " + sure(bosluk * 60)); }
-    if (hizIhlal > 0) { puan += 2; isaret.hiz = "k"; neden.push(hizIhlal + " giriş azami hızı aştı"); }
-    sonuc.push({ ...g, n, top, enBuyuk, pay, payS, bosluk, maxHiz, hizIhlal, puan, neden, isaret, bitti });
-  });
-  sonuc.sort((a, b) => b.puan - a.puan || b.top - a.top);
-  return { sonuc, atlanan };
-}
-
-function suphelCiz() {
-  const box = $("suphelBox"); if (!box) return;
-  const goster = isAdmin() && logOk;
-  box.classList.toggle("hide", !goster);
-  if (!goster) return;
-  const { sonuc, atlanan } = supheHesapla(logs, sicilHarita());
-  const sup = sonuc.filter(x => x.puan >= 1), liste = suphe.yalnizSupheli ? sup : sonuc;
-  $("supheSayi").textContent = "(" + sup.length + " şüpheli / " + sonuc.length + " vardiya)";
-  $("supheOzet").textContent = sonuc.length + " kullanıcı-vardiya incelendi, " + sup.length + " tanesi işaretlendi" +
-    (atlanan ? "; " + atlanan + " tanesi az veri nedeniyle atlandı (toplam < " + SUPHE_MIN_TOPLAM + ")" : "") + ". Devam eden vardiyalarda 'son 30 dk' kuralı uygulanmaz.";
-  const kutu = $("supheTbl"); kutu.textContent = "";
-  if (!liste.length) { kutu.append(el("p", "mut", sonuc.length ? "Bu tarihte işaretlenen giriş yok." : "Bu tarihte incelenecek giriş yok.")); return; }
-  const tbl = el("table", "at sp"), hr = el("tr"), body = el("tbody");
-  ["KİŞİ", "VARDİYA", "TOPLAM", "GİRİŞ", "EN BÜYÜK", "SON 30 DK", "EN UZUN BOŞLUK", "MAKS HIZ", "DÜZELTME", "PUAN", "NEDEN"].forEach(h => hr.append(el("th", "", h)));
-  const th = el("thead"); th.append(hr); tbl.append(th);
-  liste.forEach(x => {
-    const tr = el("tr"), seviye = x.puan >= 4 ? ["y", "Yüksek"] : x.puan >= 2 ? ["o", "Orta"] : x.puan >= 1 ? ["d", "Düşük"] : ["t", "Temiz"];
-    const vno = Math.floor(((x.vb + 3 * 3600000) % 86400000) / H8MS);
-    const hucre = (txt, sinif) => { const td = el("td", "n" + (sinif ? " " + sinif : ""), txt); tr.append(td); };
-    tr.append(el("td", "", x.ad + (x.uid === myId() ? " (siz)" : "")), el("td", "", VNO_AD[vno] + (x.bitti ? "" : " (sürüyor)")));
-    hucre(fmt(Math.round(x.top * 100) / 100)); hucre(String(x.n));
-    hucre(fmt(Math.round(x.enBuyuk * 100) / 100) + " (" + Math.round(x.pay * 100) + "%)", x.isaret.pay);
-    hucre(x.payS == null ? "—" : Math.round(x.payS * 100) + "%", x.isaret.payS);
-    hucre(x.n > 1 ? sure(x.bosluk * 60) : "—", x.isaret.bosluk);
-    hucre(x.n > 1 ? fmt(Math.round(x.maxHiz)) + "/sa" : "—", x.isaret.hiz);
-    hucre(String(x.duz + x.adDeg));
-    const tdP = el("td", ""); tdP.append(el("span", "sp-rozet " + seviye[0], seviye[1] + " · " + x.puan)); tr.append(tdP);
-    tr.append(el("td", "why", x.neden.join("; ") || "—"));
-    body.append(tr);
-  });
-  tbl.append(body); kutu.append(tbl);
-}
-$("supheHiz").value = suphe.azamiHiz; $("supheYalniz").checked = !!suphe.yalnizSupheli;
-$("supheHiz").onchange = () => { const v = parseFloat($("supheHiz").value); if (v > 0) { suphe.azamiHiz = v; lsSet(SUPHE_KEY, suphe); } else $("supheHiz").value = suphe.azamiHiz; suphelCiz(); };
-$("supheYalniz").onchange = () => { suphe.yalnizSupheli = $("supheYalniz").checked; lsSet(SUPHE_KEY, suphe); suphelCiz(); };
-
-// Mevcut logCiz'in sonrasında analizi de güncelle
-function logCiz() { logCizAsil(); try { suphelCiz(); } catch (e) { console.error(e); } }
+function logCiz() { logCizAsil(); }
 
 function logCsv() {
   const list = logGorunen(), sm = sicilHarita();
