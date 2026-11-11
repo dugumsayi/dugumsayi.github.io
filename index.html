@@ -3687,7 +3687,7 @@ function xlsxBlob(sayfalar) {
       else {
         // Tahmini bitiş ve dinlenme payı AYNI hızdan hesaplanır (dinlenirken ortalama düşmesin diye son girişe kadarki hız): dinlenme = hedef sınırı − tahmini bitiş
         const bit = simdi + kalan / hizC * (VARDIYA_DK / NET_DK) * 60000;
-        if (bit <= hbit) { durum = "Bu hızla yetişir · tahmini bitiş " + hm(bit) + " (" + fmt(yuv(kalan)) + " sayı kaldı)"; cls = "ok"; const pay = Math.floor((hbit - bit) / 60000); dinlen = pay >= 1 ? "☕ Dinlenebileceğin süre: ≈ " + sure(pay * 60) + " (sonra yine aynı hızla devam)" : "☕ Dinlenme payı yok · tam sınırda yetişiyor"; }
+        if (bit <= hbit) { durum = "Bu hızla yetişir · tahmini bitiş " + hm(bit) + " (" + fmt(yuv(kalan)) + " sayı kaldı)"; cls = "ok"; const pay = Math.max(0, Math.floor((hbit - bit) / 1000)); dinlen = pay >= 1 ? "☕ Dinlenebileceğin süre: ≈ " + sure(pay) + " (sonra yine aynı hızla devam)" : "☕ Dinlenme payı yok · tam sınırda yetişiyor"; }
         else {
           const kalanDk = Math.max(0, (hbit - simdi) / 60000 * (NET_DK / VARDIYA_DK));
           durum = "Bu hızla yetişmez · " + hm(hbit) + " itibarıyla ≈ " + fmt(Math.round(tahmin)) + " (" + fmt(Math.max(0, Math.round(hd - tahmin))) + " eksik)" +
