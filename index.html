@@ -1724,6 +1724,9 @@ $("aAra").oninput = () => adminCiz();
 // ---- Vardiya sistemi (A, B, C, D) ----
 // Veritabanı: profiles.vardiya + vardiya_listesi() + admin_vardiya() (vardiya.sql)
 const VARDIYALAR = ["A", "B", "C", "D"];
+// Hesap başlangıcı: tabloya ilk yazılan an. İlk girişten henüz MIN_HIZ_DK dk çalışma süresi geçmediyse (ör. tek girişle 132 yazıldıysa)
+// hız ölçülemez; canlı veri boş kalmasın diye o ana kadar vardiya başı esas alınır, süre dolunca ilk girişe geçilir.
+const hesapBasi = (ilk, vb, simdi) => (ilk && ilk > vb && (simdi - ilk) / 60000 * (480 - 35) / 480 >= MIN_HIZ_DK) ? ilk : vb;
 const MIN_HIZ_DK = 5;   // hız/dinlenme hesabı için ilk girişten itibaren en az bu kadar çalışma dakikası ve pozitif toplam gerekir (çok kısa sürede saçma değerler çıkmasın)
 const HEDEF_BITIS_DK = 450;   // hedefe vardiya başından 450 dk (7,5 sa) sonra ulaşılmış olmalı: 08:00 vardiyasında 15:30
 const MOLA_DK = 35, VARDIYA_DK = 480, NET_DK = VARDIYA_DK - MOLA_DK;   // 8 saatlik vardiyada 35 dk mola: net çalışma 445 dk (7 sa 25 dk)
@@ -2528,7 +2531,7 @@ function ozetChipListesi(g) {
   const canli = secili === bugun && simdi < vBas + H8;
   const vBitti = !canli;   // vardiya bittiyse (ya da geçmiş gün) tahmini bitiş saati hesaplanmaz
   const ref = canli ? simdi : son;
-  const vSaat = Math.max(0, (ref - ilk) / 3600000);   // ilk girişten itibaren
+  const vSaat = Math.max(0, (ref - hesapBasi(ilk, vBas, ref)) / 3600000);   // ilk girişten itibaren (kısa süredeyse vardiya başından)
   // 35 dakikalık molayı vardiyanın başında topluca düşmek erken girişlerde
   // süreyi negatif yapıp canlı tahmini 35 dakika boyunca kilitliyordu.
   // Mola payını 8 saatlik vardiyaya orantılı dağıt: 8 saatin sonunda
@@ -2603,13 +2606,14 @@ function ozetHedefCubuklari(g) {
   const H8 = 8 * 3600000, ilk = g.t[0], son = g.t[g.t.length - 1];
   const vb = ilk - ((ilk + 3 * 3600000) % H8), simdi = Math.max(simdiMs(), son), vbit = vb + H8;
   if (secili !== bugun || simdi >= vbit) return null;   // geçmiş gün ya da biten vardiyada çubuk gösterilmez
-  const net = yuv(g.net), calDk = Math.max(0, (simdi - ilk) / 60000) * (NET_DK / VARDIYA_DK);   // ilk girişten itibaren
+  const basO = hesapBasi(ilk, vb, simdi);
+  const net = yuv(g.net), calDk = Math.max(0, (simdi - basO) / 60000) * (NET_DK / VARDIYA_DK);   // ilk girişten itibaren
   const hiz = calDk >= MIN_HIZ_DK && net > 0 ? net / calDk : 0, tahmin = 0;
   const kutu = el("div", "hedef-kutu hd-ozet"), liste = el("div", "hd-liste");
   const kalanVrd = (vbit - simdi) / 60000;
   if (kalanVrd > 0 && kalanVrd <= 30) kutu.append(el("span", "hd-son30-yazi", "⏰ Vardiya bitimine " + Math.max(1, Math.ceil(kalanVrd)) + " dakika kaldı"));
   kutu.append(liste);
-  hedefSatirlari(liste, hedefler, net, calDk, hiz, tahmin, simdi, vbit, son, ilk);
+  hedefSatirlari(liste, hedefler, net, calDk, hiz, tahmin, simdi, vbit, son, basO);
   liste.lastChild && liste.lastChild.classList && liste.lastChild.classList.contains("hd-not") && liste.lastChild.remove();
   return kutu;
 }
@@ -3717,7 +3721,7 @@ function xlsxBlob(sayfalar) {
     const simdi = simdiMs(), vb = vbBul(simdi), vbit = vb + 8 * 3600000;
     let ilkGirisMs = 0;
     try { logs.forEach(l => { if (l.user_id !== myId() || l.sutun === "makine" || l.yeni == null) return; const zt = new Date(l.zaman).getTime(); if (!isNaN(zt) && vbBul(zt) === vb && (!ilkGirisMs || zt < ilkGirisMs)) ilkGirisMs = zt; }); } catch (e) {}
-    const basMs = ilkGirisMs ? Math.min(ilkGirisMs, simdi) : vb;                   // tabloya ilk yazılan an (yoksa vardiya başı)
+    const basMs = hesapBasi(ilkGirisMs, vb, simdi);                                // ilk giriş (yeterli süre geçtiyse), yoksa vardiya başı
     const calDk = Math.max(0, (simdi - basMs) / 60000) * (NET_DK / VARDIYA_DK);   // ilk girişten itibaren, mola payı orantılı düşülmüş çalışma dk
     const hiz = calDk >= MIN_HIZ_DK && net > 0 ? net / calDk : 0;                // sayı / çalışma dakikası
     const hbitK = vbit - (VARDIYA_DK - HEDEF_BITIS_DK) * 60000;
@@ -3732,7 +3736,7 @@ function xlsxBlob(sayfalar) {
     if (!gorunen.length) { liste.append(el("div", "mut hd-not", "Tüm hedefler gizli. Yukarıdaki düğmelerden açabilirsiniz.")); return; }
     let sonGirisMs = 0;
     try { logs.forEach(l => { if (l.user_id !== myId() || l.sutun === "makine" || l.yeni == null) return; const zt = new Date(l.zaman).getTime(); if (!isNaN(zt) && vbBul(zt) === vb && zt > sonGirisMs) sonGirisMs = zt; }); } catch (e) {}
-    hedefSatirlari(liste, gorunen, net, calDk, hiz, tahmin, simdi, vbit, sonGirisMs || 0, ilkGirisMs || 0);
+    hedefSatirlari(liste, gorunen, net, calDk, hiz, tahmin, simdi, vbit, sonGirisMs || 0, basMs);
     liste.append(el("div", "mut hd-not", "Dikey çizgi: hedefe vardiya bitiminden 30 dk önce (08:00 vardiyasında 15:30) ulaşılacak eşit tempoyla şu an olunması gereken yer. Mor kesik şerit: vardiyanın son 30 dakikası. Hız ve dinlenme payı, tabloya ilk yazdığınız andan itibaren hesaplanır (tüm vardiyalarda aynı); dinlenme payı, ilk girişinizden son girişinize kadarki ortalama hızın devam edeceği varsayımıyla hesaplanır ve gerçek zamanla birebir azalır; vardiyadaki 35 dk mola payı zaten hesapta."));
   };
 
