@@ -553,6 +553,9 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 
 /* ===== Yeni özellikler ===== */
 .hedef-kutu{display:flex;flex-direction:column;gap:14px;margin:0 0 14px;padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:10px}
+.hd-sec{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.hd-sec span{font-size:13px;color:var(--mut)}
+.hd-liste{display:flex;flex-direction:column;gap:14px}
 .hd-bas{display:flex;flex-direction:column;gap:2px}
 .hd-bas strong{font-size:15px}
 .hd-bas .mut{margin:0;font-size:13px}
@@ -3236,20 +3239,44 @@ function xlsxBlob(sayfalar) {
   const indirBlob = (blob, ad) => { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = ad; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); };
 
   // ---------- 1) Hedefe kalan sayı: ilerleme çubuğu ----------
+  const HG_KEY = "hedef_gizli";
+  const hgOku = () => { try { return JSON.parse(localStorage.getItem(HG_KEY) || "{}") || {}; } catch (e) { return {}; } };
+  const hgYaz = o => { try { localStorage.setItem(HG_KEY, JSON.stringify(o)); } catch (e) {} };
+  let hdSecImza = "";
   window.hedefCiz = function () {
     const k = $("hedefKutu"); if (!k) return;
     if (!me || !duzenlenir()) { k.classList.add("hide"); return; }
+    if (!k._kur) {   // sabit iskelet bir kez kurulur (her saniye yeniden çizilen kısım yalnızca liste ve özet)
+      k.textContent = "";
+      k._bas = el("div", "hd-bas"); k._sec = el("div", "hd-sec"); k._liste = el("div", "hd-liste");
+      k.append(k._bas, k._sec, k._liste); k._kur = true;
+    }
+    k.classList.remove("hide");
+    const hedefler = HEDEFLER.slice().sort((a, b) => a - b), gizli = hgOku();
+    // Hedef aç/kapa düğmeleri: yalnızca hedefler ya da seçim değişince yeniden kurulur (tıklama kaybolmasın)
+    const imza = hedefler.map(h => h + ":" + (gizli[h] ? 0 : 1)).join("|");
+    if (imza !== hdSecImza) {
+      hdSecImza = imza; k._sec.textContent = "";
+      k._sec.append(el("span", "", "Göster:"));
+      hedefler.forEach(hd => {
+        const acik = !gizli[hd], b = el("button", "alt sm hd-sw" + (acik ? " sel" : ""), (acik ? "✓ " : "") + fmt(hd));
+        b.type = "button"; b.title = acik ? "Bu hedefin çubuğunu gizle" : "Bu hedefin çubuğunu göster";
+        b.onclick = () => { const g = hgOku(); if (g[hd]) delete g[hd]; else g[hd] = true; hgYaz(g); hedefCiz(); };
+        k._sec.append(b);
+      });
+    }
     const net = yuv(rows.filter(x => x.user_id === myId()).reduce((a, r) => a + rsum(r), 0));
     const simdi = simdiMs(), vb = vbBul(simdi), vbit = vb + 8 * 3600000;
     const calDk = Math.max(0, (simdi - vb) / 60000) * (NET_DK / VARDIYA_DK);   // mola payı orantılı düşülmüş çalışma dakikası
     const hiz = calDk >= 1 && net > 0 ? net / calDk : 0;                         // sayı / çalışma dakikası
     const tahmin = hiz * NET_DK;                                                  // vardiya sonu tahmini
-    k.textContent = ""; k.classList.remove("hide");
-    const bas = el("div", "hd-bas");
-    bas.append(el("strong", "", VNO_AD[gv] + " vardiyası · hedef takibi"),
+    k._bas.textContent = "";
+    k._bas.append(el("strong", "", VNO_AD[gv] + " vardiyası · hedef takibi"),
       el("span", "mut", "Şu an " + fmt(net) + (hiz ? " · hız " + fmt(Math.round(hiz * 600) / 10) + " sayı/saat · vardiya sonu tahmini ≈ " + fmt(Math.round(tahmin)) : " · hız hesabı için biraz veri gerekli")));
-    k.append(bas);
-    HEDEFLER.slice().sort((a, b) => a - b).forEach(hd => {
+    const liste = k._liste; liste.textContent = "";
+    const gorunen = hedefler.filter(hd => !gizli[hd]);
+    if (!gorunen.length) { liste.append(el("div", "mut hd-not", "Tüm hedefler gizli. Yukarıdaki düğmelerden açabilirsiniz.")); return; }
+    gorunen.forEach(hd => {
       const kalan = hd - net, pct = Math.max(0, Math.min(100, net / hd * 100));
       let durum, cls;
       if (kalan <= 0) { durum = "✓ Hedef tamamlandı (+" + fmt(yuv(-kalan)) + ")"; cls = "ok"; }
@@ -3269,9 +3296,9 @@ function xlsxBlob(sayfalar) {
       dol.style.width = pct + "%"; bar.append(dol);
       const olmasi = Math.min(100, calDk / NET_DK * 100);   // eşit tempoyla gidilseydi şu an olunması gereken yer
       const isr = el("div", "hd-isaret"); isr.style.left = olmasi + "%"; isr.title = "Eşit tempoyla olunması gereken yer"; bar.append(isr);
-      s.append(t, bar, el("div", "hd-durum " + cls, durum)); k.append(s);
+      s.append(t, bar, el("div", "hd-durum " + cls, durum)); liste.append(s);
     });
-    k.append(el("div", "mut hd-not", "Dikey çizgi: vardiya boyunca eşit tempoyla gidilseydi şu an olunması gereken yer."));
+    liste.append(el("div", "mut hd-not", "Dikey çizgi: vardiya boyunca eşit tempoyla gidilseydi şu an olunması gereken yer."));
   };
 
   // ---------- 2) Aralık analizi: toplam, ortalama, en iyi gün, grafik, vardiya karşılaştırması ----------
