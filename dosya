@@ -1,0 +1,41 @@
+{
+  "name": "Makine Sayı Tablosu",
+  "short_name": "Makine Sayı",
+  "description": "Vardiya bazlı makine sayı takibi",
+  "lang": "tr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#e9edf4",
+  "theme_color": "#3159b7",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
+// Makine Sayı Tablosu - servis çalışanı: uygulama kabuğunu önbelleğe alır, veri (Supabase) her zaman ağdan gelir.
+const SURUM = "msy-v1";
+const KABUK = ["./", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
+self.addEventListener("install", e => {
+  e.waitUntil(caches.open(SURUM).then(c => Promise.all(KABUK.map(u => c.add(u).catch(() => {})))).then(() => self.skipWaiting()));
+});
+self.addEventListener("activate", e => {
+  e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== SURUM).map(x => caches.delete(x)))).then(() => self.clients.claim()));
+});
+self.addEventListener("fetch", e => {
+  const r = e.request, u = new URL(r.url);
+  if (r.method !== "GET") return;
+  if (u.hostname.endsWith("supabase.co") || u.hostname.endsWith("supabase.in")) return;   // veri/oturum: önbelleğe alınmaz
+  if (r.mode === "navigate") {                                                              // sayfa: önce ağ, çevrimdışıysa son kopya
+    e.respondWith(fetch(r).then(res => { const k = res.clone(); caches.open(SURUM).then(c => c.put("./", k)); return res; })
+      .catch(() => caches.match("./").then(x => x || caches.match(r))));
+    return;
+  }
+  if (u.hostname === "cdn.jsdelivr.net" || u.origin === location.origin) {                 // betik/ikon: önbellek, arka planda yenile
+    e.respondWith(caches.open(SURUM).then(c => c.match(r).then(h => {
+      const ag = fetch(r).then(res => { if (res && (res.ok || res.type === "opaque")) c.put(r, res.clone()); return res; }).catch(() => h);
+      return h || ag;
+    })));
+  }
+});
