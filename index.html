@@ -699,6 +699,12 @@ td.rv-bar{min-width:90px;padding:0 10px}
 .sh-not .asim{color:#ef4444}
 @media (max-width:640px){.sohbet-kok{right:10px;bottom:10px}.sh-btn-yazi{display:none}.sohbet-btn{width:52px;height:52px;padding:0;justify-content:center;border-radius:50%}.sohbet-panel{width:calc(100vw - 20px);height:calc(100vh - 90px)}}
 @media (prefers-reduced-motion:reduce){.sohbet-btn.yeni{animation:none}}
+
+/* HIZLI GIRIS ACIKKEN SOHBET UST USTE BINMASIN */
+html.hz-kilit .sohbet-panel,
+html.hz-kilit .sohbet-btn {
+  display: none !important;
+}
 </style>
 </head>
 <body>
