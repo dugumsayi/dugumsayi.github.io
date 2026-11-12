@@ -700,19 +700,18 @@ td.rv-bar{min-width:90px;padding:0 10px}
 @media (max-width:640px){.sohbet-kok{right:10px;bottom:10px}.sh-btn-yazi{display:none}.sohbet-btn{width:52px;height:52px;padding:0;justify-content:center;border-radius:50%}.sohbet-panel{width:calc(100vw - 20px);height:calc(100vh - 90px)}}
 @media (prefers-reduced-motion:reduce){.sohbet-btn.yeni{animation:none}}
 
-/* SOHBETI TELEFONDA SOLA TASI */
-@media (max-width: 700px) {
-  .sohbet-kok {
-    left: 14px !important;
-    right: auto !important;
-    align-items: flex-start !important;
-  }
-  .sohbet-panel {
-    left: 10px !important;
-    right: auto !important;
-    width: calc(100vw - 20px) !important;
-  }
-}
+/* KISI REKOR MODAL */
+.krm-ortu{position:fixed;inset:0;z-index:1200;background:rgba(10,16,28,.6);display:flex;align-items:center;justify-content:center;padding:14px}
+.krm-kart{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:14px;max-width:520px;width:100%;max-height:88vh;overflow:auto;padding:16px;box-shadow:0 16px 40px rgba(0,0,0,.35)}
+.krm-bas{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.krm-bas strong{font-size:16px}
+.krm-kapat{background:var(--bg);border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:6px 10px;cursor:pointer}
+.krm-kutu{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--bg)}
+.krm-satir{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:14px}
+.krm-satir b{font-weight:700}
+.krm-muted{color:var(--mut);font-size:12px}
+.krm-rekor{font-size:22px;font-weight:800}
+.ucard.tiklanabilir{cursor:pointer}
 </style>
 </head>
 <body>
@@ -1544,7 +1543,10 @@ function renderShared() {
   users.forEach(([uid, u]) => {
     const list = u.list.filter(r => (r.name || "").trim() || COLS.some(k => r[k] != null && r[k] !== ""))
       .sort((a, b) => adKar(a.name, b.name) || a.satir - b.satir); // makine adı küçükten büyüğe
-    const card = el("div", "ucard");
+    const card = el("div", "ucard tiklanabilir");
+    card.dataset.uid = uid; card.dataset.ad = u.ad || "";
+    card.title = "Kişisel rekor ve özeti görmek için dokunun";
+    card.onclick = (e) => { if (e.target.closest("button")) return; try { window.kisiRekorGoster(uid, u.ad || ""); } catch (err) { console.error(err); } };
     card.append(el("h3", "", u.ad + (uid === myId() ? " (siz)" : "")));
     // Hiç sayı girilmemiş tablo (yalnızca makine adı olan veya boş) diğer kişilere gösterilmez.
     if (!list.length || !list.some(r => COLS.some(k => r[k] != null && String(r[k]).trim() !== ""))) return;
@@ -1563,6 +1565,8 @@ function renderShared() {
     ft.append(el("td", "", "TOPLAM"), el("td", "", fmt(total))); body.append(ft);
     tbl.append(body); wrap.append(tbl);
     const rb = el("button", "alt sm", "Resim olarak kaydet"); rb.type = "button";
+    const krBtn = el("button", "alt sm", "📊 Rekor / Özet"); krBtn.type = "button";
+    krBtn.onclick = (e) => { e.stopPropagation(); try { window.kisiRekorGoster(uid, u.ad || ""); } catch (err) { console.error(err); } };
     const benim = uid === myId();
     rb.onclick = async () => {
       const dondurulacak = benim && !!me && duzenlenir() && gorAyar.tabloDondur !== false;   // dondurma yönetici ayarına bağlı
@@ -1575,7 +1579,7 @@ function renderShared() {
     };
     const satirKutu = el("div", "u-row"), sol = el("div", "u-sol"), sag = el("div", "u-ozet hide");
     sag.dataset.uid = uid;
-    sol.append(wrap, rb); satirKutu.append(sol, sag); card.append(satirKutu); box.append(card);
+    sol.append(wrap, rb, krBtn); satirKutu.append(sol, sag); card.append(satirKutu); box.append(card);
     grand += total;
   });
   try { ozetKartlar(); } catch (e) {}
@@ -4591,6 +4595,97 @@ function xlsxBlob(sayfalar) {
   setInterval(() => { if (me && document.visibilityState === "visible") yukle(); }, 120000);   // canlı bağlantı koparsa yedek yenileme
   document.addEventListener("visibilitychange", () => { if (!document.hidden && me) yukle(); });
 })();
+</script>
+
+<script>
+// ================= KISI REKOR VE OZET MODAL =================
+window.kisiRekorGoster = async function (uid, ad) {
+  try {
+    if (!window.sb || !uid) return;
+    const ortu = document.createElement("div");
+    ortu.className = "krm-ortu";
+    ortu.innerHTML = '<div class="krm-kart" role="dialog" aria-label="Kişisel rekor ve özet">' +
+      '<div class="krm-bas"><strong>📊 ' + (ad || "Kullanıcı") + ' — rekor ve özet</strong>' +
+      '<button class="krm-kapat" type="button">✕ Kapat</button></div>' +
+      '<div class="krm-icerik"><p class="krm-muted">Yükleniyor…</p></div></div>';
+    ortu.addEventListener("click", (e) => { if (e.target === ortu) ortu.remove(); });
+    ortu.querySelector(".krm-kapat").onclick = () => ortu.remove();
+    document.body.appendChild(ortu);
+    const ic = ortu.querySelector(".krm-icerik");
+
+    const vard = new Map();
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await window.sb.from("sayilar")
+        .select("tarih,vno,n1,n2,n3,n4,n5,n6")
+        .eq("user_id", uid)
+        .order("tarih").order("vno").order("satir")
+        .range(from, from + 999);
+      if (error) throw error;
+      (data || []).forEach(r => {
+        const k = (r.tarih || "") + "|" + (Number(r.vno) || 0);
+        const toplam = window.rsum ? window.rsum(r) : 0;
+        vard.set(k, (vard.get(k) || 0) + toplam);
+      });
+      if (!data || data.length < 1000) break;
+    }
+
+    let rekor = 0, rekorK = "";
+    vard.forEach((v, k) => { if (v > rekor) { rekor = v; rekorK = k; } });
+
+    const bugunStr = (typeof bugun !== "undefined" && bugun) ? bugun : new Date().toISOString().slice(0,10);
+    const ay = bugunStr.slice(0, 7);
+    let ayTop = 0, ayVardiya = 0;
+    vard.forEach((v, k) => { if (String(k).slice(0, 7) === ay && v > 0) { ayTop += v; ayVardiya++; } });
+
+    let enIyiMakine = "-", enIyiDeger = 0;
+    try {
+      const { data: gunData, error: gunErr } = await window.sb.from("sayilar")
+        .select("name,n1,n2,n3,n4,n5,n6").eq("user_id", uid).eq("tarih", bugunStr);
+      if (!gunErr && gunData) {
+        const mak = new Map();
+        gunData.forEach(r => {
+          const nm = (r.name || "").trim(); if (!nm) return;
+          const t = window.rsum ? window.rsum(r) : 0;
+          mak.set(nm, (mak.get(nm) || 0) + t);
+        });
+        mak.forEach((v, k) => { if (v > enIyiDeger) { enIyiDeger = v; enIyiMakine = k; } });
+      }
+    } catch (e) {}
+
+    const fmtN = (x) => (window.fmt ? window.fmt(x) : String(x));
+    const tarihAd = (k) => {
+      try { const t = String(k).split("|")[0]; return window.gunTrUzun ? window.gunTrUzun(t) : t; } catch (e) { return k; }
+    };
+    const vnoAd = (k) => {
+      try { const v = Number(String(k).split("|")[1]); return (window.VNO_AD && window.VNO_AD[v]) ? window.VNO_AD[v] : ("Vardiya " + v); } catch (e) { return "Vardiya"; }
+    };
+
+    let html = "";
+    html += '<div class="krm-kutu"><div class="krm-muted">🏆 Bugüne kadarki en iyi vardiya</div>' +
+      '<div class="krm-rekor">' + (rekor > 0 ? fmtN(rekor) : "Henüz rekor yok") + '</div>' +
+      (rekor > 0 ? '<div class="krm-muted">' + tarihAd(rekorK) + ' · ' + vnoAd(rekorK) + ' vardiyası</div>' : '') + '</div>';
+
+    html += '<div class="krm-kutu"><div class="krm-muted">Bu ayki özet</div>' +
+      '<div class="krm-satir"><span>Bu ayki toplam</span><b>' + fmtN(ayTop) + '</b></div>' +
+      '<div class="krm-satir"><span>Vardiya sayısı</span><b>' + ayVardiya + '</b></div>' +
+      '<div class="krm-satir"><span>Vardiya ortalaması</span><b>' + (ayVardiya ? fmtN(Math.round(ayTop / ayVardiya)) : "—") + '</b></div>' +
+      '<div class="krm-satir"><span>Bugünün en iyi makinesi</span><b>' + (enIyiDeger > 0 ? enIyiMakine + " · " + fmtN(enIyiDeger) : "—") + '</b></div></div>';
+
+    const sonV = [...vard.entries()].sort((a,b) => b[0].localeCompare(a[0])).slice(0, 8);
+    if (sonV.length) {
+      html += '<div class="krm-kutu"><div class="krm-muted">Son vardiyalar</div>';
+      sonV.forEach(([k, v]) => {
+        html += '<div class="krm-satir"><span>' + tarihAd(k) + ' · ' + vnoAd(k) + '</span><b>' + fmtN(v) + '</b></div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<p class="krm-muted">Bu kullanıcı için kayıtlı vardiya bulunamadı.</p>';
+    }
+    ic.innerHTML = html;
+  } catch (e) {
+    console.error(e);
+  }
+};
 </script>
 </body>
 </html>
