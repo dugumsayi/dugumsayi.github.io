@@ -735,6 +735,34 @@ html.hz-kilit .sohbet-panel {
     width: calc(100vw - 20px) !important;
   }
 }
+
+/* Mobil sohbet: kucuk panel, sabit baslik ve gorunur kapatma dugmesi. */
+.sohbet-panel{min-height:0;flex-shrink:0}
+.sohbet-panel .sh-bas,.sohbet-panel .sh-alt,.sohbet-panel .sh-not,.sohbet-panel .sh-durum{flex-shrink:0}
+.sohbet-panel .sh-liste{min-height:0;overscroll-behavior:contain}
+.sohbet-panel .sh-alt textarea{min-width:0}
+@media(max-width:700px){
+  .sohbet-panel,html.hz-kilit .sohbet-panel{
+    position:fixed;
+    left:12px !important;right:auto !important;
+    bottom:calc(var(--sohbet-vv-bottom,0px) + 76px) !important;
+    width:min(360px,calc(100vw - 24px)) !important;
+    height:min(420px,58vh) !important;
+    height:min(420px,58dvh,var(--sohbet-vv-space,calc(100dvh - 100px))) !important;
+    max-height:var(--sohbet-vv-space,calc(100dvh - 100px)) !important;
+    z-index:1100;
+  }
+  .sohbet-panel .sh-bas{padding:6px 8px;gap:4px;min-height:52px}
+  .sohbet-panel .sh-bas strong{font-size:14px;white-space:nowrap}
+  .sohbet-panel .sh-bas button{min-width:44px;min-height:44px;flex-shrink:0;margin:0}
+  .sohbet-panel #sohbetTemizle{font-size:11px;padding:4px 6px;min-width:0}
+  .sohbet-panel .sh-alt{padding:8px 8px 4px;gap:6px}
+  .sohbet-panel .sh-alt textarea{font-size:16px;height:60px;min-height:44px;padding:6px 8px}
+  .sohbet-panel .sh-alt button{font-size:14px;padding:8px 12px}
+  .sohbet-panel .sh-not{padding:0 8px 8px;gap:8px;font-size:10px}
+  .sohbet-panel .sh-not span:last-child{white-space:nowrap}
+}
+
 </style>
 </head>
 <body>
@@ -4745,5 +4773,25 @@ window.kisiRekorGoster = async function (uid, ad) {
   sohbetKonumla();
 })();
 </script>
+
+<script>
+(function(){
+  function fitSohbet(){
+    var v=window.visualViewport;
+    var h=v?v.height:window.innerHeight;
+    var bottom=v?Math.max(0,window.innerHeight-v.height-v.offsetTop):0;
+    var root=document.documentElement;
+    root.style.setProperty('--sohbet-vv-bottom',bottom+'px');
+    root.style.setProperty('--sohbet-vv-space',Math.max(0,h-100)+'px');
+  }
+  window.addEventListener('resize',fitSohbet,{passive:true});
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',fitSohbet,{passive:true});
+    window.visualViewport.addEventListener('scroll',fitSohbet,{passive:true});
+  }
+  fitSohbet();
+})();
+</script>
+
 </body>
 </html>
