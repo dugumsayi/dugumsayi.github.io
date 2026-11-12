@@ -712,6 +712,29 @@ td.rv-bar{min-width:90px;padding:0 10px}
 .krm-muted{color:var(--mut);font-size:12px}
 .krm-rekor{font-size:22px;font-weight:800}
 .ucard.tiklanabilir{cursor:pointer}
+
+/* HIZLI GIRIS ACIKKEN SOHBETI USTUNE KONUMLANDIR (duyarli) */
+html.hz-kilit .sohbet-kok {
+  bottom: calc(var(--hzYukseklik, 0px) + 16px) !important;
+}
+html.hz-kilit .sohbet-panel {
+  bottom: calc(var(--hzYukseklik, 0px) + 16px) !important;
+  max-height: calc(100dvh - var(--hzYukseklik, 0px) - 32px) !important;
+}
+
+/* SOHBETI TELEFONDA SOLA TASI */
+@media (max-width: 700px) {
+  .sohbet-kok {
+    left: 14px !important;
+    right: auto !important;
+    align-items: flex-start !important;
+  }
+  .sohbet-panel {
+    left: 10px !important;
+    right: auto !important;
+    width: calc(100vw - 20px) !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -4686,6 +4709,41 @@ window.kisiRekorGoster = async function (uid, ad) {
     console.error(e);
   }
 };
+</script>
+
+<script>
+// HIZLI GIRIS ACIKKEN SOHBET KONUMU: panelin gercek yuksekligine gore ayarla
+(function () {
+  function sohbetKonumla() {
+    const html = document.documentElement;
+    const kok = document.getElementById("sohbetKok");
+    const panel = document.getElementById("sohbetPanel");
+    const sheet = document.getElementById("hizliSheet");
+    if (!kok || !panel) return;
+    if (!html.classList.contains("hz-kilit") || !sheet) {
+      kok.style.display = "";
+      kok.style.bottom = "";
+      panel.style.height = "";
+      return;
+    }
+    const yukseklik = sheet.getBoundingClientRect().height || 0;
+    const kalan = window.innerHeight - yukseklik - 32;
+    if (kalan < 220) {
+      kok.style.display = "none";
+      return;
+    }
+    kok.style.display = "";
+    kok.style.bottom = (yukseklik + 16) + "px";
+    panel.style.height = Math.min(420, kalan) + "px";
+  }
+  const gozlemci = new MutationObserver(() => setTimeout(sohbetKonumla, 0));
+  gozlemci.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  window.addEventListener("resize", sohbetKonumla);
+  window.addEventListener("orientationchange", sohbetKonumla);
+  setInterval(sohbetKonumla, 500);
+  document.addEventListener("DOMContentLoaded", sohbetKonumla);
+  sohbetKonumla();
+})();
 </script>
 </body>
 </html>
