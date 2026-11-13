@@ -2239,7 +2239,8 @@ const GOR = [
   ["ozetyan", "Tabloların yanındaki giriş özeti (ilk/son giriş, ortalama, hedefler)", []],
   ["hafta", "Haftalık ortalama", ["haftaPanel"]],
   ["ay", "Aylık ve yıllık ortalama", ["ayPanel"]],
-  ["log", "Giriş kayıtları ve süre farkı", ["logBox"]]
+  ["log", "Giriş kayıtları ve süre farkı", ["logBox"]],
+  ["makineListesi", "Makine Listesi düğmesi (üstteki 📋 bağlantı)", ["makineListesiLink"]]
 ];
 // misafir: giriş yapmadan (kayıt yoksa gizli) · uye: giriş yapınca (kayıt yoksa görünür)
 let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {}, sira: [], hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true, erkenDk: 0, kapanDk: 0, otoGecis: true, olcumDk: 5, dinlenDk: 30 };
@@ -2302,7 +2303,10 @@ function tabloRenkUygula() {
 }
 // Yöneticinin herkes için gizlediği hedefler (HEDEFLER dizisindeki sıraya göre: 0 = birinci, 1 = ikinci)
 const hedefGizliMi = hd => { const i = HEDEFLER.indexOf(hd); return i >= 0 && !!(gorAyar.hedefGizli && gorAyar.hedefGizli[i]); };
-const gorunur = k => isAdmin() || (me ? gorAyar.uye[k] !== false : gorAyar.misafir[k] === true);
+// Makine Listesi düğmesi eskiden herkese açıktı: kayıt yoksa misafire de görünür kalır (yönetici kapatınca gizlenir).
+const GOR_MISAFIR_ACIK = ["makineListesi"];
+const misafirAcikMi = k => GOR_MISAFIR_ACIK.includes(k) ? gorAyar.misafir[k] !== false : gorAyar.misafir[k] === true;
+const gorunur = k => isAdmin() || (me ? gorAyar.uye[k] !== false : misafirAcikMi(k));
 
 // ================= AÇILIR-KAPANIR PENCERELER =================
 // Her pencerenin başlığında ok vardır. Kullanıcının seçimi bu cihazda hatırlanır;
@@ -2461,7 +2465,7 @@ function gorCiz() {
   head.append(hr); tbl.append(head);
   GOR.forEach(([k, ad]) => {
     const tr = el("tr"); tr.append(el("td", "", ad));
-    [["misafir", gorAyar.misafir[k] === true], ["uye", gorAyar.uye[k] !== false]].forEach(([g, on]) => {
+    [["misafir", misafirAcikMi(k)], ["uye", gorAyar.uye[k] !== false]].forEach(([g, on]) => {
       const td = el("td"), cb = el("input");
       cb.type = "checkbox"; cb.dataset.g = g; cb.dataset.k = k; cb.checked = on;
       td.style.textAlign = "center"; td.append(cb); tr.append(td);
