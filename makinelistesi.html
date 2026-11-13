@@ -45,6 +45,7 @@ body.kr-acik main iframe{height:52dvh}
 #krKutu .sat button{padding:12px}
 }
 #kilitRozet{font-size:13px;font-weight:800;color:#b42318;background:#fff0ee;border:1px solid #f0c4c0;border-radius:999px;padding:4px 11px}#kilitRozet[hidden]{display:none}
+#gizliKutu{max-width:460px;margin:60px auto;padding:26px 22px;background:#fff;border:1px solid #d6e2ef;border-radius:12px;box-shadow:0 2px 12px #173b5f12;text-align:center}#gizliKutu[hidden]{display:none}#gizliKutu h2{margin:0 0 8px;font-size:18px}#gizliKutu p{margin:0;color:#627f9e;font-size:14px;line-height:1.5}main[hidden]{display:none}
 </style></head><body>
 <header><h1>MAKİNE DAĞITIM</h1><div id="hint">Joker makineleri ve ek pay tablosu bulunan dağıtım ekranı.</div>
 <div id="admBar"><button id="admBtn" type="button">Yönetici girişi</button><button id="admTemizle" type="button" hidden>Tonajları sil</button><button id="admKilit" type="button" hidden>🔒 Tüm değerleri kilitle</button><button id="admKural" type="button" hidden>⚙ Kural ayarları</button><span id="kilitRozet" hidden>🔒 Değerler kilitli</span><span id="admDurum">Yükleniyor…</span></div></header>
@@ -53,7 +54,8 @@ body.kr-acik main iframe{height:52dvh}
 <label for="admSifre">Şifre</label><input id="admSifre" type="password" autocomplete="current-password">
 <div id="admMesaj"></div>
 <div class="sat"><button type="button" id="admIptal">Vazgeç</button><button type="button" id="admGiris" class="ana">Giriş yap</button></div></div></div>
-<main><iframe id="app" title="Makine dağıtım uygulaması"></iframe><aside id="krPanel" hidden><div id="krKutu"><h2><span>Kural ayarları</span><button type="button" id="krKapat" aria-label="Paneli kapat">✕</button></h2><p class="alt">Tonaj Dengesi modunda dağıtım bu kurallara göre yapılır. Seçtikçe sonuç hemen değişir, otomatik kaydedilir ve tüm kullanıcılar için geçerli olur.</p>
+<div id="gizliKutu" hidden><h2>🔒 Bu sayfa gizli</h2><p>Makine listesi şu anda yönetici tarafından görüntülemeye kapatıldı. Yönetici iseniz yukarıdaki “Yönetici girişi” ile giriş yapın.</p></div>
+<main id="anaKap"><iframe id="app" title="Makine dağıtım uygulaması"></iframe><aside id="krPanel" hidden><div id="krKutu"><h2><span>Kural ayarları</span><button type="button" id="krKapat" aria-label="Paneli kapat">✕</button></h2><p class="alt">Tonaj Dengesi modunda dağıtım bu kurallara göre yapılır. Seçtikçe sonuç hemen değişir, otomatik kaydedilir ve tüm kullanıcılar için geçerli olur.</p>
 <div class="kr"><span><b>Dikey art arda en fazla</b><small>Aynı grupta alt alta makine sayısı</small></span><input type="number" id="krDikey" min="1" max="9"></div>
 <div class="kr"><span><b>Yatay art arda en fazla</b><small>Aynı grupta yan yana makine sayısı</small></span><input type="number" id="krYatay" min="1" max="3"></div>
 <div class="kr"><span><b>Çapraz art arda en fazla</b><small>Aynı grupta çapraz makine sayısı</small></span><input type="number" id="krCapraz" min="1" max="3"></div>
@@ -135,6 +137,31 @@ function showApp(i){var h=apps[0],k=window.__kural||{};h=h.replace('</head>','<s
       admin = !!data && data.rol === "admin" && !data.banli;
     }
     arayuz();
+  }
+
+  // ===== Gizlilik: yönetici index.html > Yönetim paneli > Görünüm tablosundan "Makine Listesi" satırını açıp kapatır =====
+  // Ayar site_ayar.gorunurluk içinde makineListesi anahtarıyla tutulur (misafir / uye). Yönetici her zaman görür.
+  let engel = false, appYuklu = false;
+  async function erisimKontrol(){
+    if (!sb || admin) return true;
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      const r = await sb.from("site_ayar").select("deger").eq("anahtar", "gorunurluk").maybeSingle();
+      if (r.error || !r.data || !r.data.deger || typeof r.data.deger !== "object") return true;   // ayar okunamazsa/kayıt yoksa eski davranış: açık
+      const g = (session ? r.data.deger.uye : r.data.deger.misafir) || {};
+      return g.makineListesi !== false;
+    } catch (e) { return true; }
+  }
+  async function erisimUygula(){
+    const ok = await erisimKontrol();
+    engel = !ok;
+    $("gizliKutu").hidden = ok;
+    $("anaKap").hidden = !ok;
+    if (!ok) { $("app").srcdoc = ""; appYuklu = false; return; }
+    if (appYuklu) return;
+    appYuklu = true;
+    if (sb) { try { await sunucudanYukle(); arayuz(); } catch (e) { durum("Sunucudaki kayıt okunamadı: " + e.message, "hata"); } }
+    window.showApp(0);
   }
 
   async function kaydet(s){
@@ -284,7 +311,7 @@ function showApp(i){var h=apps[0],k=window.__kural||{};h=h.replace('</head>','<s
   function modal(ac){ $("admArka").classList.toggle("goster", ac); $("admMesaj").textContent = ""; if (ac) { $("admSicil").focus(); } }
   $("admBtn").onclick = async () => {
     if (!sb) { durum("Supabase kütüphanesi yüklenemedi; internet bağlantısını kontrol edin.", "hata"); return; }
-    if (admin) { try { await sb.auth.signOut({ scope: "local" }); } catch (e) {} admin = false; arayuz(); return; }
+    if (admin) { try { await sb.auth.signOut({ scope: "local" }); } catch (e) {} admin = false; arayuz(); erisimUygula(); return; }
     modal(true);
   };
   $("admIptal").onclick = () => modal(false);
@@ -299,7 +326,7 @@ function showApp(i){var h=apps[0],k=window.__kural||{};h=h.replace('</head>','<s
     if (error) { m.textContent = /invalid/i.test(error.message) ? "Sicil numarası veya şifre hatalı." : /banned/i.test(error.message) ? "Bu hesap yasaklanmış." : "Giriş yapılamadı: " + error.message; return; }
     await adminKontrol();
     if (!admin) { m.textContent = "Giriş yapıldı ama bu hesap yönetici değil; kayıt yetkisi yok."; return; }
-    $("admSifre").value = ""; modal(false); izle();
+    $("admSifre").value = ""; modal(false); izle(); erisimUygula();
   };
   $("admGiris").onclick = giris;
   $("admSifre").addEventListener("keydown", e => { if (e.key === "Enter") giris(); });
@@ -307,20 +334,24 @@ function showApp(i){var h=apps[0],k=window.__kural||{};h=h.replace('</head>','<s
   (async function(){
     try {
       if (window.supabase) sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);   // index.html ile aynı oturum deposunu paylaşır
-      if (sb) {
-        try { await sunucudanYukle(); } catch (e) { durum("Sunucudaki kayıt okunamadı: " + e.message, "hata"); }
-        try { await adminKontrol(); } catch (e) {}
-      }
+      if (sb) { try { await adminKontrol(); } catch (e) {} }
     } finally {
       if (!sb) arayuz();
-      window.showApp(0);
     }
+    await erisimUygula();   // gizliyse sayfa ve sunucu verisi yüklenmez
     if (sb) {
       sb.channel("makine-listesi-canli").on("postgres_changes", { event: "*", schema: "public", table: TABLO }, p => {
-        if (admin || !p.new || !p.new.deger) return;
+        if (admin || engel || !p.new || !p.new.deger) return;
         uzaktanUygula(p.new.deger);
       }).subscribe();
-      sb.auth.onAuthStateChange(() => { adminKontrol().catch(() => {}); });
+      // Yönetici gizlilik ayarını değiştirince açık sayfalar anında güncellenir
+      try {
+        sb.channel("gorunurluk-canli", { config: { broadcast: { self: false } } })
+          .on("broadcast", { event: "guncelle" }, () => { erisimUygula(); })
+          .on("postgres_changes", { event: "*", schema: "public", table: "site_ayar" }, () => { erisimUygula(); })
+          .subscribe();
+      } catch (e) {}
+      sb.auth.onAuthStateChange(() => { adminKontrol().then(erisimUygula).catch(() => {}); });
     }
   })();
 })();
