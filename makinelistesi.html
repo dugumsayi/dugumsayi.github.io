@@ -16,9 +16,12 @@
 #admKutu .sat button{flex:1;padding:10px;border-radius:9px;border:1px solid #cfe0f3;background:#edf5ff;color:#124c7c;font-weight:700;cursor:pointer}
 #admKutu .sat button.ana{background:#176db0;color:#fff;border-color:#176db0}
 #admMesaj{font-size:13px;margin-top:10px;min-height:18px;color:#b42318}
+#admKilit{border:1px solid #f1d58e;background:#fff9e9;color:#80530b;border-radius:10px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer}#admKilit[hidden]{display:none}#admKilit.kilitli{background:#e7f6ec;border-color:#b7e1c4;color:#0a7a3d}
+#admTemizle:disabled{opacity:.45;cursor:not-allowed}
+#kilitRozet{font-size:13px;font-weight:800;color:#b42318;background:#fff0ee;border:1px solid #f0c4c0;border-radius:999px;padding:4px 11px}#kilitRozet[hidden]{display:none}
 </style></head><body>
 <header><h1>MAKİNE DAĞITIM</h1><div id="hint">Joker makineleri ve ek pay tablosu bulunan dağıtım ekranı.</div>
-<div id="admBar"><button id="admBtn" type="button">Yönetici girişi</button><button id="admTemizle" type="button" hidden>Tonajları sil</button><span id="admDurum">Yükleniyor…</span></div></header>
+<div id="admBar"><button id="admBtn" type="button">Yönetici girişi</button><button id="admTemizle" type="button" hidden>Tonajları sil</button><button id="admKilit" type="button" hidden>🔒 Tüm değerleri kilitle</button><span id="kilitRozet" hidden>🔒 Değerler kilitli</span><span id="admDurum">Yükleniyor…</span></div></header>
 <div id="admArka"><div id="admKutu" role="dialog" aria-label="Yönetici girişi"><h2>Yönetici girişi</h2>
 <label for="admSicil">Sicil numarası</label><input id="admSicil" autocomplete="username" inputmode="text">
 <label for="admSifre">Şifre</label><input id="admSifre" type="password" autocomplete="current-password">
@@ -40,19 +43,24 @@ function showApp(i){document.getElementById('app').srcdoc=apps[0];}
   const sifreHazirla = p => p.length >= 6 ? p : p + "#Mkn24".slice(0, 6 - p.length);   // index.html ile aynı kural
   const mailOf = s => "makine.sicil." + s + "@gmail.com";
   let sb = null, admin = false, cur = 0, sonKayit = null, hataKayit = null, timer = null, kaydediyor = false;
+  const LS_KILIT = "makineDagitimKilit_v1";   // son bilinen kilit durumu (sunucuya ulaşılamazsa kullanılır)
+  let kilit = false; try { kilit = localStorage.getItem(LS_KILIT) === "1"; } catch (e) {}
 
   const origShow = window.showApp;
   window.showApp = function(i){ cur = i; origShow(i); };
 
   // Anahtar sırasından bağımsız karşılaştırma (jsonb anahtar sırasını değiştirebilir)
   const canon = v => JSON.stringify(v, (k, x) => (x && typeof x === "object" && !Array.isArray(x)) ? Object.keys(x).sort().reduce((o, key) => (o[key] = x[key], o), {}) : x);
-  const canonStr = s => { try { return canon(JSON.parse(s)); } catch (e) { return s; } };
+  // "kilit" alanı yalnızca sunucu kaydında tutulur; karşılaştırmalarda yok sayılır
+  const strip = o => { const c = Object.assign({}, o); delete c.kilit; return c; };
+  const canonStr = s => { try { return canon(strip(JSON.parse(s))); } catch (e) { return s; } };
 
   function durum(t, tur){ const e = $("admDurum"); e.textContent = t; e.className = tur || ""; }
   function arayuz(){
     $("admBtn").textContent = admin ? "Yönetici çıkışı" : "Yönetici girişi";
     $("admBtn").classList.toggle("acik", admin);
     $("admTemizle").hidden = !admin;
+    kilitArayuz();
     if (admin) durum("Yönetici modu: değişiklikler otomatik kaydedilir.", "ok");
     else if (sb) durum("Görüntüleme modu: değişiklikler yalnızca bu cihazda kalır, sunucuya kaydedilmez.");
     else durum("Sunucuya bağlanılamadı; cihazdaki kayıt kullanılıyor.", "hata");
@@ -62,8 +70,9 @@ function showApp(i){document.getElementById('app').srcdoc=apps[0];}
     const { data, error } = await sb.from(TABLO).select("deger").eq("id", 1).maybeSingle();
     if (error) throw error;
     if (data && data.deger && Object.keys(data.deger).length) {
-      localStorage.setItem(LS_KEY, JSON.stringify(data.deger));
-      sonKayit = canon(data.deger);
+      kilit = !!data.deger.kilit;
+      const y = strip(data.deger);
+      if (Object.keys(y).length) { localStorage.setItem(LS_KEY, JSON.stringify(y)); sonKayit = canon(y); }
     }
   }
   async function adminKontrol(){
@@ -78,16 +87,17 @@ function showApp(i){document.getElementById('app').srcdoc=apps[0];}
 
   async function kaydet(s){
     if (!admin || !sb || kaydediyor) return;
-    let v; try { v = JSON.parse(s); } catch (e) { return; }
+    let v; try { v = strip(JSON.parse(s)); } catch (e) { return; }
+    const c = canon(v); v.kilit = kilit;
     kaydediyor = true; durum("Kaydediliyor…");
     const { error } = await sb.from(TABLO).upsert({ id: 1, deger: v, guncelleme: new Date().toISOString() });
     kaydediyor = false;
     if (error) {
-      hataKayit = canon(v);
+      hataKayit = c;
       durum("Kaydedilemedi: " + error.message + (/relation|does not exist|schema cache|policy|row-level|permission/i.test(error.message) ? " — Supabase'de makine-listesi.sql çalıştırılmalı." : ""), "hata");
       return;
     }
-    hataKayit = null; sonKayit = canon(v);
+    hataKayit = null; sonKayit = c;
     durum("Sunucuya kaydedildi · " + new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }), "ok");
   }
   function izle(){
@@ -102,8 +112,10 @@ function showApp(i){document.getElementById('app').srcdoc=apps[0];}
 
   // Başka cihazda yönetici değişiklik yapınca görüntüleyenlerin ekranı güncellenir
   function uzaktanUygula(deger){
-    const c = canon(deger); if (c === sonKayit) return;
-    sonKayit = c; localStorage.setItem(LS_KEY, JSON.stringify(deger));
+    const yeniKilit = !!deger.kilit, y = strip(deger), c = canon(y);
+    if (yeniKilit !== kilit) { kilit = yeniKilit; kilitUygula(); }
+    if (c === sonKayit) return;
+    sonKayit = c; localStorage.setItem(LS_KEY, JSON.stringify(y));
     const dene = () => {
       let a = null; try { a = $("app").contentDocument.activeElement; } catch (e) {}
       if (a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) { setTimeout(dene, 3000); return; }
@@ -115,6 +127,7 @@ function showApp(i){document.getElementById('app').srcdoc=apps[0];}
   // Yazılan tüm tonajları temizler; değişiklik uygulamanın kendi kayıt akışıyla localStorage'a yazılır ve yönetici ise sunucuya da kaydedilir
   $("admTemizle").onclick = () => {
     if (!admin) return;
+    if (kilit) { durum("Değerler kilitli; silmek için önce kilidi açın.", "hata"); return; }
     if (!confirm("Girilen tüm makine tonajları silinecek (sunucudaki kayıt dahil). Devam edilsin mi?")) return;
     let d = null; try { d = $("app").contentDocument; } catch (e) {}
     const kutular = d ? d.querySelectorAll('input[id^="ton-"]') : [];
@@ -122,6 +135,44 @@ function showApp(i){document.getElementById('app').srcdoc=apps[0];}
     kutular.forEach(k => { k.value = ""; k.dispatchEvent(new Event("input", { bubbles: true })); });
     izle();
   };
+
+  // ===== Tüm değerleri kilitle (yalnızca yönetici değiştirebilir, herkes için geçerlidir) =====
+  const KILIT_CSS = "body.kilitli .machine:not(.closed-machine) input[type=number]{background:#eef2f6!important;color:#5b6b80;cursor:not-allowed}" +
+    "body.kilitli .machine input[type=checkbox],body.kilitli #groupCount,body.kilitli #selectAll,body.kilitli #selectNone{cursor:not-allowed}" +
+    "body.kilitli #selectAll,body.kilitli #selectNone,body.kilitli #groupCount{opacity:.55}";
+  function kilitArayuz(){
+    $("admKilit").hidden = !admin;
+    $("admKilit").textContent = kilit ? "🔓 Kilidi aç" : "🔒 Tüm değerleri kilitle";
+    $("admKilit").classList.toggle("kilitli", kilit);
+    $("admTemizle").disabled = kilit;
+    $("kilitRozet").hidden = !kilit;
+  }
+  function kilitUygula(){
+    try { localStorage.setItem(LS_KILIT, kilit ? "1" : "0"); } catch (e) {}
+    kilitArayuz();
+    let d = null; try { d = $("app").contentDocument; } catch (e) {}
+    if (!d || !d.body || !d.head) return;
+    if (!d.getElementById("kilitStil")) { const st = d.createElement("style"); st.id = "kilitStil"; st.textContent = KILIT_CSS; d.head.append(st); }
+    d.body.classList.toggle("kilitli", kilit);
+    d.querySelectorAll('input[id^="ton-"]').forEach(e => { e.readOnly = kilit; });
+    d.querySelectorAll('input[id^="inc-"],input[id^="joker-"],#groupCount,#selectAll,#selectNone').forEach(e => { e.disabled = kilit; });
+  }
+  async function kilitDegistir(yeni){
+    if (!admin || !sb) return;
+    if (kaydediyor) { durum("Kayıt sürüyor, birkaç saniye sonra tekrar deneyin.", "hata"); return; }
+    const onceki = kilit;
+    kilit = yeni; kilitUygula(); arayuz();
+    let v = {}; try { const s = localStorage.getItem(LS_KEY); if (s) v = strip(JSON.parse(s)); } catch (e) {}
+    const c = canon(v); v.kilit = yeni;
+    kaydediyor = true; durum("Kaydediliyor…");
+    const { error } = await sb.from(TABLO).upsert({ id: 1, deger: v, guncelleme: new Date().toISOString() });
+    kaydediyor = false;
+    if (error) { kilit = onceki; kilitUygula(); arayuz(); durum("Kilit durumu kaydedilemedi: " + error.message, "hata"); return; }
+    hataKayit = null; sonKayit = c;
+    durum(yeni ? "Tüm değerler kilitlendi ve sunucuya kaydedildi." : "Kilit açıldı; değerler yeniden düzenlenebilir.", "ok");
+  }
+  $("admKilit").onclick = () => kilitDegistir(!kilit);
+  $("app").addEventListener("load", kilitUygula);   // uygulama her yeniden yüklendiğinde kilit tekrar uygulanır
 
   function modal(ac){ $("admArka").classList.toggle("goster", ac); $("admMesaj").textContent = ""; if (ac) { $("admSicil").focus(); } }
   $("admBtn").onclick = async () => {
