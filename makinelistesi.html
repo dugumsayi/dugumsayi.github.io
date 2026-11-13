@@ -26,7 +26,24 @@
 #krKutu .sat{display:flex;gap:8px;margin-top:14px}#krKutu .sat button{flex:1;padding:10px;border-radius:9px;border:1px solid #cfe0f3;background:#edf5ff;color:#124c7c;font-weight:700;cursor:pointer}#krKutu .sat button.ana{background:#176db0;color:#fff;border-color:#176db0}
 #krMesaj{font-size:13px;margin-top:10px;min-height:18px;color:#627f9e}#krMesaj.ok{color:#0a7a3d}#krMesaj.hata{color:#b42318}
 #krPanel{flex:0 0 310px;overflow:auto;background:#fff;border-radius:10px;box-shadow:0 2px 12px #173b5f12}#krPanel[hidden]{display:none}#krPanel #krKutu{max-width:none;box-shadow:none;padding:14px;max-height:none;overflow:visible}
-@media(max-width:1000px){main{flex-direction:column}#krPanel{flex:0 0 auto;max-height:42vh}}
+#krKutu h2{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#krKapat{display:none;border:1px solid #cfe0f3;background:#edf5ff;color:#124c7c;border-radius:9px;width:38px;height:34px;font-size:16px;font-weight:800;cursor:pointer;padding:0}
+.stp{display:flex;align-items:center;gap:5px}.stp button{width:38px;height:38px;border-radius:9px;border:1px solid #cfe0f3;background:#edf5ff;color:#124c7c;font-size:20px;font-weight:700;cursor:pointer;padding:0;line-height:1}.stp input[type=number]{width:60px!important;padding:7px 2px!important}.stp:has(input:disabled){opacity:.45}
+@media(max-width:1000px){
+header{position:static;padding:8px 10px}h1{font-size:16px;margin:0 0 2px}#hint{display:none}
+#admBar{gap:6px;margin-top:4px}#admBar button{padding:8px 10px;font-size:12.5px}#admDurum{font-size:12px;width:100%}
+main{flex-direction:column;height:auto;padding:6px}
+main iframe{flex:none;width:100%;height:calc(100dvh - 12px)}
+body.kr-acik main iframe{height:52dvh}
+#krPanel{position:fixed;left:0;right:0;bottom:0;z-index:30;flex:none;max-height:46dvh;border-radius:16px 16px 0 0;box-shadow:0 -6px 24px #10294355}
+#krPanel #krKutu{padding:8px 14px 18px}
+#krKutu h2{position:sticky;top:0;background:#fff;padding:6px 0;margin:0;z-index:2}
+#krKapat{display:inline-block}
+#krKutu .alt,#krKutu .kr small{display:none}
+#krKutu .kr{padding:8px 0;font-size:15px}
+#krKutu input[type=checkbox]{width:28px;height:28px}
+#krKutu .sat button{padding:12px}
+}
 #kilitRozet{font-size:13px;font-weight:800;color:#b42318;background:#fff0ee;border:1px solid #f0c4c0;border-radius:999px;padding:4px 11px}#kilitRozet[hidden]{display:none}
 </style></head><body>
 <header><h1>MAKİNE DAĞITIM</h1><div id="hint">Joker makineleri ve ek pay tablosu bulunan dağıtım ekranı.</div>
@@ -36,7 +53,7 @@
 <label for="admSifre">Şifre</label><input id="admSifre" type="password" autocomplete="current-password">
 <div id="admMesaj"></div>
 <div class="sat"><button type="button" id="admIptal">Vazgeç</button><button type="button" id="admGiris" class="ana">Giriş yap</button></div></div></div>
-<main><iframe id="app" title="Makine dağıtım uygulaması"></iframe><aside id="krPanel" hidden><div id="krKutu"><h2>Kural ayarları</h2><p class="alt">Tonaj Dengesi modunda dağıtım bu kurallara göre yapılır. Seçtikçe sonuç hemen değişir, otomatik kaydedilir ve tüm kullanıcılar için geçerli olur.</p>
+<main><iframe id="app" title="Makine dağıtım uygulaması"></iframe><aside id="krPanel" hidden><div id="krKutu"><h2><span>Kural ayarları</span><button type="button" id="krKapat" aria-label="Paneli kapat">✕</button></h2><p class="alt">Tonaj Dengesi modunda dağıtım bu kurallara göre yapılır. Seçtikçe sonuç hemen değişir, otomatik kaydedilir ve tüm kullanıcılar için geçerli olur.</p>
 <div class="kr"><span><b>Dikey art arda en fazla</b><small>Aynı grupta alt alta makine sayısı</small></span><input type="number" id="krDikey" min="1" max="9"></div>
 <div class="kr"><span><b>Yatay art arda en fazla</b><small>Aynı grupta yan yana makine sayısı</small></span><input type="number" id="krYatay" min="1" max="3"></div>
 <div class="kr"><span><b>Çapraz art arda en fazla</b><small>Aynı grupta çapraz makine sayısı</small></span><input type="number" id="krCapraz" min="1" max="3"></div>
@@ -77,7 +94,7 @@ function showApp(i){var h=apps[0],k=window.__kural||{};h=h.replace('</head>','<s
   }
   let kural = KURAL_VARSAYILAN; try { kural = kuralDuzelt(JSON.parse(localStorage.getItem(LS_KURAL))); } catch (e) {}
   window.__kural = kural;
-  let panelAcik = true;
+  let panelAcik = !(window.matchMedia && matchMedia("(max-width:1000px)").matches);   // telefonda panel kapalı başlar
   function kuralAyarla(k){ kural = kuralDuzelt(k); window.__kural = kural; try { localStorage.setItem(LS_KURAL, JSON.stringify(kural)); } catch (e) {} }
 
   const origShow = window.showApp;
@@ -182,6 +199,7 @@ function showApp(i){var h=apps[0],k=window.__kural||{};h=h.replace('</head>','<s
     $("admKural").hidden = !admin;
     $("admKural").textContent = panelAcik ? "⚙ Kural ayarlarını gizle" : "⚙ Kural ayarları";
     $("krPanel").hidden = !admin || !panelAcik;
+    document.body.classList.toggle("kr-acik", admin && panelAcik);
     if (admin) kuralFormDoldur(kural);
     $("admKilit").textContent = kilit ? "🔓 Kilidi aç" : "🔒 Tüm değerleri kilitle";
     $("admKilit").classList.toggle("kilitli", kilit);
@@ -252,7 +270,16 @@ function showApp(i){var h=apps[0],k=window.__kural||{};h=h.replace('</head>','<s
   }
   ["krDikey","krYatay","krCapraz","krBolge","krSpan","krSpanEk","krDeneme"].forEach(id => $(id).addEventListener("change", kuralDegisti));
   $("krVarsayilan").onclick = () => { kuralFormDoldur(KURAL_VARSAYILAN); kuralDegisti(); };
-  $("admKural").onclick = () => { panelAcik = !panelAcik; arayuz(); };
+  const telefon = () => window.matchMedia && matchMedia("(max-width:1000px)").matches;
+  $("admKural").onclick = () => { panelAcik = !panelAcik; arayuz(); if (panelAcik && telefon()) setTimeout(() => $("app").scrollIntoView({ block: "start", behavior: "smooth" }), 60); };
+  $("krKapat").onclick = () => { panelAcik = false; arayuz(); };
+  // Sayı kutularına dokunmatik + / − düğmeleri
+  ["krDikey","krYatay","krCapraz","krSpanEk","krDeneme"].forEach(id => {
+    const inp = $(id), w = document.createElement("span"); w.className = "stp"; inp.parentNode.insertBefore(w, inp);
+    const mk = (t, d) => { const b = document.createElement("button"); b.type = "button"; b.textContent = t; b.setAttribute("aria-label", d > 0 ? "Artır" : "Azalt");
+      b.onclick = () => { if (inp.disabled) return; const st = Number(inp.step) || 1; inp.value = Math.min(Number(inp.max), Math.max(Number(inp.min), (Number(inp.value) || 0) + d * st)); inp.dispatchEvent(new Event("change")); }; return b; };
+    w.append(mk("−", -1), inp, mk("+", 1));
+  });
 
   function modal(ac){ $("admArka").classList.toggle("goster", ac); $("admMesaj").textContent = ""; if (ac) { $("admSicil").focus(); } }
   $("admBtn").onclick = async () => {
