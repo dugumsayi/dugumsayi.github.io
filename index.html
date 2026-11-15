@@ -767,6 +767,22 @@ html.hz-kilit .sohbet-panel {
 #ozetBox{margin:0 0 14px}
 #ozetBox.kapali,#listeBox.kapali{margin-bottom:8px}
 #ozetBox.kapali{margin-bottom:12px}
+
+/* Vardiya listesi altı: günün 3 vardiyasının sayıları (tıklamadan) */
+#vnoOzet{margin:14px 0 0}
+#vnoOzet h3{margin:0 0 8px;font-size:15px}
+#vnoOzet .vo-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r,10px);background:var(--card)}
+#vnoOzet table{width:100%;border-collapse:collapse;font-size:14px}
+#vnoOzet th,#vnoOzet td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+#vnoOzet th:first-child,#vnoOzet td:first-child{text-align:left}
+#vnoOzet thead th{font-size:12px;color:var(--mut);font-weight:600}
+#vnoOzet tr:last-child td{border-bottom:0}
+#vnoOzet tfoot td,#vnoOzet tr.vo-top td{font-weight:800}
+#vnoOzet td.vo-ad i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;background:var(--c,var(--line))}
+#vnoOzet td.vo-sifir{color:var(--mut)}
+#vnoOzet details{margin-top:10px}
+#vnoOzet summary{cursor:pointer;font-size:13px;color:var(--mut)}
+#vnoOzet tr.vo-simdi td:nth-child(var(--simdi)){background:rgba(80,120,220,.12)}
 </style>
 </head>
 <body>
@@ -998,6 +1014,7 @@ html.hz-kilit .sohbet-panel {
     <div class="sec-head" id="vardiyaHead"><h2>Vardiya listesi</h2><button id="vardiyaYenile" type="button" class="alt sm">Yenile</button></div>
     <div id="vardiyaGrid"></div>
     <p id="vardiyaAtanmamis" class="mut"></p>
+    <div id="vnoOzet"></div>
   </div>
 </div>
 
@@ -2060,7 +2077,66 @@ function vardiyaCiz() {
   if (ziyaretSayi != null) tile("Siteye bakan kişi", String(ziyaretSayi), bugunMu ? "bugün" : $("gunAd").textContent, "g");
   $("vardiyaAtanmamis").textContent = "";
   sampiyonCiz();
+  try { vnoOzetYukle(); } catch (e) {}
 }
+
+// ---- Vardiya listesi altı: seçili günün 00–08 / 08–16 / 16–24 sayıları (butonlara basmadan) ----
+let vnoOzetIstek = 0;
+async function vnoOzetYukle() {
+  const kap = $("vnoOzet"); if (!kap || !sb || !me) return;
+  const istek = ++vnoOzetIstek, gun = secili;
+  let data = null;
+  try {
+    if (!navigator.onLine) return;
+    const r = await sb.from("sayilar").select("user_id,vno,n1,n2,n3,n4,n5,n6,kullanici").eq("tarih", gun);
+    if (r.error) throw r.error; data = r.data || [];
+  } catch (e) { return; }
+  if (istek !== vnoOzetIstek || gun !== secili) return;   // eski istek: yoksay
+  const gorunen = new Map(vardiyaList.map(u => [u.id, u]));
+  const kul = new Map();   // user_id -> [v0, v1, v2]
+  data.forEach(r => {
+    if (!gorunen.has(r.user_id)) return;   // gizli hesaplar sayılmaz
+    const v = Number(r.vno); if (!(v >= 0 && v <= 2)) return;
+    if (!kul.has(r.user_id)) kul.set(r.user_id, [0, 0, 0]);
+    kul.get(r.user_id)[v] += rsum(r);
+  });
+  const gr = {};   // harf -> [v0, v1, v2]
+  const grupAd = u => (u && u.vardiya) || "";
+  kul.forEach((arr, id) => { const h = grupAd(gorunen.get(id)); gr[h] = gr[h] || [0, 0, 0]; arr.forEach((x, i) => gr[h][i] += x); });
+  const renk = { A: "#00a7e8", B: "#8b5cf6", C: "#f59e0b", D: "#14b8a6" };
+  const simdi = gun === bugun ? vNoNow() : -1;
+  const tablo = (baslikAd, satirlar, altToplam) => {
+    const t = el("table"), th = el("thead"), hr = el("tr");
+    [baslikAd, ...VNO_AD, "Toplam"].forEach(h => hr.append(el("th", "", h))); th.append(hr); t.append(th);
+    const tb = el("tbody");
+    satirlar.forEach(([ad, arr, c]) => {
+      const tr = el("tr"), td = el("td", "vo-ad"); if (c) td.style.setProperty("--c", c);
+      if (c) td.append(el("i")); td.append(document.createTextNode(ad)); tr.append(td);
+      arr.forEach(x => tr.append(el("td", x ? "" : "vo-sifir", fmt(yuv(x)))));
+      tr.append(el("td", "vo-top", fmt(yuv(arr.reduce((a, b) => a + b, 0))))); tb.append(tr);
+    });
+    t.append(tb);
+    if (altToplam) {
+      const tf = el("tfoot"), tr = el("tr"); tr.append(el("td", "", "Genel"));
+      altToplam.forEach(x => tr.append(el("td", "", fmt(yuv(x)))));
+      tr.append(el("td", "", fmt(yuv(altToplam.reduce((a, b) => a + b, 0))))); tf.append(tr); t.append(tf);
+    }
+    const w = el("div", "vo-wrap"); w.append(t); return w;
+  };
+  const sat = [...VARDIYALAR, ""].filter(h => h === "" ? gr[""] : true).map(h => [h ? h + " vardiyası" : "Vardiya seçilmedi", gr[h] || [0, 0, 0], renk[h]]);
+  const gen = [0, 1, 2].map(i => sat.reduce((a, s) => a + s[1][i], 0));
+  kap.textContent = "";
+  kap.append(el("h3", "", "Vardiya bazında sayılar · " + $("gunAd").textContent));
+  kap.append(tablo("Grup", sat, gen));
+  // Kişi bazında (açılır)
+  const kisiler = [...kul.entries()].map(([id, arr]) => [adBuyut((gorunen.get(id) || {}).ad || "?") + (grupAd(gorunen.get(id)) ? " (" + grupAd(gorunen.get(id)) + ")" : ""), arr, renk[grupAd(gorunen.get(id))]])
+    .filter(x => x[1].some(v => v)).sort((a, b) => a[0].localeCompare(b[0], "tr"));
+  if (kisiler.length) {
+    const d = el("details"); d.append(el("summary", "", "Kişi bazında göster (" + kisiler.length + ")"), tablo("Kişi", kisiler, null));
+    kap.append(d);
+  }
+}
+
 // Kullanıcı kendi vardiyasını seçer
 $("pVardiya").onchange = async () => {
   const v = $("pVardiya").value;
