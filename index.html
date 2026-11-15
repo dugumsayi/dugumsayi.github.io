@@ -782,6 +782,13 @@ html.hz-kilit .sohbet-panel {
 #vnoOzet td.vo-sifir{color:var(--mut)}
 #vnoOzet details{margin-top:10px}
 #vnoOzet summary{cursor:pointer;font-size:13px;color:var(--mut)}
+#vnoOzet td.vo-tik,#vnoOzet td.vo-ad.vo-tik{cursor:pointer}
+#vnoOzet td.vo-tik:hover{background:rgba(80,120,220,.18)}
+#vnoOzet td.vo-sec{outline:2px solid #1a73e8;outline-offset:-2px;background:rgba(80,120,220,.22)}
+#vnoOzet .vo-detay:not(:empty){margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r,10px);background:var(--card)}
+#vnoOzet .vo-dh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+#vnoOzet .vo-ipucu{font-size:12px;color:var(--mut);margin:6px 0 0}
+#vnoOzet .vo-detay td.vo-kim{white-space:normal;text-align:left;color:var(--mut);font-size:13px}
 #vnoOzet tr.vo-simdi td:nth-child(var(--simdi)){background:rgba(80,120,220,.12)}
 </style>
 </head>
@@ -2081,55 +2088,115 @@ function vardiyaCiz() {
 }
 
 // ---- Vardiya listesi altı: seçili günün 00–08 / 08–16 / 16–24 sayıları (butonlara basmadan) ----
-let vnoOzetIstek = 0;
+let vnoOzetIstek = 0, voSecim = null;   // voSecim: {t: tablo, gun, ri: satır, v: vardiya}
 async function vnoOzetYukle() {
   const kap = $("vnoOzet"); if (!kap || !sb || !me) return;
   const istek = ++vnoOzetIstek, gun = secili;
   let data = null;
   try {
     if (!navigator.onLine) return;
-    const r = await sb.from("sayilar").select("user_id,vno,n1,n2,n3,n4,n5,n6,kullanici").eq("tarih", gun);
+    const r = await sb.from("sayilar").select("user_id,vno,satir,name,n1,n2,n3,n4,n5,n6,kullanici").eq("tarih", gun);
     if (r.error) throw r.error; data = r.data || [];
   } catch (e) { return; }
   if (istek !== vnoOzetIstek || gun !== secili) return;   // eski istek: yoksay
   const gorunen = new Map(vardiyaList.map(u => [u.id, u]));
   const kul = new Map();   // user_id -> [v0, v1, v2]
+  const kayit = [];        // makine bazında: {uid, v, mak, n}
   data.forEach(r => {
     if (!gorunen.has(r.user_id)) return;   // gizli hesaplar sayılmaz
     const v = Number(r.vno); if (!(v >= 0 && v <= 2)) return;
     if (!kul.has(r.user_id)) kul.set(r.user_id, [0, 0, 0]);
-    kul.get(r.user_id)[v] += rsum(r);
+    const top = rsum(r);
+    kul.get(r.user_id)[v] += top;
+    if (top) kayit.push({ uid: r.user_id, v, mak: (r.name || "").trim() || "(adsız)", n: top });
   });
   const gr = {};   // harf -> [v0, v1, v2]
   const grupAd = u => (u && u.vardiya) || "";
   kul.forEach((arr, id) => { const h = grupAd(gorunen.get(id)); gr[h] = gr[h] || [0, 0, 0]; arr.forEach((x, i) => gr[h][i] += x); });
   const renk = { A: "#00a7e8", B: "#8b5cf6", C: "#f59e0b", D: "#14b8a6" };
   const simdi = gun === bugun ? vNoNow() : -1;
+  // Seçilen hücre/satır için: hangi makineye kaç düğüm atıldı
+  const goster = (box, det, rowAd, f, v) => {
+    det.textContent = "";
+    const liste = kayit.filter(k => f(k) && (v == null || k.v === v));
+    const hd = el("div", "vo-dh");
+    hd.append(el("strong", "", rowAd + " · " + (v == null ? "tüm vardiyalar" : VNO_AD[v]) + " — makineye göre düğümler"));
+    const kb = el("button", "alt sm", "Kapat"); kb.type = "button";
+    kb.onclick = () => { voSecim = null; det.textContent = ""; box.querySelectorAll(".vo-sec").forEach(x => x.classList.remove("vo-sec")); };
+    hd.append(kb); det.append(hd);
+    if (!liste.length) { det.append(el("p", "mut", "Bu seçimde makineye atılmış düğüm kaydı yok.")); return; }
+    const mk = new Map();
+    liste.forEach(k => {
+      const key = k.mak.toLocaleLowerCase("tr");
+      let g = mk.get(key); if (!g) { g = { ad: k.mak, n: 0, vs: [0, 0, 0], kim: new Map() }; mk.set(key, g); }
+      g.n += k.n; g.vs[k.v] += k.n; g.kim.set(k.uid, (g.kim.get(k.uid) || 0) + k.n);
+    });
+    const gl = [...mk.values()].sort((a, b) => b.n - a.n || adKar(a.ad, b.ad));
+    const t = el("table"), th = el("thead"), hr = el("tr");
+    ["Makine", ...(v == null ? VNO_AD : []), "Düğüm", "Kim"].forEach(h => hr.append(el("th", "", h)));
+    th.append(hr); t.append(th);
+    const tb = el("tbody");
+    gl.forEach(g => {
+      const tr = el("tr");
+      tr.append(el("td", "", g.ad));
+      if (v == null) g.vs.forEach(x => tr.append(el("td", x ? "" : "vo-sifir", fmt(yuv(x)))));
+      tr.append(el("td", "vo-top", fmt(yuv(g.n))));
+      tr.append(el("td", "vo-kim", [...g.kim.entries()].map(([id, x]) => adBuyut((gorunen.get(id) || {}).ad || "?") + " (" + fmt(yuv(x)) + ")").join(", ")));
+      tb.append(tr);
+    });
+    t.append(tb);
+    const tf = el("tfoot"), ft = el("tr");
+    ft.append(el("td", "", "Toplam"));
+    if (v == null) [0, 1, 2].forEach(i => ft.append(el("td", "", fmt(yuv(gl.reduce((a, g) => a + g.vs[i], 0))))));
+    ft.append(el("td", "", fmt(yuv(gl.reduce((a, g) => a + g.n, 0)))), el("td", "", ""));
+    tf.append(ft); t.append(tf);
+    const w = el("div", "vo-wrap"); w.append(t); det.append(w);
+  };
   const tablo = (baslikAd, satirlar, altToplam) => {
+    const box = el("div"), det = el("div", "vo-detay");
     const t = el("table"), th = el("thead"), hr = el("tr");
     [baslikAd, ...VNO_AD, "Toplam"].forEach(h => hr.append(el("th", "", h))); th.append(hr); t.append(th);
     const tb = el("tbody");
-    satirlar.forEach(([ad, arr, c]) => {
+    // hücreyi tıklanabilir yap: ri = satır no (-1: genel), v = vardiya no (null: hepsi)
+    const tikla = (td, ri, rowAd, f, v) => {
+      td.classList.add("vo-tik"); td.title = "Hangi makineye düğüm atıldığını göster";
+      td.dataset.ri = ri; td.dataset.v = v == null ? "" : v;
+      td.onclick = () => {
+        voSecim = { t: baslikAd, gun, ri, v };
+        box.querySelectorAll(".vo-sec").forEach(x => x.classList.remove("vo-sec")); td.classList.add("vo-sec");
+        goster(box, det, rowAd, f, v);
+      };
+    };
+    satirlar.forEach(([ad, arr, c, f], ri) => {
       const tr = el("tr"), td = el("td", "vo-ad"); if (c) td.style.setProperty("--c", c);
       if (c) td.append(el("i")); td.append(document.createTextNode(ad)); tr.append(td);
-      arr.forEach(x => tr.append(el("td", x ? "" : "vo-sifir", fmt(yuv(x)))));
-      tr.append(el("td", "vo-top", fmt(yuv(arr.reduce((a, b) => a + b, 0))))); tb.append(tr);
+      tikla(td, ri, ad, f, null);
+      arr.forEach((x, i) => { const c2 = el("td", x ? "" : "vo-sifir", fmt(yuv(x))); tikla(c2, ri, ad, f, i); tr.append(c2); });
+      const ct = el("td", "vo-top", fmt(yuv(arr.reduce((a, b) => a + b, 0)))); tikla(ct, ri, ad, f, null); tr.append(ct); tb.append(tr);
     });
     t.append(tb);
     if (altToplam) {
-      const tf = el("tfoot"), tr = el("tr"); tr.append(el("td", "", "Genel"));
-      altToplam.forEach(x => tr.append(el("td", "", fmt(yuv(x)))));
-      tr.append(el("td", "", fmt(yuv(altToplam.reduce((a, b) => a + b, 0))))); tf.append(tr); t.append(tf);
+      const tf = el("tfoot"), tr = el("tr"), hepsi = () => true, gtd = el("td", "", "Genel"); tikla(gtd, -1, "Genel", hepsi, null); tr.append(gtd);
+      altToplam.forEach((x, i) => { const c2 = el("td", "", fmt(yuv(x))); tikla(c2, -1, "Genel", hepsi, i); tr.append(c2); });
+      const gt = el("td", "", fmt(yuv(altToplam.reduce((a, b) => a + b, 0)))); tikla(gt, -1, "Genel", hepsi, null); tr.append(gt);
+      tf.append(tr); t.append(tf);
     }
-    const w = el("div", "vo-wrap"); w.append(t); return w;
+    const w = el("div", "vo-wrap"); w.append(t);
+    box.append(w, el("p", "vo-ipucu", "Bir hücreye (veya satıra) dokunun: hangi makineye düğüm atıldığı altta açılır."), det);
+    // yeniden çizimde önceki seçimi koru
+    if (voSecim && voSecim.t === baslikAd && voSecim.gun === gun) {
+      const hedef = [...box.querySelectorAll("td.vo-tik")].find(x => x.dataset.ri === String(voSecim.ri) && x.dataset.v === (voSecim.v == null ? "" : String(voSecim.v)));
+      if (hedef) hedef.click();
+    }
+    return box;
   };
-  const sat = [...VARDIYALAR, ""].filter(h => h === "" ? gr[""] : true).map(h => [h ? h + " vardiyası" : "Vardiya seçilmedi", gr[h] || [0, 0, 0], renk[h]]);
+  const sat = [...VARDIYALAR, ""].filter(h => h === "" ? gr[""] : true).map(h => [h ? h + " vardiyası" : "Vardiya seçilmedi", gr[h] || [0, 0, 0], renk[h], k => grupAd(gorunen.get(k.uid)) === h]);
   const gen = [0, 1, 2].map(i => sat.reduce((a, s) => a + s[1][i], 0));
   kap.textContent = "";
   kap.append(el("h3", "", "Vardiya bazında sayılar · " + $("gunAd").textContent));
   kap.append(tablo("Grup", sat, gen));
   // Kişi bazında (açılır)
-  const kisiler = [...kul.entries()].map(([id, arr]) => [adBuyut((gorunen.get(id) || {}).ad || "?") + (grupAd(gorunen.get(id)) ? " (" + grupAd(gorunen.get(id)) + ")" : ""), arr, renk[grupAd(gorunen.get(id))]])
+  const kisiler = [...kul.entries()].map(([id, arr]) => [adBuyut((gorunen.get(id) || {}).ad || "?") + (grupAd(gorunen.get(id)) ? " (" + grupAd(gorunen.get(id)) + ")" : ""), arr, renk[grupAd(gorunen.get(id))], k => k.uid === id])
     .filter(x => x[1].some(v => v)).sort((a, b) => a[0].localeCompare(b[0], "tr"));
   if (kisiler.length) {
     const d = el("details"); d.append(el("summary", "", "Kişi bazında göster (" + kisiler.length + ")"), tablo("Kişi", kisiler, null));
