@@ -558,12 +558,6 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 #onlineNames{font-size:12px;line-height:1.4;color:var(--mut);font-weight:500;white-space:normal;overflow-wrap:anywhere}
 @media(max-width:600px){.top{gap:8px;flex-wrap:wrap}.online-pill{font-size:12px;padding:6px 9px;max-width:100%}}
 
-/* ===== Vardiya özeti / liste sekmeleri ===== */
-.v-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;padding:4px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
-.v-tabs button{flex:1 1 150px;min-height:36px}
-.v-tabs button.sel{background:var(--btn);border-color:var(--btn);color:#fff}
-.v-tabpanel{min-width:0}
-@media(max-width:600px){.v-tabs{gap:4px}.v-tabs button{flex:1 1 120px;padding:0 8px;font-size:13px}}
 /* ===== Yeni özellikler ===== */
 .hedef-kutu{display:flex;flex-direction:column;gap:14px;margin:0 0 14px;padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:10px}
 .hd-sec{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
@@ -992,17 +986,12 @@ html.hz-kilit .sohbet-panel {
 </div>
 
 <div id="vardiyaBox" class="hide">
-  <div class="v-tabs" id="vardiyaSekmeler" role="tablist" aria-label="Vardiya bölümleri">
-    <button type="button" id="vTabOzet" class="alt sel" role="tab" aria-selected="true">Vardiya özeti</button>
-    <button type="button" id="vTabListe" class="alt" role="tab" aria-selected="false">Vardiya listesi</button>
-  </div>
-
-  <section id="vOzetPanel" class="v-tabpanel" role="tabpanel">
+  <section id="vOzetPanel" class="panel">
     <div class="sec-head" id="vOzetHead"><h2>Vardiya özeti</h2></div>
     <div id="vardiyaStat" class="stats"><div id="vardiyaSamp" class="hide"></div></div>
   </section>
 
-  <section id="vListePanel" class="v-tabpanel hide" role="tabpanel">
+  <section id="vListePanel" class="panel">
     <div class="sec-head" id="vardiyaHead"><h2>Vardiya listesi</h2><button id="vardiyaYenile" type="button" class="alt sm">Yenile</button></div>
     <div id="vardiyaGrid"></div>
     <p id="vardiyaAtanmamis" class="mut"></p>
@@ -2257,8 +2246,8 @@ $("aEkle").onclick = async () => {
 // Giriş yapmayan: hiçbir pencere yok. Giriş yapan: yöneticinin seçtikleri. Yönetici: hepsi.
 // Ayarlar site_ayar tablosunda tutulur (gorunurluk.sql). Tablo yoksa giriş yapanlara hepsi görünür.
 const GOR = [
-  ["ozet", "Vardiya özeti sekmesi (şampiyon ve toplam kutuları)", ["vardiyaStat"]],
-  ["vardiya", "Vardiya listesi sekmesi (A, B, C, D kartları)", ["vardiyaHead", "vardiyaGrid"]],
+  ["ozet", "Vardiya özeti bölümü", ["vOzetPanel"]],
+  ["vardiya", "Vardiya listesi bölümü (A, B, C, D kartları)", ["vListePanel"]],
   ["sampiyon", "Aylık vardiya şampiyonu", ["vardiyaSamp"]],
   ["genel", "Genel toplam tablosu", ["genCard", "genel"]],
   ["tablolar", "Kullanıcıların tabloları", ["users"]],
@@ -2336,43 +2325,12 @@ const hedefGizliMi = hd => { const i = HEDEFLER.indexOf(hd); return i >= 0 && !!
 const GOR_MISAFIR_ACIK = ["makineListesi"];
 const misafirAcikMi = k => GOR_MISAFIR_ACIK.includes(k) ? gorAyar.misafir[k] !== false : gorAyar.misafir[k] === true;
 const gorunur = k => isAdmin() || (me ? gorAyar.uye[k] !== false : misafirAcikMi(k));
-let aktifVardiyaSekmesi = "ozet";
-function vardiyaSekmeUygula() {
-  const ozetIzin = gorunur("ozet"), listeIzin = gorunur("vardiya");
-  const ozetBtn = $("vTabOzet"), listeBtn = $("vTabListe");
-  const ozetPanel = $("vOzetPanel"), listePanel = $("vListePanel");
-  if (!ozetBtn || !listeBtn || !ozetPanel || !listePanel) return;
-
-  ozetBtn.classList.toggle("hide", !ozetIzin);
-  listeBtn.classList.toggle("hide", !listeIzin);
-  ozetPanel.classList.toggle("gz", !ozetIzin);
-  listePanel.classList.toggle("gz", !listeIzin);
-
-  if (aktifVardiyaSekmesi === "ozet" && !ozetIzin) aktifVardiyaSekmesi = listeIzin ? "liste" : "";
-  if (aktifVardiyaSekmesi === "liste" && !listeIzin) aktifVardiyaSekmesi = ozetIzin ? "ozet" : "";
-
-  ozetPanel.classList.toggle("hide", !ozetIzin || aktifVardiyaSekmesi !== "ozet");
-  listePanel.classList.toggle("hide", !listeIzin || aktifVardiyaSekmesi !== "liste");
-  ozetBtn.classList.toggle("sel", aktifVardiyaSekmesi === "ozet");
-  listeBtn.classList.toggle("sel", aktifVardiyaSekmesi === "liste");
-  ozetBtn.setAttribute("aria-selected", String(aktifVardiyaSekmesi === "ozet"));
-  listeBtn.setAttribute("aria-selected", String(aktifVardiyaSekmesi === "liste"));
-}
-function vardiyaSekmeTikla(k) {
-  const izin = k === "ozet" ? gorunur("ozet") : gorunur("vardiya");
-  if (!izin) return;
-  // Sekmeler yalnızca içerik değiştirir; seçili bölüm kapanmaz.
-  aktifVardiyaSekmesi = k;
-  vardiyaSekmeUygula();
-}
-$("vTabOzet").onclick = () => vardiyaSekmeTikla("ozet");
-$("vTabListe").onclick = () => vardiyaSekmeTikla("liste");
-
-
 // ================= AÇILIR-KAPANIR PENCERELER =================
 // Her pencerenin başlığında ok vardır. Kullanıcının seçimi bu cihazda hatırlanır;
 // seçim yoksa yöneticinin belirlediği açılış durumu (gorAyar.kapali) geçerlidir.
 const PEN = [
+  ["vardiyaOzet", "vOzetPanel", "vOzetHead", "Vardiya özeti"],
+  ["vardiyaListe", "vListePanel", "vardiyaHead", "Vardiya listesi"],
   ["benim", "app", "appHead", "Benim girişlerim"],
   ["hedef", "hedefKutu", "hedefHead", "Hedef takibi"],
   ["kisisel", "kisiselKutu", "kisiselHead", "Kişisel rekor ve özetim"],
@@ -2441,9 +2399,9 @@ function gorUygula() {
   try { if (typeof hedefCiz === "function") hedefCiz(); } catch (e) {}
 }
 // ---- Pencere sırası: yönetici belirler ----
-var SIRA_VARS = ["benim", "gun", "vardiya", "ort", "kisisel", "log"];
-var SIRA_AD = { benim: "Benim girişlerim (hızlı sayı girişi)", gun: "Kullanıcıların tabloları", vardiya: "Özet kutuları ve vardiya listesi", ort: "Ortalama", kisisel: "Kişisel rekor ve özetim", log: "Giriş kayıtları ve süre farkı" };
-var SIRA_ID = { benim: "app", gun: "gunPanel", vardiya: "vardiyaBox", ort: "ortPanel", kisisel: "kisiselKutu", log: "logBox" };
+var SIRA_VARS = ["vardiyaOzet", "vardiyaListe", "benim", "gun", "vardiya", "ort", "kisisel", "log"];
+var SIRA_AD = { vardiyaOzet: "Vardiya özeti", vardiyaListe: "Vardiya listesi", benim: "Benim girişlerim (hızlı sayı girişi)", gun: "Kullanıcıların tabloları", vardiya: "Vardiya bölümleri", ort: "Ortalama", kisisel: "Kişisel rekor ve özetim", log: "Giriş kayıtları ve süre farkı" };
+var SIRA_ID = { vardiyaOzet: "vOzetPanel", vardiyaListe: "vListePanel", benim: "app", gun: "gunPanel", vardiya: "vardiyaBox", ort: "ortPanel", kisisel: "kisiselKutu", log: "logBox" };
 var siraTaslak = SIRA_VARS.slice();
 function siraBirles(a) {
   const o = [];
