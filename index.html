@@ -1596,8 +1596,19 @@ function renderShared() {
   let grand = 0;
   const agg = new Map();
   users.forEach(([uid, u]) => {
-    const list = u.list.filter(r => (r.name || "").trim() || COLS.some(k => r[k] != null && r[k] !== ""))
-      .sort((a, b) => adKar(a.name, b.name) || a.satir - b.satir); // makine adı küçükten büyüğe
+    const hamListe = u.list.filter(r => (r.name || "").trim() || COLS.some(k => r[k] != null && r[k] !== ""));
+    // Aynı makine adı birden fazla satıra yazılmışsa ortak tabloda tek satırda göster,
+    // sayılarını birleştir. Asıl kayıtlar ve giriş geçmişi değişmeden kalır.
+    const makineGruplari = new Map();
+    hamListe.forEach(r => {
+      const nm = (r.name || "").trim() || "(adsız)";
+      const key = nm.toLocaleLowerCase("tr");
+      let g = makineGruplari.get(key);
+      if (!g) { g = { name: nm, total: 0, satir: r.satir }; makineGruplari.set(key, g); }
+      g.total += rsum(r);
+      g.satir = Math.min(g.satir, r.satir);
+    });
+    const list = [...makineGruplari.values()].sort((a, b) => adKar(a.name, b.name) || a.satir - b.satir);
     const card = el("div", "ucard tiklanabilir");
     card.dataset.uid = uid; card.dataset.ad = u.ad || "";
     card.title = "Kişisel rekor ve özeti görmek için dokunun";
@@ -1610,10 +1621,10 @@ function renderShared() {
     head.append(hr); tbl.append(head);
     const body = el("tbody"); let total = 0;
     list.forEach(r => {
-      const tr = el("tr"), s = rsum(r); total += s;
-      const nm = (r.name || "").trim() || "(adsız)", key = nm.toLocaleLowerCase("tr");
+      const tr = el("tr"), s = r.total; total += s;
+      const nm = r.name, key = nm.toLocaleLowerCase("tr");
       const cur = agg.get(key) || { nm, s: 0 }; cur.s += s; agg.set(key, cur);
-      tr.append(el("td", "sn", r.name || ""));
+      tr.append(el("td", "sn", nm === "(adsız)" ? "" : nm));
       tr.append(el("td", "t", fmt(s))); body.append(tr);
     });
     const ft = el("tr", "tot");
