@@ -448,7 +448,7 @@ details>summary::before{content:"";width:7px;height:7px;border-right:2px solid v
 details[open]>summary::before{transform:rotate(45deg)}
 /* vardiya kartları */
 /* aylık vardiya şampiyonu */
-#vardiyaSamp{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;grid-column:span 2;margin:0;padding:14px 16px 14px 19px;border-radius:var(--r,10px);border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow)}
+#vardiyaSamp{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 14px;padding:14px 16px 14px 19px;border-radius:var(--r,10px);border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow)}
 #vardiyaSamp::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--vc,#f59e0b);opacity:.9}
 #vardiyaSamp.hide{display:none}
 #vardiyaSamp .sp-ikon{font-size:30px;line-height:1;display:none}
@@ -986,7 +986,8 @@ html.hz-kilit .sohbet-panel {
 </div>
 
 <div id="vardiyaBox" class="hide">
-  <div id="vardiyaStat" class="stats"><div id="vardiyaSamp" class="hide"></div></div>
+  <div id="vardiyaSamp" class="hide"></div>
+  <div id="vardiyaStat" class="stats"></div>
   <div class="sec-head" id="vardiyaHead"><h2>Vardiya listesi</h2><button id="vardiyaYenile" type="button" class="alt sm">Yenile</button></div>
   <div id="vardiyaGrid"></div>
   <p id="vardiyaAtanmamis" class="mut"></p>
@@ -2040,11 +2041,10 @@ function vardiyaCiz() {
   // Vardiya seçmemiş kayıtlı kullanıcılar da listeden düşmesin diye ayrı bir kartta gösterilir.
   if (yok.length) kart("", "Vardiya seçilmedi", yok);
   // Özet kutuları
-  const st = $("vardiyaStat"), sampKart = $("vardiyaSamp"); st.textContent = "";
+  const st = $("vardiyaStat"); st.textContent = "";
   const n = vardiyaList.length, aktif = vardiyaList.filter(u => u.aktif).length;
   const tile = (k, v, sub, cls) => { const d = el("div", "stat" + (cls ? " " + cls : "")); d.append(el("div", "k", k), el("div", "v", v), el("div", "s", sub || "")); st.append(d); };
-  // Sıra: şampiyon · genel toplam · sayfaya giren · aktif kullanıcı · siteye bakan
-  if (sampKart) st.append(sampKart);
+  // Şampiyon artık ayrı kart (#vardiyaSamp). Sıra: genel toplam · sayfaya giren · aktif kullanıcı · siteye bakan
   tile("Genel toplam", fmt(vardiyaList.reduce((x, u) => x + num(u), 0)), $("gunAd").textContent);
   if (girisSayi != null) tile("Sayfaya giren kişi", String(girisSayi), bugunMu ? "bugün" : $("gunAd").textContent);
   tile(bugunMu ? "Aktif kullanıcı" : "Kullanıcı", bugunMu ? aktif + " / " + n : String(n), bugunMu ? "şu an sitede" : "kayıtlı", bugunMu ? "g" : "");
@@ -2381,7 +2381,7 @@ function gorUygula() {
   try { vardiyaSureUygula(); } catch (e) {}
   try { tabloRenkUygula(); } catch (e) {}
   GOR.forEach(([k, , ids]) => ids.forEach(id => $(id).classList.toggle("gz", !gorunur(k))));
-  $("vardiyaBox").classList.toggle("gz", !(gorunur("ozet") || gorunur("vardiya")));
+  $("vardiyaBox").classList.toggle("gz", !(gorunur("ozet") || gorunur("vardiya") || gorunur("sampiyon")));
   $("gunPanel").classList.toggle("gz", !(gorunur("genel") || gorunur("tablolar")));
   if (typeof ortUygula === "function") ortUygula();
   try { ozetKartlar(); } catch (e) {}
