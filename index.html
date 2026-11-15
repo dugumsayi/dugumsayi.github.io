@@ -13,6 +13,41 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
+/* ============================================================
+   İÇİNDEKİLER (bu dosyadaki CSS bölümleri, sırayla)
+   - Paylaşılan tablolarda MAKİNE ve SAYI sütunları eşit genişlikte
+   - Profesyonel tema
+   - Giriş kartı: en üstte, sade
+   - Log tablosu
+   - Profil paneli: iki sütun + kapat düğmesi
+   - Mobil: sade ve tek sütun
+   - Açılır-kapanır pencereler
+   - Haftalık ortalama grafiği
+   - Göz yormayan, daha belirgin açık/gece tema paleti
+   - Genel cila: tüm sayfada tutarlı görünüm
+   - kartlar
+   - düğmeler
+   - giriş alanları
+   - tablolar
+   - açılır bölümler
+   - vardiya kartları
+   - aylık vardiya şampiyonu
+   - kullanıcı kartları
+   - grafik
+   - mesaj çubuğu
+   - Hızlı giriş widget'ı (telefon için)
+   - Kullanıcı kartı: tablo solda, giriş özeti (chip'ler) yanında
+   - Şu an içinde bulunulan vardiya butonu: belirgin neon yanıp sönme
+   - Yeni özellikler
+   - ---- Yönetici duyurusu bandı ----
+   - ---- Kişisel rekor ve özet ----
+   - ---- Rekor kutlaması ----
+   - ---- Sohbet kutusu ----
+   - KISI REKOR MODAL
+   - HIZLI GIRIS ACIKKEN SOHBETI USTUNE KONUMLANDIR (duyarli)
+   - SOHBETI TELEFONDA SOLA TASI
+   - Mobil sohbet: kucuk panel, sabit baslik ve gorunur kapatma dugmesi.
+   ============================================================ */
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px;max-width:1100px;margin-inline:auto}
 h1{font-size:20px;margin:0 0 4px}
@@ -53,7 +88,6 @@ tr.tot td{background:var(--tot)!important;color:#111;font-weight:600;text-align:
 .adm-tabs button.on{background:var(--card);color:var(--fg);box-shadow:var(--shadow)}
 .adm-tabs button:hover{filter:none;color:var(--fg)}
 .adm-pane.hide{display:none!important}
-
 table.at th{min-width:0;font-size:14px;padding:0 10px}
 table.at td{padding:4px 10px;font-size:14px;height:auto;text-align:left;background:var(--cell)}
 table.at tr.ban td{background:#ff7c8030}
@@ -279,7 +313,6 @@ table.lg tr.lg-ad td{opacity:.75}
   #logTbl table.lg th:nth-child(6),#logTbl table.lg td:nth-child(6){min-width:150px}
   #logTbl table.lg th:nth-child(7),#logTbl table.lg td:nth-child(7){min-width:65px}
 }
-
 /* ===== Açılır-kapanır pencereler ===== */
 .pen-bas{justify-content:flex-start}
 .pen-bas>h2{margin-right:auto;cursor:pointer;user-select:none}
@@ -302,7 +335,6 @@ button.alt.sel{background:var(--blue);color:#fff;border-color:var(--blue)}
 #gList{margin:8px 0;overflow-x:auto}
 #gList label{display:flex;gap:10px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:14px}
 #gList input{width:18px;height:18px;flex:none}
-
 /* Haftalık ortalama grafiği */
 #haftaPanel .ucard,#ayPanel .ucard,#yilPanel .ucard{padding:12px 14px}
 #hGrafik svg{width:100%;height:auto;display:block}
@@ -347,8 +379,6 @@ table.cmp{width:100%}
   table.cmp th:nth-child(4),table.cmp td:nth-child(4){width:16%}
   table.cmp th:nth-child(5),table.cmp td:nth-child(5){width:19%}
 }
-
-
 /* ===== Göz yormayan, daha belirgin açık/gece tema paleti ===== */
 :root{
   color-scheme:light;
@@ -402,7 +432,6 @@ table.at tr.ban td{background:rgba(224,72,79,.12)}
 .hc-avg{stroke:var(--warn)}.hc-avgt{fill:var(--warn)}
 table.lg .lg-e .lg-art{color:var(--ok);border-color:rgba(23,166,114,.4)}
 table.lg .lg-e .lg-eks,table.lg .lg-e .lg-sil{color:var(--bad);border-color:rgba(224,72,79,.4)}
-
 /* ===== Genel cila: tüm sayfada tutarlı görünüm ===== */
 html{-webkit-text-size-adjust:100%}
 body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;background:var(--bg);color:var(--fg)}
@@ -478,7 +507,6 @@ details[open]>summary::before{transform:rotate(45deg)}
 .oz-chip{background:var(--bg)}
 /* mesaj çubuğu */
 #logOzet .oz-card{background:var(--bg);border-color:var(--line)}
-
 /* ===== Hızlı giriş widget'ı (telefon için) ===== */
 #hizliFab{position:fixed;right:14px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:900;height:54px;border-radius:27px;padding:0 20px 0 16px;font-size:16px;display:flex;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(0,0,0,.32)!important}
 #hizliFab svg{width:22px;height:22px;flex:none}
@@ -516,7 +544,6 @@ details[open]>summary::before{transform:rotate(45deg)}
 #hizliBilgi.hata{color:var(--bad);font-weight:650}
 html.hz-kilit,html.hz-kilit body{overflow:hidden}
 #app.dondu .scroll{opacity:.65;pointer-events:none}
-
 /* ===== Kullanıcı kartı: tablo solda, giriş özeti (chip'ler) yanında ===== */
 .ugrid{grid-template-columns:repeat(auto-fill,minmax(min(100%,640px),1fr))}
 .u-row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
@@ -525,7 +552,6 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 .u-ozet{flex:1 1 260px;min-width:0}
 .u-ozet .oz-chips{margin-top:0}
 @media (max-width:600px){.ugrid{grid-template-columns:minmax(0,1fr)}.u-sol{flex:1 1 100%}}
-
 /* Şu an içinde bulunulan vardiya butonu: belirgin neon yanıp sönme */
 @keyframes vYan{
   0%,100%{background:var(--n-bg);color:var(--n-fg);box-shadow:0 0 calc(6px*var(--n-int)) #fff,0 0 calc(14px*var(--n-int)) var(--n-glow),0 0 calc(30px*var(--n-int)) var(--n-glow),0 0 calc(55px*var(--n-int)) var(--n-glow),0 0 calc(90px*var(--n-int)) var(--n-glow2);transform:scale(var(--n-scale))}
@@ -550,14 +576,11 @@ html.hz-kilit,html.hz-kilit body{overflow:hidden}
 .neon-grid input[type=range]{width:100%}
 .neon-onizle{margin:8px 0}
 .neon-onizle button{pointer-events:none}
-
-
  .online-pill{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:7px 11px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--fg);font-size:13px;font-weight:650;max-width:min(520px,100%)}
 .online-head{display:flex;align-items:center;gap:8px;white-space:nowrap}
 .online-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.14);flex:none}
 #onlineNames{font-size:12px;line-height:1.4;color:var(--mut);font-weight:500;white-space:normal;overflow-wrap:anywhere}
 @media(max-width:600px){.top{gap:8px;flex-wrap:wrap}.online-pill{font-size:12px;padding:6px 9px;max-width:100%}}
-
 /* ===== Yeni özellikler ===== */
 .hedef-kutu{display:flex;flex-direction:column;gap:14px;margin:0 0 14px;padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:10px}
 .hd-sec{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
@@ -612,7 +635,6 @@ td.rv-bar{min-width:90px;padding:0 10px}
   #yazdirAlan tr.top td{background:#eef1f7;font-weight:700}
   #yazdirAlan tr{break-inside:avoid}
 }
-
 /* ---- Yönetici duyurusu bandı ---- */
 .duyuru-bant{position:sticky;top:0;z-index:50;display:flex;gap:12px;align-items:flex-start;margin:0 0 12px;padding:12px 14px;border-radius:var(--r);border:1px solid;box-shadow:var(--shadow)}
 .duyuru-bant.hide{display:none}
@@ -664,7 +686,6 @@ td.rv-bar{min-width:90px;padding:0 10px}
 @keyframes rkDus{to{top:105%;transform:rotate(720deg) translateX(40px)}}
 @keyframes rkZip{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
 @media (prefers-reduced-motion:reduce){.rk-konfeti{display:none}.rk-kart{animation:none}}
-
 /* ---- Sohbet kutusu ---- */
 .sohbet-kok{position:fixed;right:16px;bottom:16px;z-index:900;display:flex;flex-direction:column;align-items:flex-end;gap:10px}
 .sohbet-kok.hide{display:none}
@@ -699,7 +720,6 @@ td.rv-bar{min-width:90px;padding:0 10px}
 .sh-not .asim{color:#ef4444}
 @media (max-width:640px){.sohbet-kok{right:10px;bottom:10px}.sh-btn-yazi{display:none}.sohbet-btn{width:52px;height:52px;padding:0;justify-content:center;border-radius:50%}.sohbet-panel{width:calc(100vw - 20px);height:calc(100vh - 90px)}}
 @media (prefers-reduced-motion:reduce){.sohbet-btn.yeni{animation:none}}
-
 /* KISI REKOR MODAL */
 .krm-ortu{position:fixed;inset:0;z-index:1200;background:rgba(10,16,28,.6);display:flex;align-items:center;justify-content:center;padding:14px}
 .krm-kart{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:14px;max-width:520px;width:100%;max-height:88vh;overflow:auto;padding:16px;box-shadow:0 16px 40px rgba(0,0,0,.35)}
@@ -712,7 +732,6 @@ td.rv-bar{min-width:90px;padding:0 10px}
 .krm-muted{color:var(--mut);font-size:12px}
 .krm-rekor{font-size:22px;font-weight:800}
 .ucard.tiklanabilir{cursor:pointer}
-
 /* HIZLI GIRIS ACIKKEN SOHBETI USTUNE KONUMLANDIR (duyarli) */
 html.hz-kilit .sohbet-kok {
   bottom: calc(var(--hzYukseklik, 0px) + 16px) !important;
@@ -721,7 +740,6 @@ html.hz-kilit .sohbet-panel {
   bottom: calc(var(--hzYukseklik, 0px) + 16px) !important;
   max-height: calc(100dvh - var(--hzYukseklik, 0px) - 32px) !important;
 }
-
 /* SOHBETI TELEFONDA SOLA TASI */
 @media (max-width: 700px) {
   .sohbet-kok {
@@ -735,7 +753,6 @@ html.hz-kilit .sohbet-panel {
     width: calc(100vw - 20px) !important;
   }
 }
-
 /* Mobil sohbet: kucuk panel, sabit baslik ve gorunur kapatma dugmesi. */
 .sohbet-panel{min-height:0;flex-shrink:0}
 .sohbet-panel .sh-bas,.sohbet-panel .sh-alt,.sohbet-panel .sh-not,.sohbet-panel .sh-durum{flex-shrink:0}
@@ -763,9 +780,27 @@ html.hz-kilit .sohbet-panel {
   .sohbet-panel .sh-not span:last-child{white-space:nowrap}
 }
 
+/* ===== Sayfa düzeni (üst bölüm, hızlı geçiş çubuğu, yardımcı sınıflar) ===== */
+.top-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-left:auto}
+.top-actions .bar{margin:0}
+.chip-link{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 10px;border:1px solid var(--line);border-radius:8px;color:var(--fg);text-decoration:none;font-size:13px;font-weight:600;background:var(--card)}
+.chip-link:hover{background:var(--row)}
+.bolum-nav{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:6px;margin:0 0 16px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.bolum-nav.hide{display:none}
+.bolum-nav a{flex:0 0 auto;display:inline-flex;align-items:center;height:32px;padding:0 14px;border-radius:8px;color:var(--mut);font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap}
+.bolum-nav a:hover{background:var(--row);color:var(--fg)}
+.bolum-nav a.hide{display:none}
+#vardiyaBox,#app,#gunPanel,#ortPanel,#kisiselKutu,#logBox,#profil,#admin,#auth{scroll-margin-top:12px}
+.col-flex{display:flex;flex-direction:column;gap:6px}
+.w80{width:80px}
+.w90{width:90px}
+.notice-bar{margin:8px 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
+@media (max-width:600px){.top-actions{width:100%;justify-content:stretch}.top-actions>*{flex:1 1 auto}.bolum-nav{margin-bottom:12px}}
+@media print{.bolum-nav{display:none!important}}
 </style>
 </head>
 <body>
+<!-- SOHBET (sağ alttaki yüzen kutu) -->
 <div id="sohbetKok" class="sohbet-kok hide">
   <div id="sohbetPanel" class="sohbet-panel hide" role="dialog" aria-label="Sohbet">
     <div class="sh-bas"><strong>💬 Sohbet</strong><button id="sohbetSes" type="button" class="alt sm sh-ses" aria-pressed="true" title="Bildirim sesi açık">🔔</button><button id="sohbetTemizle" type="button" class="alt sm hide" title="Yönetici: tüm mesajları sil">Tümünü sil</button><button id="sohbetKapat" type="button" class="alt sm" aria-label="Sohbeti kapat">✕</button></div>
@@ -776,21 +811,24 @@ html.hz-kilit .sohbet-panel {
   </div>
   <button id="sohbetBtn" type="button" class="sohbet-btn" aria-expanded="false" aria-label="Sohbeti aç">💬<span class="sh-btn-yazi">Sohbet</span><span id="sohbetRozet" class="sh-rozet hide">0</span></button>
 </div>
+<!-- YÖNETİCİ DUYURU BANDI -->
 <div id="duyuruBant" class="duyuru-bant hide" role="status" aria-live="polite"><span id="dbIkon" class="db-ikon"></span><div class="db-ic"><strong id="dbBaslik">Yönetici duyurusu</strong><div id="dbMetin" class="db-metin"></div><small id="dbZaman" class="db-zaman"></small></div><button id="dbOkudum" type="button">Okudum</button></div>
+<!-- ÜST BÖLÜM: durum, çevrimiçi kişiler, kullanıcı düğmeleri -->
 <header class="top">
   <div class="brand"><div><p id="st">Yükleniyor…</p></div></div>
   <div class="online-pill" aria-live="polite" title="Şu anda siteyi açık tutan ziyaretçiler">
     <div class="online-head"><span class="online-dot"></span><span id="onlineCount">0 kişi çevrimiçi</span></div>
     <div id="onlineNames">Kullanıcılar bekleniyor…</div>
   </div>
-  <button id="kurBtn" type="button" class="alt sm hide">📲 Ana ekrana ekle</button>
-  <a id="makineListesiLink" href="makinelistesi.html" target="_blank" rel="noopener"
-     style="display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 10px;margin:2px 4px 2px 0;border:1px solid var(--line);border-radius:4px;color:var(--fg);text-decoration:none;font-size:13px;font-weight:600">
-    📋 Makine Listesi
-  </a>
+  <div class="top-actions">
+    <button id="kurBtn" type="button" class="alt sm hide">📲 Ana ekrana ekle</button>
+    <a id="makineListesiLink" class="chip-link" href="makinelistesi.html" target="_blank" rel="noopener">📋 Makine Listesi</a>
   <div id="bar" class="bar hide"><span id="kim"></span><button id="profilBtn" type="button" class="alt">Profilim</button><button id="adminBtn" class="alt hide">Yönetim paneli</button><button id="cikis" type="button" class="alt">Çıkış yap</button></div>
+  </div>
 </header>
-
+<!-- Bölümler arası hızlı geçiş (sadece görünür bölümleri gösterir; en alttaki küçük betik doldurur) -->
+<nav id="bolumNav" class="bolum-nav hide" aria-label="Sayfa bölümleri"></nav>
+<!-- PROFİLİM paneli -->
 <div id="profil" class="hide">
   <div class="p-head"><strong>Profilim</strong><button id="profilKapat" type="button" class="red sm">✕ Kapat</button></div>
   <div class="p-cols">
@@ -803,7 +841,7 @@ html.hz-kilit .sohbet-panel {
       <label id="pYoneticiGizleBilgi" class="mut hide">Bu ayar normal kullanıcıların ve ziyaretçilerin listelerinde geçerlidir. Yönetim yetkiniz değişmez.</label>
       <label class="mut" for="pVardiya">Vardiyam</label>
       <select id="pVardiya"><option value="">Vardiya seçilmedi</option><option value="A">A vardiyası</option><option value="B">B vardiyası</option><option value="C">C vardiyası</option><option value="D">D vardiyası</option></select>
-      <div id="tabloRenkSatir" class="hide" style="display:flex;flex-direction:column;gap:6px">
+      <div id="tabloRenkSatir" class="hide col-flex">
         <label class="mut">Tablo rengim <input id="tabloRenkKisisel" type="color" value="#3159b7"></label>
         <button id="tabloRenkSifirlaKisisel" type="button" class="alt sm">Yönetici rengine dön</button>
         <span class="mut">Renk seçince anında uygulanır, bu cihazda saklanır.</span>
@@ -820,7 +858,7 @@ html.hz-kilit .sohbet-panel {
     </div>
   </div>
 </div>
-
+<!-- YÖNETİM PANELİ (sekmeler: kullanıcılar, hedefler, görünüm, vardiya, ana sayfa, duyuru, denetim) -->
 <div id="admin" class="hide">
   <div class="p-head"><strong>Yönetim paneli</strong><button id="adminKapat" type="button" class="red sm">✕ Kapat</button></div>
   <p class="mut">Kullanıcıları banlayabilir, silebilir, yönetici yapabilir veya yeni kullanıcı ekleyebilirsiniz.</p>
@@ -879,8 +917,8 @@ html.hz-kilit .sohbet-panel {
   <strong>Hız ve dinlenme payı için ölçüm süresi</strong>
   <p class="mut">Hız hesabı, ilk girişten sonra en az kaç dakikalık net çalışma ölçümü oluşunca başlasın; dinlenme payı ve vardiya sonu tahmini ise en az kaç dakika ölçümden sonra gösterilsin. Çok kısa sürelerde (ör. 4 dakikada 11 sayı) hız vardiyaya uzatılınca gerçekçi olmayan dinlenme süreleri çıkar; süre uzadıkça tahmin daha güvenilir olur. Kaydedince herkeste anında geçerli olur.</p>
   <div class="row">
-    <label>Hız için en az (dk) <input id="olcumDkInp" type="number" min="1" max="120" step="1" value="5" style="width:80px"></label>
-    <label>Dinlenme payı / vardiya sonu tahmini için en az (dk) <input id="dinlenDkInp" type="number" min="1" max="120" step="1" value="30" style="width:80px"></label>
+    <label>Hız için en az (dk) <input id="olcumDkInp" class="w80" type="number" min="1" max="120" step="1" value="5"></label>
+    <label>Dinlenme payı / vardiya sonu tahmini için en az (dk) <input id="dinlenDkInp" class="w80" type="number" min="1" max="120" step="1" value="30"></label>
     <button id="olcumSifirla" type="button" class="alt sm">Varsayılan (5 / 30)</button>
     <button id="olcumKaydet" type="button">Ölçüm süresini kaydet</button>
   </div>
@@ -907,8 +945,8 @@ html.hz-kilit .sohbet-panel {
   <strong>Vardiya tablosu açılış ve kapanış saatleri</strong>
   <p class="mut">Her vardiyanın tablosu başlamadan kaç dakika önce açılsın, bitmeden kaç dakika önce kapansın. Üç vardiyaya (00–08, 08–16, 16–24) aynı anda uygulanır. Kaydedince açık olan tüm kullanıcılarda anında geçerli olur. Kapanan tablodaki sayılar silinmez; "Kullanıcıların tabloları"nda tarih ve vardiya seçilerek görülür.</p>
   <div class="row">
-    <label>Başlamadan önce açılış (dk) <input id="vErkenDk" type="number" min="0" max="120" step="1" value="0" style="width:90px"></label>
-    <label>Bitmeden önce kapanış (dk) <input id="vKapanDk" type="number" min="0" max="120" step="1" value="0" style="width:90px"></label>
+    <label>Başlamadan önce açılış (dk) <input id="vErkenDk" class="w90" type="number" min="0" max="120" step="1" value="0"></label>
+    <label>Bitmeden önce kapanış (dk) <input id="vKapanDk" class="w90" type="number" min="0" max="120" step="1" value="0"></label>
   </div>
   <div class="row">
     <label class="chk"><input id="vOtoGecis" type="checkbox" checked> Tablo açıldığında, eski tabloda hiç sayısı olmayanlar otomatik yeni tabloya geçsin</label>
@@ -974,7 +1012,7 @@ html.hz-kilit .sohbet-panel {
   <div class="row"><button id="tumSil" class="red">Tüm kullanıcıların makine adı ve sayılarını sil</button></div>
   </div>
 </div>
-
+<!-- GİRİŞ / KAYIT kartı -->
 <div id="auth" class="hide">
   <div class="auth-tabs"><button type="button" id="tabGiris" class="on">Giriş yap</button><button type="button" id="tabKayit">Kayıt ol</button></div>
   <input id="ad" class="kayitOnly" placeholder="Ad Soyad" autocomplete="name">
@@ -984,22 +1022,16 @@ html.hz-kilit .sohbet-panel {
   <button id="giris">Giriş yap</button>
   <button id="kayit" class="kayitOnly">Kayıt ol</button>
 </div>
-
+<!-- VARDİYA LİSTESİ ve aylık şampiyon -->
 <div id="vardiyaBox" class="hide">
   <div id="vardiyaStat" class="stats"><div id="vardiyaSamp" class="hide"></div></div>
   <div class="sec-head" id="vardiyaHead"><h2>Vardiya listesi</h2><button id="vardiyaYenile" type="button" class="alt sm">Yenile</button></div>
   <div id="vardiyaGrid"></div>
   <p id="vardiyaAtanmamis" class="mut"></p>
 </div>
-
-
-
-
-
-
-
-
-<div id="yeniVardBar" class="hide" style="margin:8px 0;padding:10px 12px;border:1px solid var(--line,#3b4a60);border-radius:10px"><span id="yeniVardMetin"></span> <button id="yeniVardGec" type="button" class="sm">Yeni tabloya geç</button></div>
+<!-- YENİ VARDİYA TABLOSU uyarısı -->
+<div id="yeniVardBar" class="hide notice-bar"><span id="yeniVardMetin"></span> <button id="yeniVardGec" type="button" class="sm">Yeni tabloya geç</button></div>
+<!-- BENİM GİRİŞLERİM (günlük sayı tablosu + hedef takibi) -->
 <div id="app" class="hide">
   <div class="sec-head" id="appHead"><h2>Benim girişlerim (bugün)</h2></div>
   <div id="hedefKutu" class="hedef-kutu hide"><div class="sec-head" id="hedefHead"><h3>Hedef takibi</h3></div></div>
@@ -1007,7 +1039,7 @@ html.hz-kilit .sohbet-panel {
   <p id="gonderNot" class="mut hide">✓ Tablonuzu resim olarak kaydettiniz; bu vardiyanın tablosu donduruldu. Artık hiçbir değişiklik yapılamaz.</p>
   <div class="scroll"><table id="mineTbl"><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody><tfoot><tr class="tot"><td>TOPLAM</td><td id="mineToplam">0</td><td></td></tr></tfoot></table></div>
 </div>
-
+<!-- KULLANICILARIN TABLOLARI (tarihe göre) -->
 <section class="panel" id="gunPanel">
   <div class="sec-head"><h2>Kullanıcıların tabloları</h2><div class="bar"><input type="date" id="tarih"><button id="bugunBtn" class="alt">Bugün</button><span id="gunAd"></span></div></div>
   <div id="benimGun" class="oz-card benim-gun"></div>
@@ -1022,17 +1054,15 @@ html.hz-kilit .sohbet-panel {
     <div id="users"></div>
   </div>
 </section>
-
+<!-- ORTALAMA (haftalık / aylık / yıllık / aralık) -->
 <section class="panel" id="ortPanel">
   <div class="sec-head"><h2>Ortalama</h2><div class="bar" id="ortSekme"><button id="ortH" type="button" class="alt sm sel">Haftalık</button><button id="ortA" type="button" class="alt sm">Aylık</button><button id="ortY" type="button" class="alt sm">Yıllık</button><button id="ortR" type="button" class="alt sm">Aralık</button></div></div>
-
   <div id="haftaPanel">
     <div class="sec-head"><div class="bar"><button id="hOnce" type="button" class="alt sm">◀ Önceki hafta</button><button id="hBu" type="button" class="alt sm">Bu hafta</button><button id="hSonra" type="button" class="alt sm">Sonraki hafta ▶</button></div></div>
     <p id="hEtiket" class="mut"></p>
     <div id="hStat" class="stats"></div>
     <div class="ucard"><div id="hGrafik"></div></div>
   </div>
-
   <div id="ayPanel" class="ort-gizli">
     <div class="sec-head"><div class="bar"><button id="aOnce" type="button" class="alt sm">◀ Önceki ay</button><button id="aBu" type="button" class="alt sm">Bu ay</button><button id="aSonra" type="button" class="alt sm">Sonraki ay ▶</button></div></div>
     <p id="aEtiket" class="mut"></p>
@@ -1040,7 +1070,6 @@ html.hz-kilit .sohbet-panel {
     <div id="aStat" class="stats"></div>
     <div class="ucard"><div id="aTablo" class="scroll"></div></div>
   </div>
-
   <div id="aralikPanel" class="ort-gizli">
     <div class="sec-head"><div class="bar">
       <label class="mut">Başlangıç <input type="date" id="rBas"></label>
@@ -1054,7 +1083,6 @@ html.hz-kilit .sohbet-panel {
     <div class="ucard"><h3>Günlere göre atılan sayı</h3><div id="rGrafik"></div></div>
     <div class="ucard"><h3>Vardiya karşılaştırması</h3><div id="rVardiya" class="scroll"></div></div>
   </div>
-
   <div id="yilPanel" class="ort-gizli">
     <div class="sec-head"><div class="bar"><button id="yOnce" type="button" class="alt sm">◀ Önceki yıl</button><button id="yBu" type="button" class="alt sm">Bu yıl</button><button id="ySonra" type="button" class="alt sm">Sonraki yıl ▶</button></div></div>
     <p id="yEtiket" class="mut"></p>
@@ -1062,12 +1090,12 @@ html.hz-kilit .sohbet-panel {
     <div class="ucard"><div id="yGrafik"></div></div>
   </div>
 </section>
-
+<!-- KİŞİSEL REKOR VE ÖZET -->
 <section class="panel hide" id="kisiselKutu">
   <div class="sec-head" id="kisiselHead"><h2>Kişisel rekor ve özetim</h2></div>
   <div id="kisiselIc"></div>
 </section>
-
+<!-- GİRİŞ KAYITLARI ve süre farkı -->
 <details id="logBox" class="hide">
   <summary><strong>Giriş kayıtları ve süre farkı</strong> <span id="logSayi" class="mut"></span></summary>
   <p class="mut">Seçili günde girilen her sayı saat bilgisiyle kaydedilir. Her satırda kimin girdiği ve makinenin toplamının girişten önceki ve sonraki değeri görünür. Süre farkı, aynı makinedeki ve aynı kullanıcının bir önceki girişinden bu yana geçen süredir.</p>
@@ -1077,10 +1105,37 @@ html.hz-kilit .sohbet-panel {
   <div id="logTbl" class="scroll"></div>
 </details>
 <span id="siraSon" hidden></span>
-
+<!-- YAZDIRMA alanı -->
 <div id="yazdirAlan"></div>
 
+<!-- HIZLI GİRİŞ (telefon): yüzen düğme + alttan açılan tuş takımı -->
+<button id="hizliFab" type="button" class="hide" aria-label="Hızlı sayı girişi">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 7.5h8M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/></svg>
+  Hızlı giriş
+</button>
+<div id="hizliArka" class="hide"></div>
+<div id="hizliSheet" class="hide" role="dialog" aria-label="Hızlı sayı girişi">
+  <div class="hz-grip"></div>
+  <div class="hz-head"><strong>Hızlı giriş</strong><button id="hizliKapat" type="button" class="alt hz-x">Kapat ✕</button></div>
+  <div id="hizliChips"></div>
+  <div id="hizliYeni" class="hide"><input id="hizliYeniAd" type="text" placeholder="Yeni makine adı" autocomplete="off" enterkeyhint="done"><button id="hizliYeniOk" type="button">Ekle</button></div>
+  <div class="hz-disp">
+    <div class="hz-dl"><div id="hizliAd">Makine seçin</div><div id="hizliTop"></div></div>
+    <div id="hizliDeger" class="bos">0</div>
+  </div>
+  <div class="hz-pad" id="hizliPad"></div>
+  <div class="hz-act">
+    <button id="hizliIsaret" type="button" class="alt">+ / −</button>
+    <button id="hizliGeri" type="button" class="alt">↶ Geri al</button>
+    <button id="hizliEkle" type="button" class="hz-ok">TOPLAMA EKLE</button>
+  </div>
+  <div id="hizliBilgi"></div>
+</div>
+
+<!-- ===== KÜTÜPHANE: Supabase istemcisi ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+
+<!-- ===== ANA UYGULAMA: giriş, tablolar, vardiyalar, yönetim paneli, ortalamalar, kayıtlar ===== -->
 <script>
 const SUPABASE_URL = "https://pgaqufqkxptoxrgtlrxv.supabase.co";
 const SUPABASE_KEY = "sb_publishable_hxb7BDh7sjAwoBDt4UjG1w_Tu6oAwO2";
@@ -3667,29 +3722,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) { zi
 })();
 </script>
 
-<button id="hizliFab" type="button" class="hide" aria-label="Hızlı sayı girişi">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 7.5h8M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/></svg>
-  Hızlı giriş
-</button>
-<div id="hizliArka" class="hide"></div>
-<div id="hizliSheet" class="hide" role="dialog" aria-label="Hızlı sayı girişi">
-  <div class="hz-grip"></div>
-  <div class="hz-head"><strong>Hızlı giriş</strong><button id="hizliKapat" type="button" class="alt hz-x">Kapat ✕</button></div>
-  <div id="hizliChips"></div>
-  <div id="hizliYeni" class="hide"><input id="hizliYeniAd" type="text" placeholder="Yeni makine adı" autocomplete="off" enterkeyhint="done"><button id="hizliYeniOk" type="button">Ekle</button></div>
-  <div class="hz-disp">
-    <div class="hz-dl"><div id="hizliAd">Makine seçin</div><div id="hizliTop"></div></div>
-    <div id="hizliDeger" class="bos">0</div>
-  </div>
-  <div class="hz-pad" id="hizliPad"></div>
-  <div class="hz-act">
-    <button id="hizliIsaret" type="button" class="alt">+ / −</button>
-    <button id="hizliGeri" type="button" class="alt">↶ Geri al</button>
-    <button id="hizliEkle" type="button" class="hz-ok">TOPLAMA EKLE</button>
-  </div>
-  <div id="hizliBilgi"></div>
-</div>
-
+<!-- ===== HIZLI GİRİŞ: tuş takımı ile sayı ekleme ===== -->
 <script>
 /* Hızlı giriş widget'ı: ekrandaki büyük tuş takımıyla makine seçip sayı ekler.
    Mevcut tablodaki "SAYI EKLE" kutularını kullanır; kayıt, çevrimdışı kuyruk ve canlı toplam aynen çalışır. */
@@ -3846,6 +3879,8 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) { zi
   } catch (e) { console.error("Hızlı giriş widget'ı başlatılamadı:", e); }
 })();
 </script>
+
+<!-- ===== EXCEL / PDF dışa aktarma ===== -->
 <script>
 /* ================= YENİ ÖZELLİKLER =================
    1) Hedef ilerleme çubuğu   2) Aralık analizi + grafik + vardiya karşılaştırması
@@ -4274,6 +4309,8 @@ function xlsxBlob(sayfalar) {
   }
 })();
 </script>
+
+<!-- ===== SOHBET, duyuru ve çevrimiçi kişiler ===== -->
 <script>
 // ================= YÖNETİCİ DUYURUSU · KİŞİSEL REKOR · KİŞİSEL ÖZET =================
 (function () {
@@ -4515,6 +4552,8 @@ function xlsxBlob(sayfalar) {
   setInterval(() => { if (me) { kisiselYukle(false); kisiselCiz(); } }, 60000);   // 10 dk'da bir arka planda tazelenir
 })();
 </script>
+
+<!-- ===== KİŞİSEL REKOR ve ÖZET penceresi ===== -->
 <script>
 // ================= SOHBET KUTUSU (sohbet.sql gerekir) =================
 (function () {
@@ -4668,6 +4707,7 @@ function xlsxBlob(sayfalar) {
 })();
 </script>
 
+<!-- ===== SOHBET konumu (hızlı giriş açıkken) ===== -->
 <script>
 // ================= KISI REKOR VE OZET MODAL =================
 window.kisiRekorGoster = async function (uid, ad) {
@@ -4759,6 +4799,7 @@ window.kisiRekorGoster = async function (uid, ad) {
 };
 </script>
 
+<!-- ===== SOHBET ekran boyutu uyumu ===== -->
 <script>
 // HIZLI GIRIS ACIKKEN SOHBET KONUMU: panelin gercek yuksekligine gore ayarla
 (function () {
@@ -4794,6 +4835,7 @@ window.kisiRekorGoster = async function (uid, ad) {
 })();
 </script>
 
+<!-- ===== BETİK 9 ===== -->
 <script>
 (function(){
   function fitSohbet(){
@@ -4810,6 +4852,52 @@ window.kisiRekorGoster = async function (uid, ad) {
     window.visualViewport.addEventListener('scroll',fitSohbet,{passive:true});
   }
   fitSohbet();
+})();
+</script>
+
+</body>
+
+<!-- ===== BÖLÜM GEÇİŞ ÇUBUĞU (yalnızca görünür bölümleri listeler) ===== -->
+<script>
+(function () {
+  try {
+    const nav = document.getElementById("bolumNav");
+    if (!nav) return;
+    const BOLUMLER = [
+      ["vardiyaBox", "Vardiyalar"], ["app", "Girişlerim"], ["gunPanel", "Tablolar"],
+      ["ortPanel", "Ortalama"], ["kisiselKutu", "Rekorlarım"], ["logBox", "Kayıtlar"]
+    ];
+    const bagla = {};
+    BOLUMLER.forEach(([id, ad]) => {
+      const a = document.createElement("a");
+      a.href = "#" + id; a.textContent = ad; a.className = "hide";
+      a.addEventListener("click", ev => {
+        const h = document.getElementById(id); if (!h) return;
+        ev.preventDefault();
+        h.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      bagla[id] = a;
+    });
+    const gorunurMu = e => e && !e.classList.contains("hide") && e.getClientRects().length > 0;
+    let bekliyor = false;
+    function guncelle() {
+      bekliyor = false;
+      const sirali = BOLUMLER.map(([id]) => document.getElementById(id)).filter(Boolean)
+        .sort((x, y) => (x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1);
+      let say = 0;
+      sirali.forEach(e => {
+        const a = bagla[e.id], g = gorunurMu(e);
+        a.classList.toggle("hide", !g); if (g) say++;
+      });
+      const istenen = sirali.map(e => bagla[e.id]);
+      if (istenen.some((a, i) => nav.children[i] !== a)) istenen.forEach(a => nav.appendChild(a));
+      nav.classList.toggle("hide", say < 2);
+    }
+    const planla = () => { if (!bekliyor) { bekliyor = true; requestAnimationFrame(guncelle); } };
+    new MutationObserver(kayitlar => { if (kayitlar.some(k => !nav.contains(k.target) || k.target === nav && false)) planla(); }).observe(document.body, { attributes: true, attributeFilter: ["class"], subtree: true, childList: true });
+    window.addEventListener("resize", planla);
+    planla();
+  } catch (e) {}
 })();
 </script>
 
