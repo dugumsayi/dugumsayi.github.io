@@ -2257,8 +2257,8 @@ $("aEkle").onclick = async () => {
 // Giriş yapmayan: hiçbir pencere yok. Giriş yapan: yöneticinin seçtikleri. Yönetici: hepsi.
 // Ayarlar site_ayar tablosunda tutulur (gorunurluk.sql). Tablo yoksa giriş yapanlara hepsi görünür.
 const GOR = [
-  ["ozet", "Özet kutuları (siteye bakan, genel toplam, aktif kullanıcı…)", ["vardiyaStat"]],
-  ["vardiya", "Vardiya listesi (A, B, C, D kartları)", ["vardiyaHead", "vardiyaGrid"]],
+  ["ozet", "Vardiya özeti sekmesi (şampiyon ve toplam kutuları)", ["vardiyaStat"]],
+  ["vardiya", "Vardiya listesi sekmesi (A, B, C, D kartları)", ["vardiyaHead", "vardiyaGrid"]],
   ["sampiyon", "Aylık vardiya şampiyonu", ["vardiyaSamp"]],
   ["genel", "Genel toplam tablosu", ["genCard", "genel"]],
   ["tablolar", "Kullanıcıların tabloları", ["users"]],
@@ -2361,8 +2361,8 @@ function vardiyaSekmeUygula() {
 function vardiyaSekmeTikla(k) {
   const izin = k === "ozet" ? gorunur("ozet") : gorunur("vardiya");
   if (!izin) return;
-  // Aktif sekmeye tekrar basılırsa içerik kapanır; diğer sekmeye basılırsa o açılır.
-  aktifVardiyaSekmesi = aktifVardiyaSekmesi === k ? "" : k;
+  // Sekmeler yalnızca içerik değiştirir; seçili bölüm kapanmaz.
+  aktifVardiyaSekmesi = k;
   vardiyaSekmeUygula();
 }
 $("vTabOzet").onclick = () => vardiyaSekmeTikla("ozet");
@@ -2373,8 +2373,6 @@ $("vTabListe").onclick = () => vardiyaSekmeTikla("liste");
 // Her pencerenin başlığında ok vardır. Kullanıcının seçimi bu cihazda hatırlanır;
 // seçim yoksa yöneticinin belirlediği açılış durumu (gorAyar.kapali) geçerlidir.
 const PEN = [
-  ["vardiyaOzet", "vOzetPanel", "vOzetHead", "Vardiya özeti sekmesi"],
-  ["vardiyaListe", "vListePanel", "vardiyaHead", "Vardiya listesi sekmesi"],
   ["benim", "app", "appHead", "Benim girişlerim"],
   ["hedef", "hedefKutu", "hedefHead", "Hedef takibi"],
   ["kisisel", "kisiselKutu", "kisiselHead", "Kişisel rekor ve özetim"],
