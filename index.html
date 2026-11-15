@@ -1615,7 +1615,8 @@ function renderShared() {
     card.onclick = (e) => { if (e.target.closest("button")) return; try { window.kisiRekorGoster(uid, u.ad || ""); } catch (err) { console.error(err); } };
     card.append(el("h3", "", u.ad + (uid === myId() ? " (siz)" : "")));
     // Hiç sayı girilmemiş tablo (yalnızca makine adı olan veya boş) diğer kişilere gösterilmez.
-    if (!list.length || !list.some(r => COLS.some(k => r[k] != null && String(r[k]).trim() !== ""))) return;
+    // Kontrol, birleştirilmiş satırlar üzerinde değil gerçek kayıt satırları üzerinde yapılmalı.
+    if (!hamListe.length || !hamListe.some(r => COLS.some(k => r[k] != null && String(r[k]).trim() !== ""))) return;
     const wrap = el("div", "scroll"), tbl = el("table"), head = el("thead"), hr = el("tr");
     ["MAKİNE","SAYI"].forEach(h => hr.append(el("th", "", h)));
     head.append(hr); tbl.append(head);
