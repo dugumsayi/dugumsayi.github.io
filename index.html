@@ -2178,9 +2178,9 @@ async function vnoOzetYukle() {
     });
     t.append(tb);
     if (altToplam) {
-      const tf = el("tfoot"), tr = el("tr"), hepsi = () => true, gtd = el("td", "", "Genel"); tikla(gtd, -1, "Genel", hepsi, null); tr.append(gtd);
-      altToplam.forEach((x, i) => { const c2 = el("td", "", fmt(yuv(x))); tikla(c2, -1, "Genel", hepsi, i); tr.append(c2); });
-      const gt = el("td", "", fmt(yuv(altToplam.reduce((a, b) => a + b, 0)))); tikla(gt, -1, "Genel", hepsi, null); tr.append(gt);
+      const tf = el("tfoot"), tr = el("tr"), hepsi = () => true, gtd = el("td", "", "GENEL TOPLAM"); tikla(gtd, -1, "Genel toplam", hepsi, null); tr.append(gtd);
+      altToplam.forEach((x, i) => { const c2 = el("td", "", fmt(yuv(x))); tikla(c2, -1, "Genel toplam", hepsi, i); tr.append(c2); });
+      const gt = el("td", "", fmt(yuv(altToplam.reduce((a, b) => a + b, 0)))); tikla(gt, -1, "Genel toplam", hepsi, null); tr.append(gt);
       tf.append(tr); t.append(tf);
     }
     const w = el("div", "vo-wrap"); w.append(t);
@@ -2193,7 +2193,7 @@ async function vnoOzetYukle() {
     return box;
   };
   const sat = [...VARDIYALAR, ""].filter(h => h === "" ? gr[""] : true).map(h => [h ? h + " vardiyası" : "Vardiya seçilmedi", gr[h] || [0, 0, 0], renk[h], k => grupAd(gorunen.get(k.uid)) === h]);
-  const gen = [0, 1, 2].map(i => sat.reduce((a, s) => a + s[1][i], 0));
+  const gen = [0, 1, 2].map(i => [...kul.values()].reduce((a, arr) => a + (arr[i] || 0), 0));   // GENEL TOPLAM: tüm kullanıcıların her vardiyadaki sayıları (gruptan bağımsız)
   kap.textContent = "";
   kap.append(el("h3", "", "Vardiya bazında sayılar · " + $("gunAd").textContent));
   kap.append(tablo("Grup", sat, gen));
