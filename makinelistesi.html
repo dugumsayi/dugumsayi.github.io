@@ -179,14 +179,27 @@ function showApp(i){var h=apps[0],k=window.__kural||{};h=h.replace('</head>','<s
     hataKayit = null; sonKayit = c;
     durum("Sunucuya kaydedildi · " + new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }), "ok");
   }
+  // Bekleyen (henüz sunucuya yazılmamış) değişikliği hemen kaydeder; başarılıysa true döner
+  async function bekleyeniKaydet(){
+    if (timer) { clearTimeout(timer); timer = null; }
+    if (!admin || !sb) return true;
+    let s = null; try { s = localStorage.getItem(LS_KEY); } catch (e) {}
+    if (!s || canonStr(s) === sonKayit) return true;
+    for (let n = 0; kaydediyor && n < 50; n++) await new Promise(r => setTimeout(r, 100));
+    await kaydet(s);
+    let g = null; try { g = localStorage.getItem(LS_KEY); } catch (e) {}
+    return !g || canonStr(g) === sonKayit;
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") bekleyeniKaydet(); });
+  window.addEventListener("pagehide", () => { bekleyeniKaydet(); });
   function izle(){
     if (!admin || timer) return;
     const s = localStorage.getItem(LS_KEY); if (!s) return;
     const c = canonStr(s);
     if (c === sonKayit || c === hataKayit) return;
-    timer = setTimeout(() => { timer = null; const g = localStorage.getItem(LS_KEY); if (g && canonStr(g) !== sonKayit) kaydet(g); }, 700);
+    timer = setTimeout(() => { timer = null; const g = localStorage.getItem(LS_KEY); if (g && canonStr(g) !== sonKayit) kaydet(g); }, 300);
   }
-  setInterval(izle, 1000);
+  setInterval(izle, 400);
   window.addEventListener("storage", e => { if (e.key === LS_KEY) izle(); });
 
   // Başka cihazda yönetici değişiklik yapınca görüntüleyenlerin ekranı güncellenir
@@ -311,7 +324,12 @@ function showApp(i){var h=apps[0],k=window.__kural||{};h=h.replace('</head>','<s
   function modal(ac){ $("admArka").classList.toggle("goster", ac); $("admMesaj").textContent = ""; if (ac) { $("admSicil").focus(); } }
   $("admBtn").onclick = async () => {
     if (!sb) { durum("Supabase kütüphanesi yüklenemedi; internet bağlantısını kontrol edin.", "hata"); return; }
-    if (admin) { try { await sb.auth.signOut({ scope: "local" }); } catch (e) {} admin = false; arayuz(); erisimUygula(); return; }
+    if (admin) {
+      durum("Son değişiklikler kaydediliyor…");
+      const ok = await bekleyeniKaydet();
+      if (!ok && !confirm("Son değişiklikler sunucuya kaydedilemedi; şimdi çıkarsanız kaybolacak. Yine de çıkılsın mı?")) { arayuz(); return; }
+      try { await sb.auth.signOut({ scope: "local" }); } catch (e) {} admin = false; arayuz(); erisimUygula(); return;
+    }
     modal(true);
   };
   $("admIptal").onclick = () => modal(false);
