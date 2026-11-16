@@ -780,6 +780,10 @@ html.hz-kilit .sohbet-panel {
 #vnoOzet tfoot td,#vnoOzet tr.vo-top td{font-weight:800}
 #vnoOzet td.vo-ad i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;background:var(--c,var(--line))}
 #vnoOzet td.vo-sifir{color:var(--mut)}
+#vnoOzet th.vo-ad i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;background:var(--c,var(--line))}
+#vnoOzet th.vo-tik{cursor:pointer}
+#vnoOzet th.vo-tik:hover{background:rgba(80,120,220,.18)}
+#vnoOzet th.vo-sec{outline:2px solid #1a73e8;outline-offset:-2px}
 #vnoOzet details{margin-top:10px}
 #vnoOzet summary{cursor:pointer;font-size:13px;color:var(--mut)}
 #vnoOzet td.vo-tik,#vnoOzet td.vo-ad.vo-tik{cursor:pointer}
@@ -2192,11 +2196,59 @@ async function vnoOzetYukle() {
     }
     return box;
   };
+  // Grup tablosu (devrik): A/B/C/D üstte sütun, vardiyalar solda satır; toplamlar sağda ve altta
+  const tabloT = (baslikAd, satirlar) => {
+    const box = el("div"), det = el("div", "vo-detay"), hepsi = () => true;
+    const t = el("table"), th = el("thead"), hr = el("tr");
+    const tikla = (td, ri, rowAd, f, v) => {
+      td.classList.add("vo-tik"); td.title = "Hangi makineye düğüm atıldığını göster";
+      td.dataset.ri = ri; td.dataset.v = v == null ? "" : v;
+      td.onclick = () => {
+        voSecim = { t: baslikAd, gun, ri, v };
+        box.querySelectorAll(".vo-sec").forEach(x => x.classList.remove("vo-sec")); td.classList.add("vo-sec");
+        goster(box, det, rowAd, f, v);
+      };
+    };
+    const hv = el("th", "", "Vardiya"); hr.append(hv);
+    satirlar.forEach(([ad, arr, c, f], ri) => {
+      const h = el("th", "vo-ad"); if (c) { h.style.setProperty("--c", c); h.append(el("i")); }
+      h.append(document.createTextNode(ad.replace(/ vardiyası$/, ""))); tikla(h, ri, ad, f, null); hr.append(h);
+    });
+    const hT = el("th", "", "Toplam"); tikla(hT, -1, "Genel toplam", hepsi, null); hr.append(hT);
+    th.append(hr); t.append(th);
+    const tb = el("tbody");
+    VNO_AD.forEach((vn, i) => {
+      const tr = el("tr"), rd = el("td", "vo-ad", vn); tikla(rd, -1, "Genel toplam", hepsi, i); tr.append(rd);
+      let satTop = 0;
+      satirlar.forEach(([ad, arr, c, f], ri) => {
+        const x = (arr && arr[i]) || 0; satTop += x;
+        const c2 = el("td", x ? "" : "vo-sifir", fmt(yuv(x))); tikla(c2, ri, ad, f, i); tr.append(c2);
+      });
+      const ct = el("td", "vo-top", fmt(yuv(satTop))); tikla(ct, -1, "Genel toplam", hepsi, i); tr.append(ct);
+      tb.append(tr);
+    });
+    t.append(tb);
+    const tf = el("tfoot"), tr = el("tr"), gtd = el("td", "", "GENEL TOPLAM"); tikla(gtd, -1, "Genel toplam", hepsi, null); tr.append(gtd);
+    let gen = 0;
+    satirlar.forEach(([ad, arr, c, f], ri) => {
+      const x = [0, 1, 2].reduce((a, i) => a + ((arr && arr[i]) || 0), 0); gen += x;
+      const c2 = el("td", "", fmt(yuv(x))); tikla(c2, ri, ad, f, null); tr.append(c2);
+    });
+    const gt = el("td", "", fmt(yuv(gen))); tikla(gt, -1, "Genel toplam", hepsi, null); tr.append(gt);
+    tf.append(tr); t.append(tf);
+    const w = el("div", "vo-wrap"); w.append(t);
+    box.append(w, el("p", "vo-ipucu", "Bir hücreye (veya satıra) dokunun: hangi makineye düğüm atıldığı altta açılır."), det);
+    if (voSecim && voSecim.t === baslikAd && voSecim.gun === gun) {
+      const hedef = [...box.querySelectorAll("td.vo-tik")].find(x => x.dataset.ri === String(voSecim.ri) && x.dataset.v === (voSecim.v == null ? "" : String(voSecim.v)));
+      if (hedef) hedef.click();
+    }
+    return box;
+  };
   const sat = [...VARDIYALAR, ""].filter(h => h === "" ? gr[""] : true).map(h => [h ? h + " vardiyası" : "Vardiya seçilmedi", gr[h] || [0, 0, 0], renk[h], k => grupAd(gorunen.get(k.uid)) === h]);
   const gen = [0, 1, 2].map(i => sat.reduce((a, r) => a + ((r[1] && r[1][i]) || 0), 0));   // GENEL TOPLAM: tablodaki grup satırlarının (A+B+C+D+seçilmemiş) sütun toplamı
   kap.textContent = "";
   kap.append(el("h3", "", "Vardiya bazında sayılar · " + $("gunAd").textContent));
-  kap.append(tablo("Grup", sat, gen));
+  kap.append(tabloT("Grup", sat));
   // Kişi bazında (açılır)
   const kisiler = [...kul.entries()].map(([id, arr]) => [adBuyut((gorunen.get(id) || {}).ad || "?") + (grupAd(gorunen.get(id)) ? " (" + grupAd(gorunen.get(id)) + ")" : ""), arr, renk[grupAd(gorunen.get(id))], k => k.uid === id])
     .filter(x => x[1].some(v => v)).sort((a, b) => a[0].localeCompare(b[0], "tr"));
