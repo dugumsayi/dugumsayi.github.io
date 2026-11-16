@@ -5041,6 +5041,7 @@ window.kisiRekorGoster = async function (uid, ad) {
       tr.append(el("td", "", gunTr(x.t)), el("td", "", u.ad), el("td", "", harf + " · " + VN[x.v]), el("td", "n", fmt(yuv(x.n)))); tb.append(tr);
     });
     const ft = el("tr", "tot"); ft.append(el("td", "", "TOPLAM"), el("td", "", ""), el("td", "", ""), el("td", "n", fmt(yuv(top)))); tb.append(ft);
+    const fo = el("tr", "tot"); fo.append(el("td", "", "ORTALAMA"), el("td", "", ""), el("td", "", liste.length + " vardiya günü"), el("td", "n", fmt(yuv(top / liste.length)))); tb.append(fo);
     t.append(tb); sc.append(t); p.append(sc);
   }
 
@@ -5050,7 +5051,8 @@ window.kisiRekorGoster = async function (uid, ad) {
     const s = [["TARİH", "ADI SOYADI", "VARDİYA", "SAYI"]];
     let top = 0; liste.forEach(x => { top += x.n; s.push([gunTr(x.t), u.ad, harf + " · " + VN[x.v], yuv(x.n)]); });
     s.push(["TOPLAM", "", "", yuv(top)]);
-    const blob = xlsxBlob([{ ad: "Sayılar", satirlar: s, bas: [0], kalin: [s.length - 1], gen: [14, 28, 22, 12] }]);
+    s.push(["ORTALAMA", "", liste.length + " vardiya günü", yuv(top / liste.length)]);
+    const blob = xlsxBlob([{ ad: "Sayılar", satirlar: s, bas: [0], kalin: [s.length - 2, s.length - 1], gen: [14, 28, 22, 12] }]);
     const a = document.createElement("a"), ad = u.ad.replace(/[^\wÇĞİÖŞÜçğıöşü-]+/g, "_") + "-" + bas.slice(0, 7) + ".xlsx";
     a.href = URL.createObjectURL(blob); a.download = ad; document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 3000);
