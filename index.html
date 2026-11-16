@@ -780,6 +780,14 @@ html.hz-kilit .sohbet-panel {
 #vnoOzet tfoot td,#vnoOzet tr.vo-top td{font-weight:800}
 #vnoOzet td.vo-ad i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;background:var(--c,var(--line))}
 #vnoOzet td.vo-sifir{color:var(--mut)}
+@media(max-width:640px){
+#vnoOzet table.vo-t{table-layout:fixed;font-size:12.5px}
+#vnoOzet table.vo-t th,#vnoOzet table.vo-t td{padding:8px 3px;white-space:normal;overflow-wrap:anywhere}
+#vnoOzet table.vo-t th:first-child,#vnoOzet table.vo-t td:first-child{width:25%;padding-left:6px;white-space:nowrap;font-size:11.5px}
+#vnoOzet table.vo-t thead th{font-size:11px}
+#vnoOzet table.vo-t th.vo-ad i,#vnoOzet table.vo-t td.vo-ad i{width:8px;height:8px;margin-right:3px}
+#vnoOzet table.vo-t td:last-child,#vnoOzet table.vo-t th:last-child{padding-right:6px}
+}
 #vnoOzet th.vo-ad i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;background:var(--c,var(--line))}
 #vnoOzet th.vo-tik{cursor:pointer}
 #vnoOzet th.vo-tik:hover{background:rgba(80,120,220,.18)}
@@ -2199,7 +2207,7 @@ async function vnoOzetYukle() {
   // Grup tablosu (devrik): A/B/C/D üstte sütun, vardiyalar solda satır; toplamlar sağda ve altta
   const tabloT = (baslikAd, satirlar) => {
     const box = el("div"), det = el("div", "vo-detay"), hepsi = () => true;
-    const t = el("table"), th = el("thead"), hr = el("tr");
+    const t = el("table", "vo-t"), th = el("thead"), hr = el("tr");
     const tikla = (td, ri, rowAd, f, v) => {
       td.classList.add("vo-tik"); td.title = "Hangi makineye düğüm atıldığını göster";
       td.dataset.ri = ri; td.dataset.v = v == null ? "" : v;
