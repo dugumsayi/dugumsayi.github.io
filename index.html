@@ -2193,7 +2193,7 @@ async function vnoOzetYukle() {
     return box;
   };
   const sat = [...VARDIYALAR, ""].filter(h => h === "" ? gr[""] : true).map(h => [h ? h + " vardiyası" : "Vardiya seçilmedi", gr[h] || [0, 0, 0], renk[h], k => grupAd(gorunen.get(k.uid)) === h]);
-  const gen = [0, 1, 2].map(i => [...kul.values()].reduce((a, arr) => a + (arr[i] || 0), 0));   // GENEL TOPLAM: tüm kullanıcıların her vardiyadaki sayıları (gruptan bağımsız)
+  const gen = [0, 1, 2].map(i => sat.reduce((a, r) => a + ((r[1] && r[1][i]) || 0), 0));   // GENEL TOPLAM: tablodaki grup satırlarının (A+B+C+D+seçilmemiş) sütun toplamı
   kap.textContent = "";
   kap.append(el("h3", "", "Vardiya bazında sayılar · " + $("gunAd").textContent));
   kap.append(tablo("Grup", sat, gen));
