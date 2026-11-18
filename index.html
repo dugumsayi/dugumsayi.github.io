@@ -58,6 +58,15 @@ tr.tot td{background:var(--tot)!important;color:#111;font-weight:600;text-align:
 .oto-durum{font-size:13px;font-weight:600;padding:5px 10px;border-radius:6px;background:var(--bg);border:1px solid var(--line);color:var(--mut)}
 .oto-durum.ok{color:#15803d}.oto-durum.bekle{color:#b45309}.oto-durum.hata,.oto-durum.uyari{color:#b91c1c;border-color:#b91c1c}
 .oto-gizli{display:none!important}
+.tn-rozet{font-size:12px;font-weight:700;margin-top:3px;text-align:left}
+.tn-eksik{color:#dc2626}.tn-tamam{color:#16a34a}.tn-fazla{color:#d97706}.tn-yok,.tn-kapali{color:var(--mut)}
+#agg td.tn-d{font-weight:700;background:var(--card);padding:0 10px;white-space:nowrap}
+#agg td.tn-d.tn-eksik{background:rgba(220,38,38,.14)}#agg td.tn-d.tn-tamam{background:rgba(22,163,74,.14)}#agg td.tn-d.tn-fazla{background:rgba(217,119,6,.16)}
+.tn-panel{margin:12px 0;border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--card)}
+.tn-panel summary{cursor:pointer;font-weight:700}
+.tn-panel table{margin-top:8px;border-collapse:collapse;width:100%}
+.tn-panel th,.tn-panel td{border:1px solid var(--line);padding:4px 10px;text-align:center}
+.tn-not{font-size:12px;color:var(--mut);margin:6px 0 0}
 #admin .adm-pane>strong{display:block;margin:14px 0 4px;font-size:15px}
 #admin .adm-pane>strong:first-child{margin-top:0}
 #admin .mut{font-size:13px;margin:0 0 8px}
@@ -1690,6 +1699,75 @@ function tabloResim(tbl, baslik, dosya) {   // başarılı kaydedilirse/paylaş�
 }
 $("aggResim").onclick = () => tabloResim($("agg").querySelector("table"), "Genel toplam", "genel-toplam");
 
+// ================= TONAJ KONTROLÜ: gereken düğüm = makine tonajı / 45 =================
+// Tonajlar "Makine Listesi" sayfasının kaydından (makine_listesi tablosu) okunur; makine adı 3, S3 veya s3 yazılabilir.
+const TONAJ_BOL = 45;
+const tonajYuvarla = v => Math.round(v / TONAJ_BOL);   // Makine Listesi'ndeki "SAYI" sütunuyla aynı yuvarlama
+let tonajMap = null, tonajZaman = 0, tonajAcik = true;
+const tonajHazir = () => !!tonajMap && Object.keys(tonajMap).length > 0;
+async function tonajYukle(zorla) {
+  if (!sb || !navigator.onLine) return;
+  if (!zorla && Date.now() - tonajZaman < 60000) return;
+  tonajZaman = Date.now();
+  try {
+    const { data, error } = await sb.from("makine_listesi").select("deger").eq("id", 1).maybeSingle();
+    if (error) throw error;
+    const m = {};
+    ((data && data.deger && data.deger.machines) || []).forEach(x => {
+      const t = (x.ton === "" || x.ton == null) ? null : Number(x.ton);
+      m[String(x.name).trim().toUpperCase()] = { ton: Number.isFinite(t) ? t : null, acik: x.included !== false };
+    });
+    tonajMap = m; renderShared();
+  } catch (e) { /* okunamazsa kontrol gösterilmez */ }
+}
+function tonajAnahtar(ad) { const m = /^S?\s*0*(\d{1,3})$/.exec(String(ad || "").trim().toUpperCase()); return m ? "S" + m[1] : null; }
+function tonajToplamlari(agg) { const t = {}; agg.forEach(x => { const k = tonajAnahtar(x.nm); if (k) t[k] = (t[k] || 0) + x.s; }); return t; }
+function tonajDurum(ad, kt) {
+  const k = tonajAnahtar(ad); if (!k) return { sinif: "", metin: "", gereken: null };
+  const m = tonajMap[k];
+  if (!m) return { sinif: "tn-yok", metin: "listede yok", gereken: null };
+  if (!m.acik) return { sinif: "tn-kapali", metin: "kapalı makine", gereken: null };
+  if (m.ton == null) return { sinif: "tn-yok", metin: "tonaj girilmemiş", gereken: null };
+  const g = tonajYuvarla(m.ton), a = kt[k] || 0, f = Math.round((g - a) * 100) / 100;
+  if (f > 0) return { sinif: "tn-eksik", metin: "Eksik " + fmt(f), gereken: g, atilan: a };
+  if (f < 0) return { sinif: "tn-fazla", metin: fmt(-f) + " fazla", gereken: g, atilan: a };
+  return { sinif: "tn-tamam", metin: "✓ Tamam", gereken: g, atilan: a };
+}
+function tonajRapor(kt) {
+  const liste = []; let topGer = 0;
+  Object.keys(tonajMap).forEach(k => {
+    const m = tonajMap[k]; if (!m.acik || m.ton == null) return;
+    const g = tonajYuvarla(m.ton), a = kt[k] || 0; topGer += g;
+    liste.push({ k, g, a, f: Math.round((g - a) * 100) / 100 });
+  });
+  liste.sort((x, y) => Number(x.k.slice(1)) - Number(y.k.slice(1)));
+  return { liste, topGer, eksik: liste.filter(x => x.f > 0) };
+}
+function tonajPanelCiz(kap, R) {
+  const det = el("details", "tn-panel"); det.open = tonajAcik;
+  det.ontoggle = () => { tonajAcik = det.open; };
+  det.append(el("summary", "", R.eksik.length ? "⚠ Eksik düğüm olan makine: " + R.eksik.length : "✓ Tüm açık makinelerde düğüm tamam"));
+  if (R.eksik.length) {
+    const t = el("table"), h = el("tr");
+    ["MAKİNE", "GEREKEN", "ATILAN", "EKSİK"].forEach(x => h.append(el("th", "", x))); t.append(h);
+    R.eksik.forEach(x => { const r = el("tr"); r.append(el("td", "", x.k), el("td", "", fmt(x.g)), el("td", "", fmt(x.a)), el("td", "tn-eksik", fmt(x.f))); t.append(r); });
+    det.append(t);
+  }
+  det.append(el("p", "tn-not", "Gereken düğüm = makine tonajı / 45 (Makine Listesi'ndeki gibi yuvarlanır). Yalnızca bu tabloda görünen vardiya/tarihteki girişler sayılır; kapalı makineler hariç."));
+  kap.append(det);
+}
+function tonajRozetler(kt) {
+  myInputs.forEach(([iAd]) => {
+    const td = iAd && iAd.parentNode; if (!td) return;
+    let b = td.querySelector(".tn-rozet");
+    const d = tonajHazir() ? tonajDurum(iAd.value, kt) : { metin: "" };
+    if (!d.metin) { if (b) b.remove(); return; }
+    if (!b) { b = el("div", "tn-rozet"); td.append(b); }
+    b.className = "tn-rozet " + d.sinif;
+    b.textContent = d.gereken != null ? fmt(d.atilan) + " / " + fmt(d.gereken) + " · " + d.metin : d.metin;
+  });
+}
+
 function renderShared() {
   const box = $("users"); box.textContent = "";
   const byUser = new Map();
@@ -1762,13 +1840,23 @@ function renderShared() {
   const ab = $("agg"); ab.textContent = "";
   if (agg.size) {
     const tbl = el("table"), head = el("thead"), hr = el("tr"), body = el("tbody");
-    ["MAKİNE","SAYI"].forEach(h => hr.append(el("th", "", h))); head.append(hr); tbl.append(head);
+    const TN = tonajHazir(), kt = TN ? tonajToplamlari(agg) : {}, R = TN ? tonajRapor(kt) : null;
+    (TN ? ["MAKİNE","SAYI","GEREKEN","DURUM"] : ["MAKİNE","SAYI"]).forEach(h => hr.append(el("th", "", h))); head.append(hr); tbl.append(head);
     [...agg.values()].sort((a, b) => adKar(a.nm === "(adsız)" ? "" : a.nm, b.nm === "(adsız)" ? "" : b.nm)).forEach(x => {
-      const tr = el("tr"); tr.append(el("td", "sn", x.nm), el("td", "t", fmt(x.s))); body.append(tr);
+      const tr = el("tr"); tr.append(el("td", "sn", x.nm), el("td", "t", fmt(x.s)));
+      if (TN) { const d = tonajDurum(x.nm, kt); tr.append(el("td", "t", d.gereken == null ? "" : fmt(d.gereken)), el("td", "tn-d " + d.sinif, d.metin)); }
+      body.append(tr);
     });
-    const ft = el("tr", "tot"); ft.append(el("td", "", "GENEL TOPLAM"), el("td", "", fmt(grand))); body.append(ft);
+    const ft = el("tr", "tot"); ft.append(el("td", "", "GENEL TOPLAM"), el("td", "", fmt(grand)));
+    if (TN) ft.append(el("td", "", fmt(R.topGer)), el("td", "", R.eksik.length ? R.eksik.length + " makine eksik" : "✓ Tamam"));
+    body.append(ft);
     tbl.append(body); ab.append(tbl);
-  } else ab.append(el("p", "mut", "Henüz sayı girilmemiş."));
+    if (TN) tonajPanelCiz(ab, R);
+  } else {
+    ab.append(el("p", "mut", "Henüz sayı girilmemiş."));
+    if (tonajHazir()) tonajPanelCiz(ab, tonajRapor({}));
+  }
+  try { tonajRozetler(tonajHazir() ? tonajToplamlari(agg) : {}); } catch (e) {}
   $("genel").textContent = users.length ? (users.length + " kullanıcı, günün genel toplamı: " + fmt(grand)) : "Bu tarihte kayıtlı giriş yok.";
 }
 
@@ -1834,6 +1922,7 @@ async function load() {
     msg(navigator.onLine ? "Veriler yüklenemedi; cihazdaki son kayıtlar gösteriliyor." : "Çevrimdışı mod: cihazdaki kayıtlar gösteriliyor. İnternet gelince eşitlenecek.");
   }
   if (me && vardiyaGuncel()) { await gonderYukle(); fillMine(); dondurUygula(); } renderShared();
+  try { tonajYukle(); } catch (e) {}
   if (erkenOtoGecis()) return;
   try { if (typeof hedefCiz === "function") hedefCiz(); } catch (e) {}
   if (navigator.onLine) { offlineKuyrukGonder(); logYukle(); }
