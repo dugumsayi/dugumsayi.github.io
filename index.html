@@ -1749,6 +1749,27 @@ function tonajRapor(kt) {
   liste.sort((x, y) => Number(x.k.slice(1)) - Number(y.k.slice(1)));
   return { liste, topGer, eksik: liste.filter(x => x.f > 0) };
 }
+// Benim bugüne kadar yazdığım TÜM sayılar (tüm tarih ve vardiyalar), makine bazında toplam
+let gecmisMap = null, gecmisZaman = 0, gecmisYukleniyor = false;
+async function gecmisYukle(zorla) {
+  if (!sb || !navigator.onLine || !myId() || gecmisYukleniyor) return;
+  if (!zorla && Date.now() - gecmisZaman < 60000) return;
+  gecmisYukleniyor = true; gecmisZaman = Date.now();
+  let tamam = false;
+  try {
+    const t = {};
+    for (let from = 0; ; from += 1000) {   // Supabase tek sorguda en fazla 1000 satır verir; sayfa sayfa çekilir
+      const { data, error } = await sb.from("sayilar").select("name,n1,n2,n3,n4,n5,n6").eq("user_id", myId())
+        .order("tarih").order("vno").order("satir").range(from, from + 999);
+      if (error) throw error;
+      data.forEach(r => { const k = tonajAnahtar(r.name); if (!k) return; const v = rsum(r); if (v) t[k] = (t[k] || 0) + v; });
+      if (data.length < 1000) break;
+    }
+    gecmisMap = t; tamam = true;
+  } catch (e) { /* okunamazsa seçili gün/vardiya değerleri gösterilir */ }
+  gecmisYukleniyor = false;
+  if (tamam) { try { renderShared(); } catch (e) {} }
+}
 function tonajPanelCiz(kap, R) {
   // Benim şimdiye kadar attığım düğümler (makine bazında)
   const ben = {};
@@ -1759,27 +1780,31 @@ function tonajPanelCiz(kap, R) {
   det.ontoggle = () => { tonajAcik = det.open; };
   det.append(el("summary", "", R.eksik.length ? "⚠ Eksik düğüm olan makine: " + R.eksik.length : "✓ Tüm açık makinelerde düğüm tamam"));
   det.append(el("p", "tn-say", "Düğüm atılan makineler → ✓ İyi: " + iyi.length + " · ✗ Kötü (eksik): " + kotu.length + "   |   Henüz düğüm atılmayan: " + atilmamis.length));
-  // Makine Listesi'nde ELLE seçilen gruplar: her grubun SAYI (gereken = tonaj/45), atılan ve eksik değerleri
+  // Makine Listesi'nde ELLE seçilen gruplar: ATILAN = benim bugüne kadar (tüm tarih ve vardiyalarda) yazdığım tüm sayılar
   const gruplu = R.liste.filter(x => x.grup);
   if (gruplu.length) {
+    gecmisYukle();
+    const at = x => gecmisMap ? (gecmisMap[x.k] || 0) : x.a;
+    const fx = x => Math.round((x.g - at(x)) * 100) / 100;
     const gd = el("details", "tn-alt"); gd.open = true;
     const gNo = [...new Set(gruplu.map(x => x.grup))].sort((p, q) => p - q);
     gd.append(el("summary", "", "Elle seçilen gruplar (" + gNo.length + " grup · " + gruplu.length + " makine)"));
+    gd.append(el("p", "tn-not", gecmisMap ? "Atılan = bugüne kadar yazdığınız tüm sayılar (tüm tarih ve vardiyalar)." : "Geçmişte yazdığınız tüm sayılar yükleniyor… (şimdilik seçili tarih/vardiya gösteriliyor)"));
     const gt = el("table"), gh = el("tr");
-    ["GRUP / MAKİNE", "SAYI (gereken)", "ATILAN", "FARK", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
+    ["GRUP / MAKİNE", "SAYI (gereken)", "ATILAN (tüm geçmiş)", "FARK", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
     const fark = f => f > 0 ? "−" + fmt(f) : (f < 0 ? "+" + fmt(-f) : "0");
     gNo.forEach(g => {
       const L = gruplu.filter(x => x.grup === g);
-      const tg = L.reduce((p, x) => p + x.g, 0), ta = L.reduce((p, x) => p + x.a, 0), tf = Math.round((tg - ta) * 100) / 100;
+      const tg = L.reduce((p, x) => p + x.g, 0), ta = L.reduce((p, x) => p + at(x), 0), tf = Math.round((tg - ta) * 100) / 100;
       const hr = el("tr", "tn-grup-bas");
       hr.append(el("td", "", g + ". Grup · " + L.length + " makine"), el("td", "", fmt(tg)), el("td", "", fmt(ta)),
         el("td", tf > 0 ? "tn-eksik" : "tn-tamam", fark(tf)), el("td", tf > 0 ? "tn-eksik" : "tn-tamam", tf > 0 ? "✗ eksik" : "✓ tamam"));
       gt.append(hr);
       L.forEach(x => {
-        const r = el("tr", (ben[x.k] || 0) > 0 ? "tn-ben" : "");
-        const durum = x.a <= 0 ? "— atılmadı" : (x.f > 0 ? "✗ eksik" : "✓ tamam");
-        r.append(el("td", "", x.k), el("td", "", fmt(x.g)), el("td", "", fmt(x.a)),
-          el("td", x.f > 0 ? "tn-eksik" : "tn-tamam", fark(x.f)), el("td", x.f > 0 ? "tn-eksik" : (x.a <= 0 ? "tn-yok" : "tn-tamam"), durum));
+        const f = fx(x), r = el("tr", (ben[x.k] || 0) > 0 ? "tn-ben" : "");
+        const durum = at(x) <= 0 ? "— atılmadı" : (f > 0 ? "✗ eksik" : "✓ tamam");
+        r.append(el("td", "", x.k), el("td", "", fmt(x.g)), el("td", "", fmt(at(x))),
+          el("td", f > 0 ? "tn-eksik" : "tn-tamam", fark(f)), el("td", f > 0 ? "tn-eksik" : (at(x) <= 0 ? "tn-yok" : "tn-tamam"), durum));
         gt.append(r);
       });
     });
