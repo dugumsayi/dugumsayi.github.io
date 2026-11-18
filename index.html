@@ -5215,7 +5215,7 @@ window.kisiRekorGoster = async function (uid, ad) {
   }
   function ac(k) {
     const d = DEF[k], e = $(d.id);
-    try { if (!me || !d.gor()) return; } catch (x) {}
+    try { if (!d.gor()) return; } catch (x) {}
     geriKoy();
     yer = document.createComment("sec-yer"); e.parentNode.insertBefore(yer, e);
     body.textContent = ""; body.append(e);
@@ -5235,11 +5235,10 @@ window.kisiRekorGoster = async function (uid, ad) {
   function dugmeler() {
     Object.keys(DEF).forEach(k => {
       let goster = false;
-      try { goster = !!me && DEF[k].gor(); } catch (e) {}
+      try { goster = DEF[k].gor() && (k === "ort" || !$("vardiyaBox").classList.contains("hide") || acik === k); } catch (e) {}
       $(DEF[k].btn).classList.toggle("hide", !goster);
       if (!goster && acik === k) kapat();
     });
-    try { if (!me && acik) kapat(); } catch (e) {}
   }
   const eski = window.gorUygula;
   if (typeof eski === "function") {
