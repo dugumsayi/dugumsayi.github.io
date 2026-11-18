@@ -1741,49 +1741,6 @@ async function tonajYukle(zorla) {
   } catch (e) { /* okunamazsa kontrol gösterilmez */ }
 }
 function tonajAnahtar(ad) { const m = /^S?\s*0*(\d{1,3})$/.exec(String(ad || "").trim().toUpperCase()); return m ? "S" + m[1] : null; }
-
-// ================= DEVİR: eksik kalan düğüm sonraki vardiyaya eklenir (6 günlük döngü boyunca) =================
-// Gereken(vardiya) = makinenin vardiya başına gereken sayısı + önceki vardiyalardan devreden eksik.
-// Zincir, "Vardiya döngüsü (6 gün)" aralığının başından seçili vardiyaya kadar işler; tüm kullanıcıların yazdığı sayılar toplanır.
-// Fazla atılan düğüm devretmez (devir en az 0). Zincir, aralıktaki ilk kayıtlı vardiyadan başlar.
-let devirMap = {}, devirAnahtar = "", devirZaman = 0, devirYukleniyor = false;
-async function devirYukle(zorla) {
-  if (!sb || !navigator.onLine || devirYukleniyor || !tonajHazir()) return;
-  const b = donguAralik()[0], anah = b + "|" + secili + "|" + gv;
-  if (!zorla && anah === devirAnahtar && Date.now() - devirZaman < 60000) return;
-  devirYukleniyor = true;
-  let tamam = false;
-  try {
-    const det = {}; let ilk = null;
-    for (let from = 0; ; from += 1000) {
-      const { data, error } = await sb.from("sayilar").select("tarih,vno,name,n1,n2,n3,n4,n5,n6")
-        .gte("tarih", b).lte("tarih", secili).order("tarih").order("vno").order("satir").range(from, from + 999);
-      if (error) throw error;
-      data.forEach(r => {
-        const vn = Number(r.vno) || 0;
-        if (r.tarih === secili && vn >= gv) return;       // yalnızca seçili vardiyadan ÖNCEKİ vardiyalar
-        const k = tonajAnahtar(r.name), v = rsum(r); if (!k || !v) return;
-        const dk = r.tarih + "|" + vn; if (!ilk || dk < ilk) ilk = dk;
-        (det[k] = det[k] || {})[dk] = ((det[k] || {})[dk] || 0) + v;
-      });
-      if (data.length < 1000) break;
-    }
-    const m = {};
-    if (ilk) Object.keys(tonajMap).forEach(k => {
-      const t = tonajMap[k]; if (!t.acik || t.ton == null) return;
-      const g = tonajYuvarla(t.ton); let c = 0;
-      for (let d = b; d <= secili; d = gunKaydir(d, 1)) for (let v = 0; v < 3; v++) {
-        if (d === secili && v >= gv) break;
-        const dk = d + "|" + v; if (dk < ilk) continue;
-        c = Math.max(0, Math.round((c + g - ((det[k] && det[k][dk]) || 0)) * 100) / 100);
-      }
-      if (c > 0) m[k] = c;
-    });
-    devirMap = m; devirAnahtar = anah; devirZaman = Date.now(); tamam = true;
-  } catch (e) { /* okunamazsa devir uygulanmaz */ }
-  devirYukleniyor = false;
-  if (tamam) { try { renderShared(); } catch (e) {} }
-}
 function tonajToplamlari(agg) { const t = {}; agg.forEach(x => { const k = tonajAnahtar(x.nm); if (k) t[k] = (t[k] || 0) + x.s; }); return t; }
 function tonajDurum(ad, kt) {
   const k = tonajAnahtar(ad); if (!k) return { sinif: "", metin: "", gereken: null };
@@ -1791,8 +1748,8 @@ function tonajDurum(ad, kt) {
   if (!m) return { sinif: "tn-yok", metin: "listede yok", gereken: null };
   if (!m.acik) return { sinif: "tn-kapali", metin: "kapalı makine", gereken: null };
   if (m.ton == null) return { sinif: "tn-yok", metin: "tonaj girilmemiş", gereken: null };
-  const dv = devirMap[k] || 0, g = tonajYuvarla(m.ton) + dv, a = kt[k] || 0, f = Math.round((g - a) * 100) / 100;
-  if (f > 0) return { sinif: "tn-eksik", metin: "Eksik " + fmt(f) + (dv ? " · devir " + fmt(dv) : ""), gereken: g, atilan: a };
+  const g = tonajYuvarla(m.ton), a = kt[k] || 0, f = Math.round((g - a) * 100) / 100;
+  if (f > 0) return { sinif: "tn-eksik", metin: "Eksik " + fmt(f), gereken: g, atilan: a };
   if (f < 0) return { sinif: "tn-fazla", metin: fmt(-f) + " fazla", gereken: g, atilan: a };
   return { sinif: "tn-tamam", metin: "✓ Tamam", gereken: g, atilan: a };
 }
@@ -1800,8 +1757,8 @@ function tonajRapor(kt) {
   const liste = []; let topGer = 0;
   Object.keys(tonajMap).forEach(k => {
     const m = tonajMap[k]; if (!m.acik || m.ton == null) return;
-    const g0 = tonajYuvarla(m.ton), g = g0 + (devirMap[k] || 0), a = kt[k] || 0; topGer += g;
-    liste.push({ k, g, g0, a, f: Math.round((g - a) * 100) / 100, grup: m.grup || null });
+    const g = tonajYuvarla(m.ton), a = kt[k] || 0; topGer += g;
+    liste.push({ k, g, a, f: Math.round((g - a) * 100) / 100, grup: m.grup || null });
   });
   liste.sort((x, y) => Number(x.k.slice(1)) - Number(y.k.slice(1)));
   return { liste, topGer, eksik: liste.filter(x => x.f > 0) };
@@ -1900,7 +1857,7 @@ function tonajPanelCiz(kap, R) {
       });
       return top;
     };
-    const fx = x => Math.round((x.g0 - at(x)) * 100) / 100;
+    const fx = x => Math.round((x.g - at(x)) * 100) / 100;
     const gd = el("details", "tn-alt"); gd.open = true;
     const gNo = [...new Set(gruplu.map(x => x.grup))].sort((p, q) => p - q);
     gd.append(el("summary", "", "Elle seçilen gruplar (" + gNo.length + " grup · " + gruplu.length + " makine)"));
@@ -1932,7 +1889,7 @@ function tonajPanelCiz(kap, R) {
       else anah.forEach(dk => {
         const [t, vn] = dk.split("|"), top = gun[dk].reduce((p, y) => p + y[1], 0);
         const gd2 = el("div", "tn-gun", tarihTR(t) + " · " + (VNO_AD[Number(vn)] || "?") + " → ");
-        const gerekGrup = liste.reduce((p, y) => p + (Number(y.g0) || 0), 0);
+        const gerekGrup = liste.reduce((p, y) => p + (Number(y.g) || 0), 0);
         const topSp = el("span", grupMu && top < gerekGrup ? "tn-kirmizi" : "", fmt(top));
         gd2.append(topSp, (grupMu || liste.length > 1) ? "   (" + gun[dk].map(y => y[0] + ": " + fmt(y[1])).join(", ") + ")" : "");
         gd2.title = "Bu günün kullanıcı tablosunu görmek için tıklayın";
@@ -1961,7 +1918,7 @@ function tonajPanelCiz(kap, R) {
     const fark = f => f > 0 ? "−" + fmt(f) : (f < 0 ? "+" + fmt(-f) : "0");
     gNo.forEach(g => {
       const L = gruplu.filter(x => x.grup === g);
-      const tg = L.reduce((p, x) => p + x.g0, 0), ta = L.reduce((p, x) => p + at(x), 0), tf = Math.round((tg - ta) * 100) / 100;
+      const tg = L.reduce((p, x) => p + x.g, 0), ta = L.reduce((p, x) => p + at(x), 0), tf = Math.round((tg - ta) * 100) / 100;
       const hr = el("tr", "tn-grup-bas");
       hr.append(el("td", "", g + ". Grup · " + L.length + " makine"), el("td", "", fmt(tg)), el("td", "", fmt(ta)),
         el("td", tf > 0 ? "tn-eksik" : "tn-tamam", fark(tf)), el("td", tf > 0 ? "tn-eksik" : "tn-tamam", tf > 0 ? "✗ eksik" : "✓ tamam"));
@@ -1970,7 +1927,7 @@ function tonajPanelCiz(kap, R) {
       L.forEach(x => {
         const f = fx(x), r = el("tr", (ben[x.k] || 0) > 0 ? "tn-ben" : "");
         const durum = at(x) <= 0 ? "— atılmadı" : (f > 0 ? "✗ eksik" : "✓ tamam");
-        r.append(el("td", "", x.k), el("td", "", fmt(x.g0)), el("td", "", fmt(at(x))),
+        r.append(el("td", "", x.k), el("td", "", fmt(x.g)), el("td", "", fmt(at(x))),
           el("td", f > 0 ? "tn-eksik" : "tn-tamam", fark(f)), el("td", f > 0 ? "tn-eksik" : (at(x) <= 0 ? "tn-yok" : "tn-tamam"), durum));
         gt.append(r);
         tikla(r.children[2], "m" + x.k, r, [x]); if (gecmisAcik.has("m" + x.k)) gt.append(zamanSatir([x]));
@@ -2000,7 +1957,7 @@ function tonajPanelCiz(kap, R) {
     d2.append(el("p", "tn-not", atilmamis.map(x => x.k + " (" + fmt(x.g) + ")").join(", ")));
     det.append(d2);
   }
-  det.append(el("p", "tn-not", "İyi: atılan ≥ gereken. Kötü: düğüm atılmış ama gerekenden az. Gereken = tonaj / 45 + önceki vardiyalardan devreden eksik (6 günlük döngü). “BENİM”: sizin bu makineye attığınız düğüm. Yalnızca seçili tarih/vardiyadaki girişler sayılır; kapalı makineler hariç."));
+  det.append(el("p", "tn-not", "İyi: atılan ≥ gereken. Kötü: düğüm atılmış ama gerekenden az. Gereken = tonaj / 45. “BENİM”: sizin bu makineye attığınız düğüm. Yalnızca seçili tarih/vardiyadaki girişler sayılır; kapalı makineler hariç."));
   kap.append(det);
 }
 function tonajRozetler(kt) {
@@ -2016,7 +1973,6 @@ function tonajRozetler(kt) {
 }
 
 function renderShared() {
-  try { devirYukle(); } catch (e) {}
   const box = $("users"); box.textContent = "";
   const byUser = new Map();
   const gorunenKullanicilar = vardiyaListeHazir ? new Set(vardiyaList.map(u => u.id)) : null;
