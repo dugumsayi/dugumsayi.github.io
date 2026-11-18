@@ -1851,7 +1851,7 @@ function tonajPanelCiz(kap, R) {
     const tarihTR = t => new Date(t + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "short" });
     // Bir makinenin (veya grubun) geçmişte ne zaman yazıldığını gösteren açılır satır
     const zamanSatir = (liste, grupMu) => {
-      const tr = el("tr", "tn-detay"), td = el("td"); td.colSpan = 5;
+      const tr = el("tr", "tn-detay"), td = el("td"); td.colSpan = 6;
       const gun = {};
       liste.forEach(x => Object.entries(gecmisDetay[x.k] || {}).forEach(([dk, v]) => { (gun[dk] = gun[dk] || []).push([x.k, v]); }));
       const anah = Object.keys(gun).sort().reverse();
@@ -1885,26 +1885,34 @@ function tonajPanelCiz(kap, R) {
       };
     };
     const gt = el("table", "tn-gt"), gh = el("tr");
-    ["GRUP / MAKİNE", "SAYI (gereken)", myId() ? "ATILAN (tüm geçmiş)" : "ATILAN (tüm kullanıcılar)", "FARK", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
+    ["GRUP / MAKİNE", "SAYI (gereken)", myId() ? "ATILAN (tüm geçmiş)" : "ATILAN (tüm kullanıcılar)", "FARK", "YAZILACAK", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
     const fark = f => f > 0 ? "−" + fmt(f) : (f < 0 ? "+" + fmt(-f) : "0");
+    let toplamYaz = 0;
     gNo.forEach(g => {
       const L = gruplu.filter(x => x.grup === g);
       const tg = L.reduce((p, x) => p + x.g, 0), ta = L.reduce((p, x) => p + at(x), 0), tf = Math.round((tg - ta) * 100) / 100;
       const hr = el("tr", "tn-grup-bas");
+      const gYaz = Math.round(L.reduce((p, x) => p + Math.max(0, fx(x)), 0) * 100) / 100;   // grubun makinelerindeki eksiklerin toplamı
+      toplamYaz += gYaz;
       hr.append(el("td", "", g + ". Grup · " + L.length + " makine"), el("td", "", fmt(tg)), el("td", "", fmt(ta)),
-        el("td", tf > 0 ? "tn-eksik" : "tn-tamam", fark(tf)), el("td", tf > 0 ? "tn-eksik" : "tn-tamam", tf > 0 ? "✗ eksik" : "✓ tamam"));
+        el("td", tf > 0 ? "tn-eksik" : "tn-tamam", fark(tf)), el("td", gYaz > 0 ? "tn-eksik" : "tn-tamam", gYaz > 0 ? fmt(gYaz) : "0"), el("td", tf > 0 ? "tn-eksik" : "tn-tamam", tf > 0 ? "✗ eksik" : "✓ tamam"));
       gt.append(hr);
       tikla(hr.children[2], "g" + g, hr, L, true); if (gecmisAcik.has("g" + g)) gt.append(zamanSatir(L, true));
       L.forEach(x => {
         const f = fx(x), r = el("tr", (ben[x.k] || 0) > 0 ? "tn-ben" : "");
         const durum = at(x) <= 0 ? "— atılmadı" : (f > 0 ? "✗ eksik" : "✓ tamam");
         r.append(el("td", "", x.k), el("td", "", fmt(x.g)), el("td", "", fmt(at(x))),
-          el("td", f > 0 ? "tn-eksik" : "tn-tamam", fark(f)), el("td", f > 0 ? "tn-eksik" : (at(x) <= 0 ? "tn-yok" : "tn-tamam"), durum));
+          el("td", f > 0 ? "tn-eksik" : "tn-tamam", fark(f)), el("td", f > 0 ? "tn-eksik" : "tn-tamam", f > 0 ? fmt(f) : "0"), el("td", f > 0 ? "tn-eksik" : (at(x) <= 0 ? "tn-yok" : "tn-tamam"), durum));
         gt.append(r);
         tikla(r.children[2], "m" + x.k, r, [x]); if (gecmisAcik.has("m" + x.k)) gt.append(zamanSatir([x]));
       });
     });
     const gkap = el("div", "tn-gkap"); gkap.append(gt); gd.append(gkap);
+    const eksikMak = gruplu.filter(x => fx(x) > 0);
+    toplamYaz = Math.round(toplamYaz * 100) / 100;
+    gd.append(el("p", "tn-say", eksikMak.length
+      ? "📌 Eksikleri tamamlamak için sonraki vardiya/gün toplam " + fmt(toplamYaz) + " sayı yazmanız gerekiyor → " + eksikMak.map(x => x.k + ": " + fmt(fx(x))).join(", ")
+      : "✓ Elle seçilen gruplarda eksik yok; ek sayı yazmanız gerekmiyor."));
     gd.append(el("p", "tn-not", "Gruplar Makine Listesi sayfasındaki “Elle grup seçimi” bölümünden gelir. SAYI = makine tonajı / 45."));
     det.append(gd);
   }
