@@ -817,7 +817,8 @@ html.hz-kilit .sohbet-panel {
 #vtModal iframe{flex:1;width:100%;border:0;background:#fff}
 
 /* ===== Özet / Vardiya listesi / Ortalama düğmeleri (pencere olarak açılır) ===== */
-#ozetBtn,#vlistBtn,#ortBtn{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 10px;margin:2px 4px 2px 0;border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--fg);font-size:13px;font-weight:600;height:auto;cursor:pointer}
+#ozetBtn,#vlistBtn,#ortBtn,#benimBtn,#gunBtn{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 10px;margin:2px 4px 2px 0;border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--fg);font-size:13px;font-weight:600;height:auto;cursor:pointer}
+#benimBtn[aria-expanded="true"],#gunBtn[aria-expanded="true"]{background:var(--card);border-color:var(--blue,#3159b7)}
 #ozetBox,#listeBox,#ortPanel{display:none}
 #secModal{position:fixed;inset:0;z-index:9000;display:none;flex-direction:column;background:var(--bg)}
 #secModal.open{display:flex}
@@ -1062,6 +1063,8 @@ html.hz-kilit .sohbet-panel {
   <button id="ozetBtn" type="button" class="alt hide">📊 Özet</button>
   <button id="vlistBtn" type="button" class="alt hide">👥 Vardiya Listesi</button>
   <button id="ortBtn" type="button" class="alt hide">📈 Ortalama</button>
+  <button id="benimBtn" type="button" class="alt hide" aria-expanded="false">✍️ Benim Girişlerim</button>
+  <button id="gunBtn" type="button" class="alt hide" aria-expanded="false">🗂️ Kullanıcıların Tabloları</button>
 </div>
 
 <div id="vardiyaBox" class="hide">
@@ -5289,6 +5292,35 @@ window.kisiRekorGoster = async function (uid, ad) {
   try { dugmeler(); } catch (e) {}
   // Giriş/çıkış sonrası düğmeler güncel kalsın
   setInterval(() => { try { dugmeler(); } catch (e) {} }, 1500);
+})();
+</script>
+
+<script>
+// ===== Benim girişlerim / Kullanıcıların tabloları: düğmeyle açılır-kapanır (mevcut ▾ okuyla aynı durumu paylaşır) =====
+(function () {
+  const $ = id => document.getElementById(id);
+  const DEF = {
+    benim: { btn: "benimBtn", kutu: "app", gor: () => !$("app").classList.contains("hide") },
+    gun:   { btn: "gunBtn",   kutu: "gunPanel", gor: () => !$("gunPanel").classList.contains("gz") }
+  };
+  function guncelle() {
+    Object.keys(DEF).forEach(k => {
+      const d = DEF[k], b = $(d.btn), kutu = $(d.kutu); if (!b || !kutu) return;
+      let goster = false; try { goster = d.gor(); } catch (e) {}
+      b.classList.toggle("hide", !goster);
+      b.setAttribute("aria-expanded", String(!kutu.classList.contains("kapali")));
+    });
+  }
+  Object.keys(DEF).forEach(k => {
+    $(DEF[k].btn).addEventListener("click", () => {
+      const kutu = $(DEF[k].kutu);
+      try { penDegistir(k, !kutu.classList.contains("kapali")); } catch (e) {}
+      guncelle();
+      if (!kutu.classList.contains("kapali")) { try { kutu.scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {} }
+    });
+  });
+  setInterval(() => { try { guncelle(); } catch (e) {} }, 1000);
+  try { guncelle(); } catch (e) {}
 })();
 </script>
 
