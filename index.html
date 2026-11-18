@@ -1721,6 +1721,8 @@ $("aggResim").onclick = () => tabloResim($("agg").querySelector("table"), "Genel
 // ================= TONAJ KONTROLÜ: gereken düğüm = makine tonajı / 45 =================
 // Tonajlar "Makine Listesi" sayfasının kaydından (makine_listesi tablosu) okunur; makine adı 3, S3 veya s3 yazılabilir.
 const TONAJ_BOL = 45;
+const VARDIYA_HEDEF = 92;   // vardiya başına atılması gereken düğüm
+const kalanMetin = k => k > 0 ? fmt(k) + " (" + Math.ceil(k / VARDIYA_HEDEF) + " vardiya)" : "0";
 const HEDEF_POZ = 384;   // atılması gereken toplam pozisyon (düğüm) hedefi
 const tonajYuvarla = v => Math.round(v / TONAJ_BOL);   // Makine Listesi'ndeki "SAYI" sütunuyla aynı yuvarlama
 let tonajMap = null, tonajZaman = 0, tonajAcik = true;
@@ -1934,7 +1936,7 @@ function tonajPanelCiz(kap, R) {
     };
     const topAt = gruplu.reduce((p, x) => p + at(x), 0), topKalanPoz = Math.max(0, HEDEF_POZ - topAt);
     const topKalanMak = gruplu.reduce((p, x) => p + Math.max(0, fx(x)), 0);
-    const hedefP = el("p", "tn-say", "Atılması gereken: " + fmt(HEDEF_POZ) + " pozisyon · Atılan: " + fmt(topAt) + " · KALAN pozisyon: " + fmt(topKalanPoz) + "   |   Eksik makinelerin toplam kalanı: " + fmt(topKalanMak));
+    const hedefP = el("p", "tn-say", "Atılması gereken: " + fmt(HEDEF_POZ) + " pozisyon · Atılan: " + fmt(topAt) + " · KALAN pozisyon: " + fmt(topKalanPoz) + "   |   Eksik makinelerin toplam kalanı: " + kalanMetin(topKalanMak) + " · vardiya başına " + VARDIYA_HEDEF);
     gd.append(hedefP);
     const gt = el("table", "tn-gt"), gh = el("tr");
     ["GRUP / MAKİNE", "SAYI (gereken)", "ATILAN (" + (atKip === "tum" ? (myId() ? "tüm geçmiş" : "tüm kullanıcılar") : atKip === "gun" ? "seçili gün" : atKip === "dongu" ? "vardiya döngüsü" : atKip === "sabah" ? "sabahtan sabaha" : "seçili vardiya") + ")", "FARK", "KALAN", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
@@ -1945,14 +1947,14 @@ function tonajPanelCiz(kap, R) {
       const gKalan = L.reduce((p, x) => p + Math.max(0, fx(x)), 0);   // gruptaki eksik makinelerin kalan toplamı
       const hr = el("tr", "tn-grup-bas");
       hr.append(el("td", "", g + ". Grup · " + L.length + " makine"), el("td", "", fmt(tg)), el("td", "", fmt(ta)),
-        el("td", tf > 0 ? "tn-eksik" : "tn-tamam", fark(tf)), el("td", gKalan > 0 ? "tn-eksik" : "tn-tamam", fmt(gKalan)), el("td", tf > 0 ? "tn-eksik" : "tn-tamam", tf > 0 ? "✗ eksik" : "✓ tamam"));
+        el("td", tf > 0 ? "tn-eksik" : "tn-tamam", fark(tf)), el("td", gKalan > 0 ? "tn-eksik" : "tn-tamam", kalanMetin(gKalan)), el("td", tf > 0 ? "tn-eksik" : "tn-tamam", tf > 0 ? "✗ eksik" : "✓ tamam"));
       gt.append(hr);
       tikla(hr.children[2], "g" + g, hr, L, true); if (gecmisAcik.has("g" + g)) gt.append(zamanSatir(L, true));
       L.forEach(x => {
         const f = fx(x), r = el("tr", (ben[x.k] || 0) > 0 ? "tn-ben" : "");
         const durum = at(x) <= 0 ? "— atılmadı" : (f > 0 ? "✗ eksik" : "✓ tamam");
         r.append(el("td", "", x.k), el("td", "", fmt(x.g)), el("td", "", fmt(at(x))),
-          el("td", f > 0 ? "tn-eksik" : "tn-tamam", fark(f)), el("td", f > 0 ? "tn-eksik" : "tn-tamam", fmt(Math.max(0, f))), el("td", f > 0 ? "tn-eksik" : (at(x) <= 0 ? "tn-yok" : "tn-tamam"), durum));
+          el("td", f > 0 ? "tn-eksik" : "tn-tamam", fark(f)), el("td", f > 0 ? "tn-eksik" : "tn-tamam", kalanMetin(Math.max(0, f))), el("td", f > 0 ? "tn-eksik" : (at(x) <= 0 ? "tn-yok" : "tn-tamam"), durum));
         gt.append(r);
         tikla(r.children[2], "m" + x.k, r, [x]); if (gecmisAcik.has("m" + x.k)) gt.append(zamanSatir([x]));
       });
