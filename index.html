@@ -812,6 +812,18 @@ html.hz-kilit .sohbet-panel {
 #vtModal .vt-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:var(--card);border-bottom:1px solid var(--line)}
 #vtModal .vt-bar strong{font-size:16px}
 #vtModal iframe{flex:1;width:100%;border:0;background:#fff}
+
+/* ===== Özet / Vardiya listesi / Ortalama düğmeleri (pencere olarak açılır) ===== */
+#ozetBtn,#vlistBtn,#ortBtn{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 10px;margin:2px 4px 2px 0;border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--fg);font-size:13px;font-weight:600;height:auto;cursor:pointer}
+#ozetBox,#listeBox,#ortPanel{display:none}
+#secModal{position:fixed;inset:0;z-index:9000;display:none;flex-direction:column;background:var(--bg)}
+#secModal.open{display:flex}
+#secModal .vt-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:var(--card);border-bottom:1px solid var(--line)}
+#secModal .vt-bar strong{font-size:16px}
+#secModal #secBody{flex:1;overflow:auto;padding:12px}
+#secModal #secBody>#ozetBox:not(.gz),#secModal #secBody>#listeBox:not(.gz),#secModal #secBody>#ortPanel:not(.gz){display:block}
+#secModal .pen-btn{display:none}
+#secModal .pen-bas>h2{pointer-events:none;cursor:default}
 </style>
 </head>
 <body>
@@ -838,6 +850,9 @@ html.hz-kilit .sohbet-panel {
     📋 Makine Listesi
   </a>
   <button id="vtBtn" type="button" class="alt">📅 Vardiya Takvimi</button>
+  <button id="ozetBtn" type="button" class="alt hide">📊 Özet</button>
+  <button id="vlistBtn" type="button" class="alt hide">👥 Vardiya Listesi</button>
+  <button id="ortBtn" type="button" class="alt hide">📈 Ortalama</button>
   <div id="bar" class="bar hide"><span id="kim"></span><button id="profilBtn" type="button" class="alt">Profilim</button><button id="adminBtn" class="alt hide">Yönetim paneli</button><button id="cikis" type="button" class="alt">Çıkış yap</button></div>
 </header>
 
@@ -1136,6 +1151,11 @@ html.hz-kilit .sohbet-panel {
 <span id="siraSon" hidden></span>
 
 <div id="yazdirAlan"></div>
+
+<div id="secModal" role="dialog" aria-modal="true" aria-label="Bölüm">
+  <div class="vt-bar"><strong id="secBaslik"></strong><button id="secKapat" type="button" class="red sm">✕ Kapat</button></div>
+  <div id="secBody"></div>
+</div>
 
 <div id="vtModal" role="dialog" aria-modal="true" aria-label="Vardiya Takvimi">
   <div class="vt-bar"><strong>📅 Vardiya Takvimi</strong><button id="vtKapat" type="button" class="red sm">✕ Kapat</button></div>
@@ -2641,7 +2661,7 @@ function siraBirles(a) {
 }
 function siraUygula() {
   const son = $("siraSon"); if (!son) return;
-  siraBirles(gorAyar.sira).forEach(k => { const e = $(SIRA_ID[k]); if (e) son.parentNode.insertBefore(e, son); });
+  siraBirles(gorAyar.sira).forEach(k => { const e = $(SIRA_ID[k]); if (e && !e.closest("#secModal")) son.parentNode.insertBefore(e, son); });
 }
 function siraCiz() {
   const ul = $("siraListe"); if (!ul) return; ul.textContent = "";
@@ -5170,5 +5190,70 @@ window.kisiRekorGoster = async function (uid, ad) {
   }
 })();
 </script>
+
+<script>
+// ===== Özet / Vardiya listesi / Ortalama: üstteki düğmelerle pencere olarak açılır =====
+(function () {
+  const $ = id => document.getElementById(id);
+  const modal = $("secModal"), body = $("secBody");
+  const DEF = {
+    ozet:  { btn: "ozetBtn",  id: "ozetBox",   baslik: "📊 Özet",            pen: "ozet",    gor: () => gorunur("ozet") },
+    vlist: { btn: "vlistBtn", id: "listeBox",  baslik: "👥 Vardiya Listesi", pen: "vardiya", gor: () => gorunur("vardiya") },
+    ort:   { btn: "ortBtn",   id: "ortPanel",  baslik: "📈 Ortalama",        pen: "ort",     gor: () => gorunur("hafta") || gorunur("ay") }
+  };
+  let acik = null, yer = null;
+  function geriKoy() {
+    if (!acik) return;
+    const e = $(DEF[acik].id);
+    if (yer && yer.parentNode) { yer.parentNode.insertBefore(e, yer); yer.remove(); }
+    yer = null; acik = null;
+  }
+  function kapat() {
+    geriKoy();
+    modal.classList.remove("open"); document.body.style.overflow = "";
+    try { penUygula(); } catch (e) {}
+  }
+  function ac(k) {
+    const d = DEF[k], e = $(d.id);
+    try { if (!me || !d.gor()) return; } catch (x) {}
+    geriKoy();
+    yer = document.createComment("sec-yer"); e.parentNode.insertBefore(yer, e);
+    body.textContent = ""; body.append(e);
+    acik = k; $("secBaslik").textContent = d.baslik;
+    try { penCiz(d.pen, false); } catch (x) {}           // pencerede her zaman açık (kayıtlı ▾ durumunu değiştirmez)
+    modal.classList.add("open"); document.body.style.overflow = "hidden";
+    try { if (k === "ozet" && typeof ozetKartlar === "function") ozetKartlar(); } catch (x) {}
+    try { if (k === "vlist" && typeof vardiyaCiz === "function") vardiyaCiz(); } catch (x) {}
+    try { if (k === "ort" && typeof ortUygula === "function") ortUygula(); } catch (x) {}
+    try { window.dispatchEvent(new Event("resize")); } catch (x) {}
+    body.scrollTop = 0;
+  }
+  Object.keys(DEF).forEach(k => $(DEF[k].btn).addEventListener("click", () => ac(k)));
+  $("secKapat").addEventListener("click", kapat);
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && modal.classList.contains("open")) kapat(); });
+
+  function dugmeler() {
+    Object.keys(DEF).forEach(k => {
+      let goster = false;
+      try { goster = !!me && DEF[k].gor(); } catch (e) {}
+      $(DEF[k].btn).classList.toggle("hide", !goster);
+      if (!goster && acik === k) kapat();
+    });
+    try { if (!me && acik) kapat(); } catch (e) {}
+  }
+  const eski = window.gorUygula;
+  if (typeof eski === "function") {
+    window.gorUygula = function () {
+      const r = eski.apply(this, arguments);
+      try { dugmeler(); } catch (e) {}
+      return r;
+    };
+  }
+  try { dugmeler(); } catch (e) {}
+  // Giriş/çıkış sonrası düğmeler güncel kalsın
+  setInterval(() => { try { dugmeler(); } catch (e) {} }, 1500);
+})();
+</script>
+
 </body>
 </html>
