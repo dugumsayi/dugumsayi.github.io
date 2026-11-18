@@ -1765,11 +1765,22 @@ function tonajRapor(kt) {
 }
 // Benim bugüne kadar yazdığım TÜM sayılar (tüm tarih ve vardiyalar), makine bazında toplam
 let gecmisMap = null, gecmisDetay = {}, gecmisZaman = 0, gecmisYukleniyor = false, gecmisKip = null;   // gecmisKip: kullanıcı id'si (kişisel) veya "tum" (çıkış yapılmışken herkesin toplamı)
-let atKip = "tum", atYon = "son";   // atYon: 18 günlük blokta seçili tarih bloğun "son" ya da "ilk" günü
+let atKip = "tum", atYon = "son";   
 const gunKaydir = (t, n) => new Date(new Date(t + "T12:00:00Z").getTime() + n * 86400000).toISOString().slice(0, 10);
-let donguSabah = true;   // true: döngü sabah 08:00'den ertesi sabah 08:00'e hesaplanır
-const DONGU_GUN = 18;   // vardiya döngüsü uzunluğu (gün)
-const donguAralik = () => atYon === "ilk" ? [secili, gunKaydir(secili, DONGU_GUN - 1)] : [gunKaydir(secili, -(DONGU_GUN - 1)), secili];   // ATILAN hesaplama yöntemi: "tum" | "gun" | "vardiya"
+// Vardiya döngüsü: ilk sayı günü (08:00–16:00 vardiyası) → son sayı günü (08:00–16:00 vardiyası, dahil). Aradaki tatil günleri sayılmaz.
+const DONGULER = [["2026-11-01", "2026-11-18"], ["2026-11-21", "2026-12-12"]];   // bilinen dönemler (başlangıç, bitiş)
+let donguB = null, donguE = null;
+const donguAralik = () => {
+  if (!donguB || !donguE) {
+    const k = lsGet("donguAralikV2", null);
+    if (k && k[0] && k[1]) { donguB = k[0]; donguE = k[1]; }
+    else { const d = DONGULER.find(x => secili >= x[0] && secili <= x[1]) || DONGULER[DONGULER.length - 1]; donguB = d[0]; donguE = d[1]; }
+  }
+  return [donguB, donguE];
+};
+const donguAyarla = (b, e) => { donguB = b; donguE = e; lsSet("donguAralikV2", [b, e]); };
+// (tarih, vardiya no) döngü aralığında mı? İlk gün 08:00 vardiyasından başlar, son gün 08:00–16:00 vardiyasında biter.
+const donguIcinde = (t, n) => { const [b, e] = donguAralik(); return (t > b || (t === b && n >= 1)) && (t < e || (t === e && n <= 1)); };
 const gecmisAcik = new Set();   // açık bırakılan "ne zaman yazılmış" satırları
 async function gecmisYukle(zorla) {
   if (!sb || !navigator.onLine || gecmisYukleniyor) return;
@@ -1854,11 +1865,7 @@ function tonajPanelCiz(kap, R) {
       let top = 0;
       Object.entries(gecmisDetay[x.k] || {}).forEach(([dk, v]) => {
         const [t, vn] = dk.split("|");
-        if (atKip === "dongu") {
-          const [b, e] = donguAralik(), n = Number(vn);
-          if (donguSabah) { if ((t >= b && t <= e && n >= 1) || (t > b && t <= gunKaydir(e, 1) && n === 0)) top += v; }
-          else if (t >= b && t <= e) top += v;
-        }
+        if (atKip === "dongu") { if (donguIcinde(t, Number(vn))) top += v; }
         else if (atKip === "sabah") { if ((t === secili && Number(vn) >= 1) || (t === gunKaydir(secili, 1) && Number(vn) === 0)) top += v; }
         else if (t === secili && (atKip === "gun" || Number(vn) === gv)) top += v;
       });
@@ -1871,19 +1878,20 @@ function tonajPanelCiz(kap, R) {
     gd.append(el("p", "tn-not", gecmisMap && atKip !== "tum" ? "Atılan = " + (myId() ? "yalnızca sizin" : "tüm kullanıcıların") + " yazdığı sayılar; yalnızca aşağıdaki hesaplama yöntemindeki gün/vardiya aralığı sayılır. ATILAN değerine tıklayınca tüm geçmiş günler listelenir." : gecmisMap ? (myId() ? "Atılan = bugüne kadar yazdığınız tüm sayılar (tüm tarih ve vardiyalar). Ne zaman yazdığınızı görmek için ATILAN değerine, o günün kullanıcı tablosunu görmek için de tarihe tıklayın." : "Giriş yapılmadığı için Atılan = tüm kullanıcıların bugüne kadar yazdığı sayıların toplamı. Kendi toplamınızı görmek için giriş yapın.") : "Geçmişte yazılan tüm sayılar yükleniyor… (şimdilik seçili tarih/vardiya gösteriliyor)"));
     const kipBar = el("div", "tn-not");
     const kipSel = el("select"); kipSel.style.cssText = "margin-left:6px;height:30px;border-radius:6px;padding:0 8px";
-    [["tum", "Tüm geçmiş"], ["gun", "Seçili gün (tüm vardiyalar)"], ["vardiya", "Seçili gün + vardiya"], ["sabah", "Sabahtan sabaha (08:00 → ertesi 08:00)"], ["dongu", "Vardiya döngüsü (" + DONGU_GUN + " gün)"]].forEach(([v, t]) => { const o = el("option", "", t); o.value = v; kipSel.append(o); });
+    [["tum", "Tüm geçmiş"], ["gun", "Seçili gün (tüm vardiyalar)"], ["vardiya", "Seçili gün + vardiya"], ["sabah", "Sabahtan sabaha (08:00 → ertesi 08:00)"], ["dongu", "Vardiya döngüsü (08:00 → 08:00)"]].forEach(([v, t]) => { const o = el("option", "", t); o.value = v; kipSel.append(o); });
     kipSel.value = atKip;
     kipSel.onchange = () => { atKip = kipSel.value; renderShared(); };
     kipBar.append("Hesaplama yöntemi:", kipSel);
     if (atKip === "dongu") {
-      const yonSel = el("select"); yonSel.style.cssText = "margin-left:6px;height:30px;border-radius:6px;padding:0 8px";
-      [["son", "Seçili gün bloğun SON günü"], ["ilk", "Seçili gün bloğun İLK günü"]].forEach(([v, t]) => { const o = el("option", "", t); o.value = v; yonSel.append(o); });
-      yonSel.value = atYon; yonSel.onchange = () => { atYon = yonSel.value; renderShared(); };
-      const fmtG = t => new Date(t + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
       const [b, e] = donguAralik();
-      const sbCb = el("input"); sbCb.type = "checkbox"; sbCb.checked = donguSabah; sbCb.onchange = () => { donguSabah = sbCb.checked; renderShared(); };
-      const sbLb = el("label", "", " Sabahtan sabaha (08:00)"); sbLb.style.cssText = "margin-left:8px;white-space:nowrap"; sbLb.prepend(sbCb);
-      kipBar.append(yonSel, sbLb, donguSabah ? "  → " + fmtG(b) + " 08:00 – " + fmtG(gunKaydir(e, 1)) + " 08:00 (" + DONGU_GUN + " gün)" : "  → " + fmtG(b) + " 00:00 – " + fmtG(e) + " 24:00 (" + DONGU_GUN + " gün)");
+      const fmtG = t => new Date(t + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+      const mk = (v, f) => { const i = el("input"); i.type = "date"; i.value = v; i.style.cssText = "height:30px;border-radius:6px;padding:0 6px;margin:0 6px"; i.onchange = () => { if (i.value) { f(i.value); renderShared(); } }; return i; };
+      const satir = el("div", "tn-not"); satir.style.marginTop = "6px";
+      satir.append("İlk sayı günü:", mk(b, v => donguAyarla(v, donguE)), " Son sayı günü:", mk(e, v => donguAyarla(donguB, v)));
+      const hazir = el("div", "tn-not"); hazir.style.marginTop = "6px";
+      DONGULER.forEach(([x, y]) => { const bt = el("button", "alt sm", fmtG(x).replace(" 2026", "") + " – " + fmtG(y).replace(" 2026", "")); bt.type = "button"; bt.style.marginRight = "6px"; if (x === b && y === e) bt.style.outline = "2px solid var(--vc,#4f8cff)"; bt.onclick = () => { donguAyarla(x, y); renderShared(); }; hazir.append(bt); });
+      const gun = Math.round((new Date(e + "T12:00:00Z") - new Date(b + "T12:00:00Z")) / 86400000) + 1;
+      kipBar.append("  → " + fmtG(b) + " (08:00–16:00 vardiyası) – " + fmtG(e) + " (08:00–16:00 vardiyası) · " + gun + " gün", hazir, satir);
     } else if (atKip === "sabah") kipBar.append("  → " + new Date(secili + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" }) + " 08:00 → " + new Date(gunKaydir(secili, 1) + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" }) + " 08:00");
     else if (atKip !== "tum") kipBar.append("  → " + new Date(secili + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "long" }) + (atKip === "vardiya" ? " · " + (VNO_AD[gv] || "?") : ""));
     gd.append(kipBar);
@@ -1924,7 +1932,7 @@ function tonajPanelCiz(kap, R) {
       };
     };
     const gt = el("table", "tn-gt"), gh = el("tr");
-    ["GRUP / MAKİNE", "SAYI (gereken)", "ATILAN (" + (atKip === "tum" ? (myId() ? "tüm geçmiş" : "tüm kullanıcılar") : atKip === "gun" ? "seçili gün" : atKip === "dongu" ? DONGU_GUN + " günlük döngü" : atKip === "sabah" ? "sabahtan sabaha" : "seçili vardiya") + ")", "FARK", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
+    ["GRUP / MAKİNE", "SAYI (gereken)", "ATILAN (" + (atKip === "tum" ? (myId() ? "tüm geçmiş" : "tüm kullanıcılar") : atKip === "gun" ? "seçili gün" : atKip === "dongu" ? "vardiya döngüsü" : atKip === "sabah" ? "sabahtan sabaha" : "seçili vardiya") + ")", "FARK", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
     const fark = f => f > 0 ? "−" + fmt(f) : (f < 0 ? "+" + fmt(-f) : "0");
     gNo.forEach(g => {
       const L = gruplu.filter(x => x.grup === g);
