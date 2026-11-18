@@ -78,6 +78,8 @@ tr.tot td{background:var(--tot)!important;color:#111;font-weight:600;text-align:
 .tn-panel table.tn-gt th:first-child,.tn-panel table.tn-gt td:first-child{min-width:78px}
 .tn-panel table.tn-gt td:last-child{white-space:nowrap}
 @media(max-width:600px){.tn-panel table.tn-gt th{font-size:11px;padding:5px 3px}.tn-panel table.tn-gt td{font-size:13px;padding:5px 3px}.tn-panel table.tn-gt th:first-child,.tn-panel table.tn-gt td:first-child{min-width:64px}}
+.tn-gun{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;padding:3px 0!important}
+.tn-gunk{margin:4px 0 8px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card)}.tn-gunb{font-weight:700;margin-bottom:4px}
 .tn-tikla{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 .tn-panel tr.tn-detay td{text-align:left;font-weight:400;font-size:13px;background:var(--bg)}.tn-detay div{padding:2px 0}
 .tn-panel tr.tn-grup-bas td{background:var(--bg);font-weight:800;border-top:2px solid var(--line)}
@@ -1780,6 +1782,46 @@ async function gecmisYukle(zorla) {
   gecmisYukleniyor = false;
   if (tamam) { try { renderShared(); } catch (e) {} }
 }
+// Seçilen tarih + vardiyada, ilgili makinelere sayı yazan kullanıcıların tablosu
+async function gunKullaniciTablosu(kap, tarih, vno, anahtarlar) {
+  kap.textContent = "";
+  try {
+    const hamlar = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await sb.from("sayilar").select("user_id,kullanici,name,n1,n2,n3,n4,n5,n6")
+        .eq("tarih", tarih).eq("vno", vno).order("satir").range(from, from + 999);
+      if (error) throw error;
+      hamlar.push(...data);
+      if (data.length < 1000) break;
+    }
+    const gorunen = vardiyaListeHazir ? new Set(vardiyaList.map(u => u.id)) : null;
+    const kisi = new Map();   // user_id -> { ad, m: { makine: toplam } }
+    hamlar.forEach(r => {
+      const k = tonajAnahtar(r.name); if (!k || !anahtarlar.has(k)) return;
+      if (gorunen && !gorunen.has(r.user_id)) return;
+      const v = rsum(r); if (!v) return;
+      let u = kisi.get(r.user_id); if (!u) { u = { ad: adBuyut(r.kullanici) || "?", m: {} }; kisi.set(r.user_id, u); }
+      if (adBuyut(r.kullanici)) u.ad = adBuyut(r.kullanici);
+      u.m[k] = (u.m[k] || 0) + v;
+    });
+    const liste = [...kisi.entries()].sort((p, q) => (p[0] === myId() ? -1 : 0) - (q[0] === myId() ? -1 : 0) || p[1].ad.localeCompare(q[1].ad, "tr"));
+    const bas = el("div", "tn-gunb", new Date(tarih + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "short" }) + " · " + (VNO_AD[vno] || "?") + " · kullanıcı tablosu");
+    kap.append(bas);
+    if (!liste.length) { kap.append(el("div", "tn-not", "Bu gün için kullanıcı kaydı bulunamadı.")); return; }
+    const t = el("table", "tn-gt"), h = el("tr");
+    ["KULLANICI", "MAKİNE", "SAYI"].forEach(x => h.append(el("th", "", x))); t.append(h);
+    let top = 0;
+    liste.forEach(([uid, u]) => {
+      Object.keys(u.m).sort((p, q) => Number(p.slice(1)) - Number(q.slice(1))).forEach(k => {
+        top += u.m[k];
+        t.append(Object.assign(el("tr", uid === myId() ? "tn-ben" : ""), {}));
+        t.lastChild.append(el("td", "", u.ad + (uid === myId() ? " (ben)" : "")), el("td", "", k), el("td", "", fmt(u.m[k])));
+      });
+    });
+    const ft = el("tr", "tn-grup-bas"); ft.append(el("td", "", "TOPLAM"), el("td", ""), el("td", "", fmt(top))); t.append(ft);
+    const w = el("div", "tn-gkap"); w.append(t); kap.append(w);
+  } catch (e) { kap.textContent = "Kullanıcı tablosu yüklenemedi."; }
+}
 function tonajPanelCiz(kap, R) {
   // Benim şimdiye kadar attığım düğümler (makine bazında)
   const ben = {};
@@ -1799,7 +1841,7 @@ function tonajPanelCiz(kap, R) {
     const gd = el("details", "tn-alt"); gd.open = true;
     const gNo = [...new Set(gruplu.map(x => x.grup))].sort((p, q) => p - q);
     gd.append(el("summary", "", "Elle seçilen gruplar (" + gNo.length + " grup · " + gruplu.length + " makine)"));
-    gd.append(el("p", "tn-not", gecmisMap ? "Atılan = bugüne kadar yazdığınız tüm sayılar (tüm tarih ve vardiyalar). Ne zaman yazdığınızı görmek için ATILAN değerine tıklayın." : "Geçmişte yazdığınız tüm sayılar yükleniyor… (şimdilik seçili tarih/vardiya gösteriliyor)"));
+    gd.append(el("p", "tn-not", gecmisMap ? "Atılan = bugüne kadar yazdığınız tüm sayılar (tüm tarih ve vardiyalar). Ne zaman yazdığınızı görmek için ATILAN değerine, o günün kullanıcı tablosunu görmek için de tarihe tıklayın." : "Geçmişte yazdığınız tüm sayılar yükleniyor… (şimdilik seçili tarih/vardiya gösteriliyor)"));
     const tarihTR = t => new Date(t + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "short" });
     // Bir makinenin (veya grubun) geçmişte ne zaman yazıldığını gösteren açılır satır
     const zamanSatir = (liste) => {
@@ -1811,7 +1853,17 @@ function tonajPanelCiz(kap, R) {
       else if (!anah.length) td.append(el("div", "", "Bu makine için geçmişte yazılmış sayı yok."));
       else anah.forEach(dk => {
         const [t, vn] = dk.split("|"), top = gun[dk].reduce((p, y) => p + y[1], 0);
-        td.append(el("div", "", tarihTR(t) + " · " + (VNO_AD[Number(vn)] || "?") + " → " + fmt(top) + (liste.length > 1 ? "   (" + gun[dk].map(y => y[0] + ": " + fmt(y[1])).join(", ") + ")" : "")));
+        const gd2 = el("div", "tn-gun", tarihTR(t) + " · " + (VNO_AD[Number(vn)] || "?") + " → " + fmt(top) + (liste.length > 1 ? "   (" + gun[dk].map(y => y[0] + ": " + fmt(y[1])).join(", ") + ")" : ""));
+        gd2.title = "Bu günün kullanıcı tablosunu görmek için tıklayın";
+        const gk = el("div", "tn-gunk"); gk.hidden = true;
+        gd2.onclick = async () => {
+          if (!gk.hidden) { gk.hidden = true; return; }
+          gk.hidden = false;
+          if (gk.dataset.yuk) return;
+          gk.textContent = "Yükleniyor…"; gk.dataset.yuk = "1";
+          await gunKullaniciTablosu(gk, t, Number(vn), new Set(liste.map(y => y.k)));
+        };
+        td.append(gd2, gk);
       });
       tr.append(td); return tr;
     };
