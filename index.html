@@ -806,6 +806,8 @@ html.hz-kilit .sohbet-panel {
 #vnoOzet tr.vo-simdi td:nth-child(var(--simdi)){background:rgba(80,120,220,.12)}
 
 #navBtns{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:4px;margin:0 0 16px}
+#navBtns.nav-alt{flex-direction:column;flex-wrap:nowrap;align-items:stretch;max-width:440px;margin-left:auto;margin-right:auto}
+#navBtns.nav-alt>button{margin:0;width:100%}
 /* ===== Vardiya Takvimi eklentisi ===== */
 #vtBtn{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 10px;margin:2px 4px 2px 0;border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--fg);font-size:13px;font-weight:600;height:auto;cursor:pointer}
 #vtModal{position:fixed;inset:0;z-index:9000;display:none;flex-direction:column;background:var(--bg)}
@@ -955,6 +957,14 @@ html.hz-kilit .sohbet-panel {
     <label class="chk"><input id="tabloDondurAc" type="checkbox" checked> Resim olarak kaydedince tablo dondurulsun</label>
     <button id="tabloDondurKaydet" type="button">Dondurma ayarını kaydet</button>
   </div>
+  <strong>Üst düğmelerin dizilimi</strong>
+  <p class="mut">Vardiya Takvimi, Özet, Vardiya Listesi ve Ortalama düğmeleri giriş alanının altında tek satırda ya da alt alta görünsün. Kaydedince tüm kullanıcılarda geçerli olur.</p>
+  <div class="row">
+    <label class="chk"><input type="radio" name="navDizilim" value="satir" checked> Tek satırda</label>
+    <label class="chk"><input type="radio" name="navDizilim" value="alt"> Alt alta</label>
+    <button id="navDizilimKaydet" type="button">Dizilimi kaydet</button>
+  </div>
+  <hr>
   <strong>Tablo rengi</strong>
   <p class="mut">Kullanıcı tablolarının ve genel toplam tablosunun rengi. İsterseniz herkes için tek renk belirleyin, isterseniz kullanıcıların kendi tablo rengini (kendi cihazlarında) seçmesine izin verin.</p>
   <div class="row">
@@ -2509,10 +2519,10 @@ const GOR = [
   ["vardiyaTakvimi", "Vardiya Takvimi düğmesi (üstteki 📅 düğme)", ["vtBtn"]]
 ];
 // misafir: giriş yapmadan (kayıt yoksa gizli) · uye: giriş yapınca (kayıt yoksa görünür)
-let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {}, sira: [], hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true, erkenDk: 0, kapanDk: 0, otoGecis: true, olcumDk: 5, dinlenDk: 30 };
+let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {}, sira: [], hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true, erkenDk: 0, kapanDk: 0, otoGecis: true, olcumDk: 5, dinlenDk: 30, navDizilim: "satir" };
 const olcumGecerli = (x, d) => (Number.isInteger(x) && x >= 1 && x <= 120) ? x : d;
 const vDkGecerli = (x, d) => (Number.isInteger(x) && x >= 0 && x <= 120) ? x : d;
-const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {}, neon: (d.neon && typeof d.neon === "object") ? d.neon : {}, sira: Array.isArray(d.sira) ? d.sira : [], hedefGizli: (d.hedefGizli && typeof d.hedefGizli === "object") ? d.hedefGizli : {}, son30Renk: /^#[0-9a-fA-F]{6}$/.test(d.son30Renk || "") ? d.son30Renk : "", tabloRenk: /^#[0-9a-fA-F]{6}$/.test(d.tabloRenk || "") ? d.tabloRenk : "", tabloIzin: d.tabloIzin === true, tabloDondur: d.tabloDondur !== false, erkenDk: vDkGecerli(d.erkenDk, 0), kapanDk: vDkGecerli(d.kapanDk, 0), otoGecis: d.otoGecis !== false, olcumDk: olcumGecerli(d.olcumDk, 5), dinlenDk: olcumGecerli(d.dinlenDk, 30) } : { misafir: {}, uye: d || {}, kapali: {}, hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true, erkenDk: 0, kapanDk: 0, otoGecis: true, olcumDk: 5, dinlenDk: 30 };
+const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {}, neon: (d.neon && typeof d.neon === "object") ? d.neon : {}, sira: Array.isArray(d.sira) ? d.sira : [], hedefGizli: (d.hedefGizli && typeof d.hedefGizli === "object") ? d.hedefGizli : {}, son30Renk: /^#[0-9a-fA-F]{6}$/.test(d.son30Renk || "") ? d.son30Renk : "", tabloRenk: /^#[0-9a-fA-F]{6}$/.test(d.tabloRenk || "") ? d.tabloRenk : "", tabloIzin: d.tabloIzin === true, tabloDondur: d.tabloDondur !== false, erkenDk: vDkGecerli(d.erkenDk, 0), kapanDk: vDkGecerli(d.kapanDk, 0), otoGecis: d.otoGecis !== false, olcumDk: olcumGecerli(d.olcumDk, 5), dinlenDk: olcumGecerli(d.dinlenDk, 30), navDizilim: d.navDizilim === "alt" ? "alt" : "satir" } : { misafir: {}, uye: d || {}, kapali: {}, hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true, erkenDk: 0, kapanDk: 0, otoGecis: true, olcumDk: 5, dinlenDk: 30, navDizilim: "satir" };
 // ---- Tablo rengi: yönetici herkes için renk belirler; izin verirse kullanıcı kendi cihazında kendi rengini seçer ----
 const TR_KEY = "dugum-tablo-renk-v1";
 const trGecerli = c => /^#[0-9a-fA-F]{6}$/.test(c || "");
@@ -2631,10 +2641,18 @@ function pCiz() {
     box.append(lb);
   });
 }
+function navDizilimUygula() {
+  const k = $("navBtns"); if (!k) return;
+  const alt = gorAyar.navDizilim === "alt";
+  k.classList.toggle("nav-alt", alt);
+  const r = document.querySelector('input[name="navDizilim"][value="' + (alt ? "alt" : "satir") + '"]');
+  if (r && !r.checked && !r.contains(document.activeElement)) r.checked = true;
+}
 function gorUygula() {
   try { olcumUygula(); } catch (e) {}
   try { vardiyaSureUygula(); } catch (e) {}
   try { tabloRenkUygula(); } catch (e) {}
+  try { navDizilimUygula(); } catch (e) {}
   GOR.forEach(([k, , ids]) => ids.forEach(id => $(id).classList.toggle("gz", !gorunur(k))));
   $("vardiyaBox").classList.toggle("gz", !(gorunur("ozet") || gorunur("vardiya")));
   $("gunPanel").classList.toggle("gz", !(gorunur("genel") || gorunur("tablolar")));
@@ -2765,7 +2783,7 @@ async function gorYukle() {
 }
 $("gKaydet").onclick = async () => {
   if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
-  const ayar = { misafir: {}, uye: {}, kapali: {}, neon: neonOku(), sira: siraTaslak.slice(), hedefGizli: gorAyar.hedefGizli || {}, son30Renk: gorAyar.son30Renk || "", tabloRenk: gorAyar.tabloRenk || "", tabloIzin: !!gorAyar.tabloIzin, tabloDondur: gorAyar.tabloDondur !== false, erkenDk: gorAyar.erkenDk, kapanDk: gorAyar.kapanDk, otoGecis: gorAyar.otoGecis !== false, olcumDk: gorAyar.olcumDk, dinlenDk: gorAyar.dinlenDk };
+  const ayar = { misafir: {}, uye: {}, kapali: {}, neon: neonOku(), sira: siraTaslak.slice(), hedefGizli: gorAyar.hedefGizli || {}, son30Renk: gorAyar.son30Renk || "", tabloRenk: gorAyar.tabloRenk || "", tabloIzin: !!gorAyar.tabloIzin, tabloDondur: gorAyar.tabloDondur !== false, erkenDk: gorAyar.erkenDk, kapanDk: gorAyar.kapanDk, otoGecis: gorAyar.otoGecis !== false, olcumDk: gorAyar.olcumDk, dinlenDk: gorAyar.dinlenDk, navDizilim: gorAyar.navDizilim === "alt" ? "alt" : "satir" };
   document.querySelectorAll("#gList input").forEach(i => { ayar[i.dataset.g][i.dataset.k] = i.checked; });
   document.querySelectorAll("#pList input").forEach(i => { ayar.kapali[i.dataset.k] = i.checked; });
   msg("Görünürlük kaydediliyor…");
@@ -2875,6 +2893,22 @@ $("tabloDondurKaydet").onclick = async () => {
   gorAyar = gorNorm(ayar); lsSet(GOR_KEY, ayar); dondurUygula();
   try { if (gorKanal) gorKanal.send({ type: "broadcast", event: "guncelle", payload: { t: Date.now() } }); } catch (e) {}
   msg(acik ? "Dondurma açıldı: resim kaydedince tablo donacak." : "Dondurma kapatıldı: hiçbir tablo donmayacak.");
+};
+$("navDizilimKaydet").onclick = async () => {
+  if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
+  const sec = (document.querySelector('input[name="navDizilim"]:checked') || {}).value === "alt" ? "alt" : "satir";
+  const ayar = Object.assign({}, gorAyar, { navDizilim: sec });
+  msg("Dizilim kaydediliyor…");
+  const { error } = await sb.rpc("admin_gorunurluk_kaydet", { ayar });
+  if (error) { msg("Kaydedilemedi: " + error.message); alert("Kaydedilemedi: " + error.message); return; }
+  const dog = await sb.from("site_ayar").select("deger").eq("anahtar", "gorunurluk").maybeSingle();
+  if (dog.error || !dog.data || !dog.data.deger || (dog.data.deger.navDizilim === "alt" ? "alt" : "satir") !== sec) {
+    const h = "Ayar sunucuda saklanamadı (gorunurluk kaydı navDizilim alanını kabul etmiyor). admin_gorunurluk_kaydet fonksiyonu yeni alanı atıyor olabilir; bu uyarıyı geliştiriciye iletin.";
+    msg(h); alert(h); return;
+  }
+  gorAyar = gorNorm(ayar); lsSet(GOR_KEY, ayar); navDizilimUygula();
+  try { if (gorKanal) gorKanal.send({ type: "broadcast", event: "guncelle", payload: { t: Date.now() } }); } catch (e) {}
+  msg(sec === "alt" ? "Düğmeler alt alta dizildi." : "Düğmeler tek satıra alındı.");
 };
 $("tabloRenkKisisel").oninput = () => { try { localStorage.setItem(TR_KEY, $("tabloRenkKisisel").value); } catch (e) {} tabloRenkUygula(); };
 $("tabloRenkSifirlaKisisel").onclick = () => { try { localStorage.removeItem(TR_KEY); } catch (e) {} tabloRenkUygula(); };
