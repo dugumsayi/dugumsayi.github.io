@@ -78,6 +78,7 @@ tr.tot td{background:var(--tot)!important;color:#111;font-weight:600;text-align:
 .tn-panel table.tn-gt th:first-child,.tn-panel table.tn-gt td:first-child{min-width:78px}
 .tn-panel table.tn-gt td:last-child{white-space:nowrap}
 @media(max-width:600px){.tn-panel table.tn-gt th{font-size:11px;padding:5px 3px}.tn-panel table.tn-gt td{font-size:13px;padding:5px 3px}.tn-panel table.tn-gt th:first-child,.tn-panel table.tn-gt td:first-child{min-width:64px}}
+.tn-kirmizi{color:#ff3b3b;font-weight:700}
 .tn-gun{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;padding:3px 0!important}
 .tn-panel tr.tn-sec td{font-weight:800;background:rgba(37,99,235,.16)}
 .tn-gunk{margin:4px 0 8px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card)}.tn-gunb{font-weight:700;margin-bottom:4px}
@@ -1845,7 +1846,7 @@ function tonajPanelCiz(kap, R) {
     gd.append(el("p", "tn-not", gecmisMap ? "Atılan = bugüne kadar yazdığınız tüm sayılar (tüm tarih ve vardiyalar). Ne zaman yazdığınızı görmek için ATILAN değerine, o günün kullanıcı tablosunu görmek için de tarihe tıklayın." : "Geçmişte yazdığınız tüm sayılar yükleniyor… (şimdilik seçili tarih/vardiya gösteriliyor)"));
     const tarihTR = t => new Date(t + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "short" });
     // Bir makinenin (veya grubun) geçmişte ne zaman yazıldığını gösteren açılır satır
-    const zamanSatir = (liste) => {
+    const zamanSatir = (liste, grupMu) => {
       const tr = el("tr", "tn-detay"), td = el("td"); td.colSpan = 5;
       const gun = {};
       liste.forEach(x => Object.entries(gecmisDetay[x.k] || {}).forEach(([dk, v]) => { (gun[dk] = gun[dk] || []).push([x.k, v]); }));
@@ -1854,7 +1855,10 @@ function tonajPanelCiz(kap, R) {
       else if (!anah.length) td.append(el("div", "", "Bu makine için geçmişte yazılmış sayı yok."));
       else anah.forEach(dk => {
         const [t, vn] = dk.split("|"), top = gun[dk].reduce((p, y) => p + y[1], 0);
-        const gd2 = el("div", "tn-gun", tarihTR(t) + " · " + (VNO_AD[Number(vn)] || "?") + " → " + fmt(top) + (liste.length > 1 ? "   (" + gun[dk].map(y => y[0] + ": " + fmt(y[1])).join(", ") + ")" : ""));
+        const gd2 = el("div", "tn-gun", tarihTR(t) + " · " + (VNO_AD[Number(vn)] || "?") + " → ");
+        const gerekGrup = liste.reduce((p, y) => p + (Number(y.g) || 0), 0);
+        const topSp = el("span", grupMu && top < gerekGrup ? "tn-kirmizi" : "", fmt(top));
+        gd2.append(topSp, (grupMu || liste.length > 1) ? "   (" + gun[dk].map(y => y[0] + ": " + fmt(y[1])).join(", ") + ")" : "");
         gd2.title = "Bu günün kullanıcı tablosunu görmek için tıklayın";
         const gk = el("div", "tn-gunk"); gk.hidden = true;
         gd2.onclick = async () => {
@@ -1868,12 +1872,12 @@ function tonajPanelCiz(kap, R) {
       });
       tr.append(td); return tr;
     };
-    const tikla = (td, anahtar, tr, liste) => {
+    const tikla = (td, anahtar, tr, liste, grupMu) => {
       td.classList.add("tn-tikla"); td.title = "Ne zaman yazdığınızı görmek için tıklayın";
       td.onclick = () => {
         const sn = tr.nextElementSibling;
         if (sn && sn.classList.contains("tn-detay")) { sn.remove(); gecmisAcik.delete(anahtar); }
-        else { tr.after(zamanSatir(liste)); gecmisAcik.add(anahtar); }
+        else { tr.after(zamanSatir(liste, grupMu)); gecmisAcik.add(anahtar); }
       };
     };
     const gt = el("table", "tn-gt"), gh = el("tr");
@@ -1886,7 +1890,7 @@ function tonajPanelCiz(kap, R) {
       hr.append(el("td", "", g + ". Grup · " + L.length + " makine"), el("td", "", fmt(tg)), el("td", "", fmt(ta)),
         el("td", tf > 0 ? "tn-eksik" : "tn-tamam", fark(tf)), el("td", tf > 0 ? "tn-eksik" : "tn-tamam", tf > 0 ? "✗ eksik" : "✓ tamam"));
       gt.append(hr);
-      tikla(hr.children[2], "g" + g, hr, L); if (gecmisAcik.has("g" + g)) gt.append(zamanSatir(L));
+      tikla(hr.children[2], "g" + g, hr, L, true); if (gecmisAcik.has("g" + g)) gt.append(zamanSatir(L, true));
       L.forEach(x => {
         const f = fx(x), r = el("tr", (ben[x.k] || 0) > 0 ? "tn-ben" : "");
         const durum = at(x) <= 0 ? "— atılmadı" : (f > 0 ? "✗ eksik" : "✓ tamam");
