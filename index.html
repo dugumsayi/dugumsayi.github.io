@@ -805,6 +805,7 @@ html.hz-kilit .sohbet-panel {
 #vnoOzet .vo-detay td.vo-kim{white-space:normal;text-align:left;color:var(--mut);font-size:13px}
 #vnoOzet tr.vo-simdi td:nth-child(var(--simdi)){background:rgba(80,120,220,.12)}
 
+#navBtns{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:4px;margin:0 0 16px}
 /* ===== Vardiya Takvimi eklentisi ===== */
 #vtBtn{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 10px;margin:2px 4px 2px 0;border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--fg);font-size:13px;font-weight:600;height:auto;cursor:pointer}
 #vtModal{position:fixed;inset:0;z-index:9000;display:none;flex-direction:column;background:var(--bg)}
@@ -849,10 +850,6 @@ html.hz-kilit .sohbet-panel {
      style="display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 10px;margin:2px 4px 2px 0;border:1px solid var(--line);border-radius:4px;color:var(--fg);text-decoration:none;font-size:13px;font-weight:600">
     📋 Makine Listesi
   </a>
-  <button id="vtBtn" type="button" class="alt">📅 Vardiya Takvimi</button>
-  <button id="ozetBtn" type="button" class="alt hide">📊 Özet</button>
-  <button id="vlistBtn" type="button" class="alt hide">👥 Vardiya Listesi</button>
-  <button id="ortBtn" type="button" class="alt hide">📈 Ortalama</button>
   <div id="bar" class="bar hide"><span id="kim"></span><button id="profilBtn" type="button" class="alt">Profilim</button><button id="adminBtn" class="alt hide">Yönetim paneli</button><button id="cikis" type="button" class="alt">Çıkış yap</button></div>
 </header>
 
@@ -1048,6 +1045,13 @@ html.hz-kilit .sohbet-panel {
   <input id="sifre" type="password" placeholder="Şifre" autocomplete="current-password">
   <button id="giris">Giriş yap</button>
   <button id="kayit" class="kayitOnly">Kayıt ol</button>
+</div>
+
+<div id="navBtns">
+  <button id="vtBtn" type="button" class="alt">📅 Vardiya Takvimi</button>
+  <button id="ozetBtn" type="button" class="alt hide">📊 Özet</button>
+  <button id="vlistBtn" type="button" class="alt hide">👥 Vardiya Listesi</button>
+  <button id="ortBtn" type="button" class="alt hide">📈 Ortalama</button>
 </div>
 
 <div id="vardiyaBox" class="hide">
