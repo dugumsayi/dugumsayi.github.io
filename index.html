@@ -67,6 +67,10 @@ tr.tot td{background:var(--tot)!important;color:#111;font-weight:600;text-align:
 .tn-panel table{margin-top:8px;border-collapse:collapse;width:100%}
 .tn-panel th,.tn-panel td{border:1px solid var(--line);padding:4px 10px;text-align:center}
 .tn-not{font-size:12px;color:var(--mut);margin:6px 0 0}
+.tn-say{font-weight:700;margin:6px 0 0}.tn-alt{margin-top:8px}.tn-alt summary{cursor:pointer;font-weight:600}
+.tn-panel tr.tn-satir-kotu td{background:rgba(220,38,38,.10)}.tn-panel tr.tn-satir-iyi td{background:rgba(22,163,74,.10)}
+.tn-panel tr.tn-ben td:first-child{border-left:4px solid #2563eb;font-weight:800}
+.tn-panel td.tn-eksik,.tn-panel td.tn-tamam{font-weight:700}
 #admin .adm-pane>strong{display:block;margin:14px 0 4px;font-size:15px}
 #admin .adm-pane>strong:first-child{margin-top:0}
 #admin .mut{font-size:13px;margin:0 0 8px}
@@ -1744,16 +1748,36 @@ function tonajRapor(kt) {
   return { liste, topGer, eksik: liste.filter(x => x.f > 0) };
 }
 function tonajPanelCiz(kap, R) {
+  // Benim şimdiye kadar attığım düğümler (makine bazında)
+  const ben = {};
+  try { rows.forEach(r => { if (r.user_id !== myId()) return; const k = tonajAnahtar(r.name); if (k) ben[k] = (ben[k] || 0) + rsum(r); }); } catch (e) {}
+  const atilmis = R.liste.filter(x => x.a > 0), atilmamis = R.liste.filter(x => x.a <= 0);
+  const iyi = atilmis.filter(x => x.f <= 0), kotu = atilmis.filter(x => x.f > 0);
   const det = el("details", "tn-panel"); det.open = tonajAcik;
   det.ontoggle = () => { tonajAcik = det.open; };
   det.append(el("summary", "", R.eksik.length ? "⚠ Eksik düğüm olan makine: " + R.eksik.length : "✓ Tüm açık makinelerde düğüm tamam"));
-  if (R.eksik.length) {
+  det.append(el("p", "tn-say", "Düğüm atılan makineler → ✓ İyi: " + iyi.length + " · ✗ Kötü (eksik): " + kotu.length + "   |   Henüz düğüm atılmayan: " + atilmamis.length));
+  if (atilmis.length) {
     const t = el("table"), h = el("tr");
-    ["MAKİNE", "GEREKEN", "ATILAN", "EKSİK"].forEach(x => h.append(el("th", "", x))); t.append(h);
-    R.eksik.forEach(x => { const r = el("tr"); r.append(el("td", "", x.k), el("td", "", fmt(x.g)), el("td", "", fmt(x.a)), el("td", "tn-eksik", fmt(x.f))); t.append(r); });
+    ["MAKİNE", "GEREKEN", "ATILAN", "FARK", "BENİM", "DURUM"].forEach(x => h.append(el("th", "", x))); t.append(h);
+    atilmis.forEach(x => {
+      const r = el("tr", x.f > 0 ? "tn-satir-kotu" : "tn-satir-iyi" + ((ben[x.k] || 0) > 0 ? " tn-ben" : ""));
+      if (x.f > 0 && (ben[x.k] || 0) > 0) r.classList.add("tn-ben");
+      r.append(el("td", "", x.k), el("td", "", fmt(x.g)), el("td", "", fmt(x.a)),
+        el("td", "", x.f > 0 ? "−" + fmt(x.f) : (x.f < 0 ? "+" + fmt(-x.f) : "0")),
+        el("td", "", (ben[x.k] || 0) > 0 ? fmt(ben[x.k]) : "—"),
+        el("td", x.f > 0 ? "tn-eksik" : "tn-tamam", x.f > 0 ? "✗ KÖTÜ (eksik)" : "✓ İYİ"));
+      t.append(r);
+    });
     det.append(t);
   }
-  det.append(el("p", "tn-not", "Gereken düğüm = makine tonajı / 45 (Makine Listesi'ndeki gibi yuvarlanır). Yalnızca bu tabloda görünen vardiya/tarihteki girişler sayılır; kapalı makineler hariç."));
+  if (atilmamis.length) {
+    const d2 = el("details", "tn-alt");
+    d2.append(el("summary", "", "Henüz düğüm atılmayan makineler (" + atilmamis.length + ")"));
+    d2.append(el("p", "tn-not", atilmamis.map(x => x.k + " (" + fmt(x.g) + ")").join(", ")));
+    det.append(d2);
+  }
+  det.append(el("p", "tn-not", "İyi: atılan ≥ gereken. Kötü: düğüm atılmış ama gerekenden az. Gereken = tonaj / 45. “BENİM”: sizin bu makineye attığınız düğüm. Yalnızca seçili tarih/vardiyadaki girişler sayılır; kapalı makineler hariç."));
   kap.append(det);
 }
 function tonajRozetler(kt) {
