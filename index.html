@@ -70,6 +70,7 @@ tr.tot td{background:var(--tot)!important;color:#111;font-weight:600;text-align:
 .tn-say{font-weight:700;margin:6px 0 0}.tn-alt{margin-top:8px}.tn-alt summary{cursor:pointer;font-weight:600}
 .tn-panel tr.tn-satir-kotu td{background:rgba(220,38,38,.10)}.tn-panel tr.tn-satir-iyi td{background:rgba(22,163,74,.10)}
 .tn-panel tr.tn-ben td:first-child{border-left:4px solid #2563eb;font-weight:800}
+.tn-ort td{font-style:italic;font-weight:700;border-top:1px dashed var(--mut);background:rgba(148,163,184,.10)}
 .tn-panel td.tn-eksik,.tn-panel td.tn-tamam{font-weight:700}
 .tn-gkap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .tn-panel table.tn-gt{table-layout:auto;width:100%}
@@ -1895,6 +1896,12 @@ function tonajPanelCiz(kap, R) {
         gt.append(r);
         tikla(r.children[2], "m" + x.k, r, [x]); if (gecmisAcik.has("m" + x.k)) gt.append(zamanSatir([x]));
       });
+      // Grup ortalaması (makine başına)
+      const n = L.length, og = tg / n, oa = ta / n, of = Math.round((tf / n) * 100) / 100;
+      const orr = el("tr", "tn-ort");
+      orr.append(el("td", "", "Ortalama (makine başı)"), el("td", "", fmt(Math.round(og * 100) / 100)), el("td", "", fmt(Math.round(oa * 100) / 100)),
+        el("td", of > 0 ? "tn-eksik" : "tn-tamam", fark(of)), el("td", "", "—"));
+      gt.append(orr);
     });
     const gkap = el("div", "tn-gkap"); gkap.append(gt); gd.append(gkap);
     gd.append(el("p", "tn-not", "Gruplar Makine Listesi sayfasındaki “Elle grup seçimi” bölümünden gelir. SAYI = makine tonajı / 45."));
