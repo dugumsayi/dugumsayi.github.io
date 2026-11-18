@@ -53,6 +53,14 @@ tr.tot td{background:var(--tot)!important;color:#111;font-weight:600;text-align:
 .adm-tabs button.on{background:var(--card);color:var(--fg);box-shadow:var(--shadow)}
 .adm-tabs button:hover{filter:none;color:var(--fg)}
 .adm-pane.hide{display:none!important}
+.adm-ust{position:sticky;top:0;z-index:20;background:var(--card);padding-top:2px;margin:0 0 12px}
+.adm-ust .adm-tabs{margin:8px 0 6px}
+.oto-durum{font-size:13px;font-weight:600;padding:5px 10px;border-radius:6px;background:var(--bg);border:1px solid var(--line);color:var(--mut)}
+.oto-durum.ok{color:#15803d}.oto-durum.bekle{color:#b45309}.oto-durum.hata,.oto-durum.uyari{color:#b91c1c;border-color:#b91c1c}
+.oto-gizli{display:none!important}
+#admin .adm-pane>strong{display:block;margin:14px 0 4px;font-size:15px}
+#admin .adm-pane>strong:first-child{margin-top:0}
+#admin .mut{font-size:13px;margin:0 0 8px}
 
 table.at th{min-width:0;font-size:14px;padding:0 10px}
 table.at td{padding:4px 10px;font-size:14px;height:auto;text-align:left;background:var(--cell)}
@@ -888,7 +896,8 @@ html.hz-kilit .sohbet-panel {
 
 <div id="admin" class="hide">
   <div class="p-head"><strong>Yönetim paneli</strong><button id="adminKapat" type="button" class="red sm">✕ Kapat</button></div>
-  <p class="mut">Kullanıcıları banlayabilir, silebilir, yönetici yapabilir veya yeni kullanıcı ekleyebilirsiniz.</p>
+  <p class="mut">Ayarlar <b>otomatik kaydedilir</b>. Kullanıcı işlemleri (ekle, sil, ban) düğmeye basınca hemen uygulanır.</p>
+  <div class="adm-ust">
   <div class="adm-tabs" id="admTabs" role="tablist">
     <button type="button" role="tab" data-tab="kul" class="on">Kullanıcılar</button>
     <button type="button" role="tab" data-tab="hedef">Hedefler</button>
@@ -897,6 +906,8 @@ html.hz-kilit .sohbet-panel {
     <button type="button" role="tab" data-tab="ana">Ana sayfa</button>
     <button type="button" role="tab" data-tab="duyuru">Duyuru</button>
     <button type="button" role="tab" data-tab="veri">Denetim &amp; silme</button>
+  </div>
+  <div id="otoDurum" class="oto-durum" role="status" aria-live="polite">✓ Ayarlar değiştirdiğiniz anda otomatik kaydedilir</div>
   </div>
   <div class="adm-pane" data-pane="kul">
   <strong>Yeni kullanıcı ekle</strong>
@@ -912,19 +923,19 @@ html.hz-kilit .sohbet-panel {
   <div id="aListe" class="scroll"></div>
   <hr>
   <strong>Kullanıcı kayıt ayarı</strong>
-  <p class="mut">Yeni kullanıcıların kendi kendine kayıt olmasını buradan açıp kapatabilirsiniz. Kapatıldığında mevcut kullanıcıların girişi etkilenmez.</p>
+  <p class="mut">Yeni kullanıcıların kendi kendine kayıt olması açılıp kapatılır; mevcut hesaplar etkilenmez.</p>
   <div class="row">
     <span id="kayitDurum" class="badge">Durum yükleniyor…</span>
     <button id="kayitAcKapat" type="button" class="alt">Kayıt ayarını yükle</button>
   </div>
   <hr>
   <strong>Eski kayıtları düzelt</strong>
-  <p class="mut">Mevcut kullanıcıların yalnızca soyadlarının son kelimesini büyük harfe çevirir. Kullanıcı hesapları ve diğer bilgiler silinmez.</p>
+  <p class="mut">Soyadlarının son kelimesini büyük harfe çevirir. Hesaplar silinmez.</p>
   <div class="row"><button id="eskiSoyadlariBuyut" type="button" class="alt">Eski kayıtların soyadlarını büyüt</button></div>
   </div>
   <div class="adm-pane hide" data-pane="hedef">
   <strong>Günlük hedef sayıları</strong>
-  <p class="mut">Burada belirlediğiniz iki hedef, tüm kullanıcıların giriş özeti ve hedef hesaplamalarında ortak kullanılır.</p>
+  <p class="mut">Tüm kullanıcılarda ortak kullanılan günlük hedefler.</p>
   <div class="row">
     <label>Birinci hedef <input id="hedefBir" type="number" min="1" max="1000000" step="1" value="504"></label>
     <label>İkinci hedef <input id="hedefIki" type="number" min="1" max="1000000" step="1" value="552"></label>
@@ -935,14 +946,14 @@ html.hz-kilit .sohbet-panel {
     <label class="chk"><input id="hedefGor1" type="checkbox" checked> Birinci hedef tüm kullanıcılarda görünsün</label>
     <label class="chk"><input id="hedefGor2" type="checkbox" checked> İkinci hedef tüm kullanıcılarda görünsün</label>
   </div>
-  <p class="mut">Kutuyu kapatırsanız o hedef; ilerleme çubuğundan giriş özetine kadar herkesin ekranında gizlenir. "Hedefleri kaydet" düğmesiyle kaydedilir.</p>
+  <p class="mut">İşareti kaldırırsanız o hedef herkeste gizlenir.</p>
   <div class="row">
     <label>İlerleme çubuğu rengi <input id="son30Renk" type="color" value="#8b5cf6"></label>
     <button id="son30Sifirla" type="button" class="alt sm">Varsayılan</button>
   </div>
-  <p class="mut">Seçtiğiniz renk, tüm ilerleme çubuklarında her zaman kullanılır. "Varsayılan" seçilirse çubuklar durumuna göre renklenir (yeşil / turuncu / mavi). Vardiyanın son 30 dakikası ise her zaman çubuğun sağ ucunda mor kesik şeritle gösterilir. "Hedefleri kaydet" ile herkes için kaydedilir.</p>
+  <p class="mut">Seçilen renk tüm ilerleme çubuklarında kullanılır. “Varsayılan” durumuna göre renklendirir.</p>
   <strong>Hız ve dinlenme payı için ölçüm süresi</strong>
-  <p class="mut">Hız hesabı, ilk girişten sonra en az kaç dakikalık net çalışma ölçümü oluşunca başlasın; dinlenme payı ve vardiya sonu tahmini ise en az kaç dakika ölçümden sonra gösterilsin. Çok kısa sürelerde (ör. 4 dakikada 11 sayı) hız vardiyaya uzatılınca gerçekçi olmayan dinlenme süreleri çıkar; süre uzadıkça tahmin daha güvenilir olur. Kaydedince herkeste anında geçerli olur.</p>
+  <p class="mut">Hız hesabı ve dinlenme payı tahmini, en az bu kadar dakikalık ölçümden sonra gösterilir.</p>
   <div class="row">
     <label>Hız için en az (dk) <input id="olcumDkInp" type="number" min="1" max="120" step="1" value="5" style="width:80px"></label>
     <label>Dinlenme payı / vardiya sonu tahmini için en az (dk) <input id="dinlenDkInp" type="number" min="1" max="120" step="1" value="30" style="width:80px"></label>
@@ -953,13 +964,13 @@ html.hz-kilit .sohbet-panel {
   </div>
   <div class="adm-pane hide" data-pane="gorunum">
   <strong>Tabloyu dondurma</strong>
-  <p class="mut">Açıkken, kullanıcı kendi kartındaki "Resim olarak kaydet"e basınca o vardiyanın tablosu donar ve değiştirilemez. Kapatırsanız kimsenin tablosu donmaz; daha önce dondurulmuş tablolar da yeniden düzenlenebilir olur (tekrar açarsanız eskiler yine donar).</p>
+  <p class="mut">Açıkken, kullanıcı “Resim olarak kaydet”e basınca o vardiyanın tablosu donar.</p>
   <div class="row">
     <label class="chk"><input id="tabloDondurAc" type="checkbox" checked> Resim olarak kaydedince tablo dondurulsun</label>
     <button id="tabloDondurKaydet" type="button">Dondurma ayarını kaydet</button>
   </div>
   <strong>Üst düğmelerin dizilimi</strong>
-  <p class="mut">Vardiya Takvimi, Özet, Vardiya Listesi ve Ortalama düğmeleri giriş alanının altında tek satırda ya da alt alta görünsün. Kaydedince tüm kullanıcılarda geçerli olur.</p>
+  <p class="mut">Giriş alanının altındaki üst düğmeler tek satırda ya da alt alta görünsün.</p>
   <div class="row">
     <label class="chk"><input type="radio" name="navDizilim" value="satir" checked> Tek satırda</label>
     <label class="chk"><input type="radio" name="navDizilim" value="alt"> Alt alta</label>
@@ -967,7 +978,7 @@ html.hz-kilit .sohbet-panel {
   </div>
   <hr>
   <strong>Tablo rengi</strong>
-  <p class="mut">Kullanıcı tablolarının ve genel toplam tablosunun rengi. İsterseniz herkes için tek renk belirleyin, isterseniz kullanıcıların kendi tablo rengini (kendi cihazlarında) seçmesine izin verin.</p>
+  <p class="mut">Tüm tablolar için tek renk seçin; isterseniz kullanıcılar kendi rengini seçebilir.</p>
   <div class="row">
     <label>Tablo rengi <input id="tabloRenkAdmin" type="color" value="#3159b7"></label>
     <button id="tabloRenkSifirla" type="button" class="alt sm">Varsayılan</button>
@@ -978,7 +989,7 @@ html.hz-kilit .sohbet-panel {
   </div>
   <div class="adm-pane hide" data-pane="vardiya">
   <strong>Vardiya tablosu açılış ve kapanış saatleri</strong>
-  <p class="mut">Her vardiyanın tablosu başlamadan kaç dakika önce açılsın, bitmeden kaç dakika önce kapansın. Üç vardiyaya (00–08, 08–16, 16–24) aynı anda uygulanır. Kaydedince açık olan tüm kullanıcılarda anında geçerli olur. Kapanan tablodaki sayılar silinmez; "Kullanıcıların tabloları"nda tarih ve vardiya seçilerek görülür.</p>
+  <p class="mut">Tablonun vardiyadan kaç dk önce açılıp kaç dk önce kapanacağı (3 vardiyaya birden uygulanır). Kapanan tablodaki sayılar silinmez.</p>
   <div class="row">
     <label>Başlamadan önce açılış (dk) <input id="vErkenDk" type="number" min="0" max="120" step="1" value="0" style="width:90px"></label>
     <label>Bitmeden önce kapanış (dk) <input id="vKapanDk" type="number" min="0" max="120" step="1" value="0" style="width:90px"></label>
@@ -986,7 +997,7 @@ html.hz-kilit .sohbet-panel {
   <div class="row">
     <label class="chk"><input id="vOtoGecis" type="checkbox" checked> Tablo açıldığında, eski tabloda hiç sayısı olmayanlar otomatik yeni tabloya geçsin</label>
   </div>
-  <p class="mut">Kapalıysa herkes eski tabloda kalır ve yeni tabloya yalnızca eski tablo kapanınca (veya "yeni tabloya geç" düğmesiyle) geçer. Eski tabloda sayısı olanlar her durumda kapanışa kadar yerinde kalır.</p>
+  <p class="mut">Kapalıysa herkes eski tabloda kalır; yeni tabloya eski tablo kapanınca geçer.</p>
   <div id="vOnizle" class="mut"></div>
   <div class="row">
     <button id="vSureKaydet" type="button">Vardiya saatlerini kaydet</button>
@@ -1008,13 +1019,13 @@ html.hz-kilit .sohbet-panel {
   </div>
   <div class="adm-pane hide" data-pane="ana">
   <strong>Ana sayfa görünürlüğü</strong>
-  <p class="mut">Her pencere için iki ayrı seçim yapın: giriş yapmadan gelen ziyaretçiler ve giriş yapmış kullanıcılar ne görsün. Varsayılan: ziyaretçiye hiçbiri, kullanıcıya hepsi. Yöneticiler her zaman hepsini görür.</p>
+  <p class="mut">Her pencereyi ziyaretçilere (girişsiz) ve üyelere (girişli) ayrı ayrı gösterin ya da gizleyin. Yöneticiler hepsini görür.</p>
   <div id="gList"></div>
   <strong>Pencere açılış durumu</strong>
-  <p class="mut">Pencereler başlığındaki ok ile açılıp kapanır. Burada işaretlediğiniz pencereler, kullanıcı kendisi değiştirmedikçe <b>kapalı</b> açılır. Kullanıcının kendi açıp kapattığı pencere o cihazda hatırlanır.</p>
+  <p class="mut">İşaretli pencereler, kullanıcı kendisi değiştirmedikçe kapalı açılır.</p>
   <div id="pList"></div>
   <strong>Şu anki vardiya butonu (neon) ayarı</strong>
-  <p class="mut">"Kullanıcıların tabloları" bölümündeki <b>· şimdi</b> butonunun renklerini, ışığını ve hızını belirleyin. Değişiklikler burada anında görünür; aşağıdaki kaydet düğmesine basınca herkeste güncellenir.</p>
+  <p class="mut">“· şimdi” butonunun görünümü. Değişiklikler anında önizlenir.</p>
   <div class="neon-onizle"><button type="button" class="alt sm simdi" id="neonOnizle">08:00–16:00 · şimdi</button></div>
   <div class="neon-grid">
     <label>Parlak anın rengi<input type="color" id="neonBg"></label>
@@ -1031,7 +1042,7 @@ html.hz-kilit .sohbet-panel {
   </div>
   <div class="row"><button id="neonSifirla" type="button" class="alt">Varsayılan yeşile dön</button></div>
   <strong>Ana sayfa pencere sırası</strong>
-  <p class="mut">Pencerelerin sayfada hangi sırada görüneceğini ▲ ▼ ile belirleyin. Kaydedince tüm kullanıcılarda bu sıra geçerli olur.</p>
+  <p class="mut">▲ ▼ ile sırayı belirleyin; tüm kullanıcılarda geçerli olur.</p>
   <ul id="siraListe" class="sira-liste"></ul>
   <div class="row"><button id="siraSifirla" type="button" class="alt">Varsayılan sıraya dön</button></div>
   <div class="row"><button id="gKaydet">Görünürlüğü ve açılış durumunu kaydet</button></div>
@@ -2932,6 +2943,98 @@ gorUygula();   // sayfa açılır açılmaz varsayılan (misafir) görünümü u
   btns.forEach(b => b.onclick = () => sec(b.dataset.tab));
   let k0 = "kul"; try { k0 = localStorage.getItem(KEY) || "kul"; } catch (e) {}
   sec(k0);
+})();
+
+
+// ================= YÖNETİM PANELİ: OTOMATİK KAYDET =================
+// Ayarlar değiştirilince kısa bir gecikmeyle mevcut kaydet işleyicileri kendiliğinden çalıştırılır (sıraya dizilerek).
+(function () {
+  const durum = document.getElementById("otoDurum"), stEl = document.getElementById("st");
+  const HATA = /kaydedilemedi|saklanamad|başarısız|olmalı|bulunamad/i;
+  let kuyruk = Promise.resolve(), isler = 0;
+  const zamanlar = {}, planli = {};
+  const goster = (t, c) => { if (durum) { durum.textContent = t; durum.className = "oto-durum " + (c || ""); } };
+  const saat = () => new Date().toLocaleTimeString("tr-TR");
+  const sayi = id => { const t = String(document.getElementById(id).value).trim(); return t === "" ? NaN : Number(t); };
+
+  function calistir(btnId, dogrula) {
+    const b = document.getElementById(btnId);
+    if (!b || !b.onclick || !isAdmin()) return;
+    if (dogrula) { const h = dogrula(); if (h) { goster("⚠ " + h + " (kaydedilmedi)", "uyari"); return; } }
+    isler++; goster("Kaydediliyor…", "bekle");
+    kuyruk = kuyruk.then(async () => {
+      let hata = "";
+      try { await b.onclick(); const m = stEl ? stEl.textContent : ""; if (HATA.test(m)) hata = m; }
+      catch (e) { hata = e && e.message ? e.message : "bilinmeyen hata"; }
+      isler--;
+      if (hata) goster("⚠ Kaydedilemedi: " + hata, "hata");
+      else if (!isler && !Object.keys(planli).length) goster("✓ Kaydedildi " + saat(), "ok");
+    });
+  }
+  function planla(anahtar, btnId, dogrula, gecikme) {
+    clearTimeout(zamanlar[anahtar]);
+    planli[anahtar] = () => { clearTimeout(zamanlar[anahtar]); delete planli[anahtar]; calistir(btnId, dogrula); };
+    if (isAdmin()) goster("Değişiklik algılandı…", "bekle");
+    zamanlar[anahtar] = setTimeout(planli[anahtar], gecikme);
+  }
+  function hemenKaydet() { Object.keys(planli).forEach(k => planli[k]()); }
+  const bagla = (ids, olay, anahtar, btnId, dogrula, gecikme) => ids.forEach(id => {
+    const e = document.getElementById(id); if (e) e.addEventListener(olay, () => planla(anahtar, btnId, dogrula, gecikme));
+  });
+  const tamSayi = (v, mn, mx) => Number.isInteger(v) && v >= mn && v <= mx;
+
+  // Doğrulayıcılar: hatalı/yarım değer varsa sessizce bekler, kaydetmez
+  const dHedef = () => {
+    const a = sayi("hedefBir"), b = sayi("hedefIki");
+    if (!tamSayi(a, 1, 1000000) || !tamSayi(b, 1, 1000000) || a === b) return "Hedefler 1–1.000.000 arası ve birbirinden farklı tam sayı olmalı";
+  };
+  const dOlcum = () => {
+    const a = sayi("olcumDkInp"), b = sayi("dinlenDkInp");
+    if (!tamSayi(a, 1, 120) || !tamSayi(b, 1, 120)) return "Süreler 1–120 arası tam sayı olmalı";
+    if (b < a) return "Dinlenme süresi, hız süresinden kısa olamaz";
+  };
+  const dVardiya = () => {
+    const e = sayi("vErkenDk"), k = sayi("vKapanDk"), ok = tamSayi(e, 0, 120) && tamSayi(k, 0, 120);
+    const yine = document.getElementById("vSureKaydet");
+    if (yine) { yine.classList.toggle("oto-gizli", !(ok && e < k)); yine.textContent = "Yine de kaydet"; }
+    if (!ok) return "Süreler 0–120 arası tam sayı olmalı";
+    if (e < k) return "Açılış süresi kapanıştan kısa: geçişte tablo açık kalmaz. Gerekirse “Yine de kaydet”e basın";
+    if (yine) yine.textContent = "Vardiya saatlerini kaydet";
+  };
+
+  // Hedefler
+  bagla(["hedefBir", "hedefIki"], "input", "hedef", "hedefKaydet", dHedef, 1000);
+  bagla(["hedefGor1", "hedefGor2"], "change", "hedef", "hedefKaydet", dHedef, 300);
+  bagla(["son30Renk"], "input", "hedef", "hedefKaydet", dHedef, 1200);
+  bagla(["son30Sifirla"], "click", "hedef", "hedefKaydet", dHedef, 300);
+  bagla(["olcumDkInp", "dinlenDkInp"], "input", "olcum", "olcumKaydet", dOlcum, 1000);
+  bagla(["olcumSifirla"], "click", "olcum", "olcumKaydet", dOlcum, 300);
+  // Görünüm
+  bagla(["tabloDondurAc"], "change", "dondur", "tabloDondurKaydet", null, 300);
+  document.querySelectorAll('input[name="navDizilim"]').forEach(r => r.addEventListener("change", () => planla("nav", "navDizilimKaydet", null, 300)));
+  bagla(["tabloRenkAdmin"], "input", "tabloRenk", "tabloRenkKaydet", null, 1200);
+  bagla(["tabloIzin"], "change", "tabloRenk", "tabloRenkKaydet", null, 300);
+  bagla(["tabloRenkSifirla"], "click", "tabloRenk", "tabloRenkKaydet", null, 300);
+  // Vardiya tabloları
+  bagla(["vErkenDk", "vKapanDk"], "input", "vardiya", "vSureKaydet", dVardiya, 1000);
+  bagla(["vOtoGecis"], "change", "vardiya", "vSureKaydet", dVardiya, 300);
+  bagla(["vSureSifirla"], "click", "vardiya", "vSureKaydet", dVardiya, 300);
+  // Ana sayfa (görünürlük, açılış durumu, neon, sıra)
+  ["gList", "pList"].forEach(id => { const e = document.getElementById(id); if (e) e.addEventListener("change", () => planla("ana", "gKaydet", null, 500)); });
+  bagla(["neonBg", "neonFg", "neonDim", "neonDimFg", "neonGlow", "neonGlow2", "neonBorder", "neonInt", "neonHiz", "neonScale"], "input", "ana", "gKaydet", null, 1200);
+  bagla(["neonAcik", "neonSifirla", "siraSifirla"], "change", "ana", "gKaydet", null, 400);
+  bagla(["neonSifirla", "siraSifirla"], "click", "ana", "gKaydet", null, 400);
+  const sl = document.getElementById("siraListe"); if (sl) sl.addEventListener("click", e => { if (e.target.closest("button")) planla("ana", "gKaydet", null, 600); });
+
+  // Bekleyen değişiklik kaybolmasın: panel/sekme kapanırken ya da sayfa gizlenirken hemen kaydet
+  const kapat = document.getElementById("adminKapat"); if (kapat) kapat.addEventListener("click", hemenKaydet);
+  document.querySelectorAll("#admTabs button").forEach(b => b.addEventListener("click", hemenKaydet));
+  document.addEventListener("visibilitychange", () => { if (document.hidden) hemenKaydet(); });
+  window.addEventListener("beforeunload", e => { if (Object.keys(planli).length) { hemenKaydet(); e.preventDefault(); e.returnValue = ""; } });
+
+  // Kaydet düğmelerini gizle (vSureKaydet yalnızca onay gerektiğinde görünür)
+  ["hedefKaydet", "olcumKaydet", "tabloDondurKaydet", "navDizilimKaydet", "tabloRenkKaydet", "vSureKaydet"].forEach(id => { const b = document.getElementById(id); if (b) b.classList.add("oto-gizli"); });
+  const gk = document.getElementById("gKaydet"); if (gk) (gk.closest(".row") || gk).classList.add("oto-gizli");
 })();
 
 
