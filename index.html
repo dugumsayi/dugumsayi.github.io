@@ -1411,6 +1411,7 @@ $("cikis").onclick = async () => {
   try { [localStorage, sessionStorage].forEach(st0 => Object.keys(st0).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => st0.removeItem(k))); } catch (e) {}
   lsDel(OTURUM_KEY); cevrimdisiOturum = false; bellekSifre = null;
   me = null; profil = null; sonBan = ""; btn.disabled = false;
+  gecmisMap = null; gecmisDetay = {}; gecmisZaman = 0; gecmisYukleniyor = false; gecmisAcik.clear();   // önceki kullanıcının geçmişi kalmasın
   $("profil").classList.add("hide"); $("admin").classList.add("hide");
   hazirla();
 };
@@ -1763,23 +1764,26 @@ function tonajRapor(kt) {
   return { liste, topGer, eksik: liste.filter(x => x.f > 0) };
 }
 // Benim bugüne kadar yazdığım TÜM sayılar (tüm tarih ve vardiyalar), makine bazında toplam
-let gecmisMap = null, gecmisDetay = {}, gecmisZaman = 0, gecmisYukleniyor = false;
+let gecmisMap = null, gecmisDetay = {}, gecmisZaman = 0, gecmisYukleniyor = false, gecmisKip = null;   // gecmisKip: kullanıcı id'si (kişisel) veya "tum" (çıkış yapılmışken herkesin toplamı)
 const gecmisAcik = new Set();   // açık bırakılan "ne zaman yazılmış" satırları
 async function gecmisYukle(zorla) {
-  if (!sb || !navigator.onLine || !myId() || gecmisYukleniyor) return;
+  if (!sb || !navigator.onLine || gecmisYukleniyor) return;
+  const kip = myId() || "tum";
+  if (gecmisKip !== kip) { gecmisKip = kip; gecmisMap = null; gecmisDetay = {}; gecmisZaman = 0; zorla = true; gecmisAcik.clear(); }   // giriş/çıkış değişince veri türü de değişir
   if (!zorla && Date.now() - gecmisZaman < 60000) return;
   gecmisYukleniyor = true; gecmisZaman = Date.now();
   let tamam = false;
   try {
     const t = {}, det = {};
     for (let from = 0; ; from += 1000) {   // Supabase tek sorguda en fazla 1000 satır verir; sayfa sayfa çekilir
-      const { data, error } = await sb.from("sayilar").select("tarih,vno,name,n1,n2,n3,n4,n5,n6").eq("user_id", myId())
-        .order("tarih").order("vno").order("satir").range(from, from + 999);
+      let q = sb.from("sayilar").select("user_id,tarih,vno,name,n1,n2,n3,n4,n5,n6");
+      if (myId()) q = q.eq("user_id", myId());
+      const { data, error } = await q.order("tarih").order("vno").order("satir").range(from, from + 999);
       if (error) throw error;
       data.forEach(r => { const k = tonajAnahtar(r.name); if (!k) return; const v = rsum(r); if (!v) return; t[k] = (t[k] || 0) + v; const dk = r.tarih + "|" + (Number(r.vno) || 0), d = det[k] || (det[k] = {}); d[dk] = (d[dk] || 0) + v; });
       if (data.length < 1000) break;
     }
-    gecmisMap = t; gecmisDetay = det; tamam = true;
+    if (gecmisKip === kip) { gecmisMap = t; gecmisDetay = det; tamam = true; }
   } catch (e) { /* okunamazsa seçili gün/vardiya değerleri gösterilir */ }
   gecmisYukleniyor = false;
   if (tamam) { try { renderShared(); } catch (e) {} }
@@ -1843,7 +1847,7 @@ function tonajPanelCiz(kap, R) {
     const gd = el("details", "tn-alt"); gd.open = true;
     const gNo = [...new Set(gruplu.map(x => x.grup))].sort((p, q) => p - q);
     gd.append(el("summary", "", "Elle seçilen gruplar (" + gNo.length + " grup · " + gruplu.length + " makine)"));
-    gd.append(el("p", "tn-not", gecmisMap ? "Atılan = bugüne kadar yazdığınız tüm sayılar (tüm tarih ve vardiyalar). Ne zaman yazdığınızı görmek için ATILAN değerine, o günün kullanıcı tablosunu görmek için de tarihe tıklayın." : "Geçmişte yazdığınız tüm sayılar yükleniyor… (şimdilik seçili tarih/vardiya gösteriliyor)"));
+    gd.append(el("p", "tn-not", gecmisMap ? (myId() ? "Atılan = bugüne kadar yazdığınız tüm sayılar (tüm tarih ve vardiyalar). Ne zaman yazdığınızı görmek için ATILAN değerine, o günün kullanıcı tablosunu görmek için de tarihe tıklayın." : "Giriş yapılmadığı için Atılan = tüm kullanıcıların bugüne kadar yazdığı sayıların toplamı. Kendi toplamınızı görmek için giriş yapın.") : "Geçmişte yazılan tüm sayılar yükleniyor… (şimdilik seçili tarih/vardiya gösteriliyor)"));
     const tarihTR = t => new Date(t + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "short" });
     // Bir makinenin (veya grubun) geçmişte ne zaman yazıldığını gösteren açılır satır
     const zamanSatir = (liste, grupMu) => {
@@ -1881,7 +1885,7 @@ function tonajPanelCiz(kap, R) {
       };
     };
     const gt = el("table", "tn-gt"), gh = el("tr");
-    ["GRUP / MAKİNE", "SAYI (gereken)", "ATILAN (tüm geçmiş)", "FARK", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
+    ["GRUP / MAKİNE", "SAYI (gereken)", myId() ? "ATILAN (tüm geçmiş)" : "ATILAN (tüm kullanıcılar)", "FARK", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
     const fark = f => f > 0 ? "−" + fmt(f) : (f < 0 ? "+" + fmt(-f) : "0");
     gNo.forEach(g => {
       const L = gruplu.filter(x => x.grup === g);
@@ -2120,6 +2124,7 @@ async function hazirla() {
   $("app").classList.toggle("hide", !duzenle);
   const ah = $("app").querySelector("h2"); if (ah) ah.textContent = "Benim girişlerim (" + (secili === bugun ? "bugün" : "yeni vardiya") + " · " + VNO_AD[gv] + ")";
   if (me) kimYaz();
+  gecmisYukle(true);   // giriş/çıkış sonrası geçmiş toplamlar (yeşil tablo) hemen yeniden yüklensin
   await gorYukle();
   await hedefYukle();
   await kalpAt();
