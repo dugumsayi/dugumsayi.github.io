@@ -71,6 +71,7 @@ tr.tot td{background:var(--tot)!important;color:#111;font-weight:600;text-align:
 .tn-panel tr.tn-satir-kotu td{background:rgba(220,38,38,.10)}.tn-panel tr.tn-satir-iyi td{background:rgba(22,163,74,.10)}
 .tn-panel tr.tn-ben td:first-child{border-left:4px solid #2563eb;font-weight:800}
 .tn-panel td.tn-eksik,.tn-panel td.tn-tamam{font-weight:700}
+.tn-panel tr.tn-grup-bas td{background:var(--bg);font-weight:800;border-top:2px solid var(--line)}
 #admin .adm-pane>strong{display:block;margin:14px 0 4px;font-size:15px}
 #admin .adm-pane>strong:first-child{margin-top:0}
 #admin .mut{font-size:13px;margin:0 0 8px}
@@ -1719,7 +1720,8 @@ async function tonajYukle(zorla) {
     const m = {};
     ((data && data.deger && data.deger.machines) || []).forEach(x => {
       const t = (x.ton === "" || x.ton == null) ? null : Number(x.ton);
-      m[String(x.name).trim().toUpperCase()] = { ton: Number.isFinite(t) ? t : null, acik: x.included !== false };
+      const gp = Number(x.grup);
+      m[String(x.name).trim().toUpperCase()] = { ton: Number.isFinite(t) ? t : null, acik: x.included !== false, grup: (Number.isFinite(gp) && gp > 0) ? gp : null };
     });
     tonajMap = m; renderShared();
   } catch (e) { /* okunamazsa kontrol gösterilmez */ }
@@ -1742,7 +1744,7 @@ function tonajRapor(kt) {
   Object.keys(tonajMap).forEach(k => {
     const m = tonajMap[k]; if (!m.acik || m.ton == null) return;
     const g = tonajYuvarla(m.ton), a = kt[k] || 0; topGer += g;
-    liste.push({ k, g, a, f: Math.round((g - a) * 100) / 100 });
+    liste.push({ k, g, a, f: Math.round((g - a) * 100) / 100, grup: m.grup || null });
   });
   liste.sort((x, y) => Number(x.k.slice(1)) - Number(y.k.slice(1)));
   return { liste, topGer, eksik: liste.filter(x => x.f > 0) };
@@ -1757,6 +1759,34 @@ function tonajPanelCiz(kap, R) {
   det.ontoggle = () => { tonajAcik = det.open; };
   det.append(el("summary", "", R.eksik.length ? "⚠ Eksik düğüm olan makine: " + R.eksik.length : "✓ Tüm açık makinelerde düğüm tamam"));
   det.append(el("p", "tn-say", "Düğüm atılan makineler → ✓ İyi: " + iyi.length + " · ✗ Kötü (eksik): " + kotu.length + "   |   Henüz düğüm atılmayan: " + atilmamis.length));
+  // Makine Listesi'nde ELLE seçilen gruplar: her grubun SAYI (gereken = tonaj/45), atılan ve eksik değerleri
+  const gruplu = R.liste.filter(x => x.grup);
+  if (gruplu.length) {
+    const gd = el("details", "tn-alt"); gd.open = true;
+    const gNo = [...new Set(gruplu.map(x => x.grup))].sort((p, q) => p - q);
+    gd.append(el("summary", "", "Elle seçilen gruplar (" + gNo.length + " grup · " + gruplu.length + " makine)"));
+    const gt = el("table"), gh = el("tr");
+    ["GRUP / MAKİNE", "SAYI (gereken)", "ATILAN", "FARK", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
+    const fark = f => f > 0 ? "−" + fmt(f) : (f < 0 ? "+" + fmt(-f) : "0");
+    gNo.forEach(g => {
+      const L = gruplu.filter(x => x.grup === g);
+      const tg = L.reduce((p, x) => p + x.g, 0), ta = L.reduce((p, x) => p + x.a, 0), tf = Math.round((tg - ta) * 100) / 100;
+      const hr = el("tr", "tn-grup-bas");
+      hr.append(el("td", "", g + ". Grup · " + L.length + " makine"), el("td", "", fmt(tg)), el("td", "", fmt(ta)),
+        el("td", tf > 0 ? "tn-eksik" : "tn-tamam", fark(tf)), el("td", tf > 0 ? "tn-eksik" : "tn-tamam", tf > 0 ? "✗ eksik" : "✓ tamam"));
+      gt.append(hr);
+      L.forEach(x => {
+        const r = el("tr", (ben[x.k] || 0) > 0 ? "tn-ben" : "");
+        const durum = x.a <= 0 ? "— atılmadı" : (x.f > 0 ? "✗ eksik" : "✓ tamam");
+        r.append(el("td", "", x.k), el("td", "", fmt(x.g)), el("td", "", fmt(x.a)),
+          el("td", x.f > 0 ? "tn-eksik" : "tn-tamam", fark(x.f)), el("td", x.f > 0 ? "tn-eksik" : (x.a <= 0 ? "tn-yok" : "tn-tamam"), durum));
+        gt.append(r);
+      });
+    });
+    gd.append(gt);
+    gd.append(el("p", "tn-not", "Gruplar Makine Listesi sayfasındaki “Elle grup seçimi” bölümünden gelir. SAYI = makine tonajı / 45."));
+    det.append(gd);
+  }
   if (atilmis.length) {
     const t = el("table"), h = el("tr");
     ["MAKİNE", "GEREKEN", "ATILAN", "FARK", "BENİM", "DURUM"].forEach(x => h.append(el("th", "", x))); t.append(h);
