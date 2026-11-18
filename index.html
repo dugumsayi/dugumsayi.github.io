@@ -71,6 +71,8 @@ tr.tot td{background:var(--tot)!important;color:#111;font-weight:600;text-align:
 .tn-panel tr.tn-satir-kotu td{background:rgba(220,38,38,.10)}.tn-panel tr.tn-satir-iyi td{background:rgba(22,163,74,.10)}
 .tn-panel tr.tn-ben td:first-child{border-left:4px solid #2563eb;font-weight:800}
 .tn-panel td.tn-eksik,.tn-panel td.tn-tamam{font-weight:700}
+.tn-tikla{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+.tn-panel tr.tn-detay td{text-align:left;font-weight:400;font-size:13px;background:var(--bg)}.tn-detay div{padding:2px 0}
 .tn-panel tr.tn-grup-bas td{background:var(--bg);font-weight:800;border-top:2px solid var(--line)}
 #admin .adm-pane>strong{display:block;margin:14px 0 4px;font-size:15px}
 #admin .adm-pane>strong:first-child{margin-top:0}
@@ -1750,22 +1752,23 @@ function tonajRapor(kt) {
   return { liste, topGer, eksik: liste.filter(x => x.f > 0) };
 }
 // Benim bugüne kadar yazdığım TÜM sayılar (tüm tarih ve vardiyalar), makine bazında toplam
-let gecmisMap = null, gecmisZaman = 0, gecmisYukleniyor = false;
+let gecmisMap = null, gecmisDetay = {}, gecmisZaman = 0, gecmisYukleniyor = false;
+const gecmisAcik = new Set();   // açık bırakılan "ne zaman yazılmış" satırları
 async function gecmisYukle(zorla) {
   if (!sb || !navigator.onLine || !myId() || gecmisYukleniyor) return;
   if (!zorla && Date.now() - gecmisZaman < 60000) return;
   gecmisYukleniyor = true; gecmisZaman = Date.now();
   let tamam = false;
   try {
-    const t = {};
+    const t = {}, det = {};
     for (let from = 0; ; from += 1000) {   // Supabase tek sorguda en fazla 1000 satır verir; sayfa sayfa çekilir
-      const { data, error } = await sb.from("sayilar").select("name,n1,n2,n3,n4,n5,n6").eq("user_id", myId())
+      const { data, error } = await sb.from("sayilar").select("tarih,vno,name,n1,n2,n3,n4,n5,n6").eq("user_id", myId())
         .order("tarih").order("vno").order("satir").range(from, from + 999);
       if (error) throw error;
-      data.forEach(r => { const k = tonajAnahtar(r.name); if (!k) return; const v = rsum(r); if (v) t[k] = (t[k] || 0) + v; });
+      data.forEach(r => { const k = tonajAnahtar(r.name); if (!k) return; const v = rsum(r); if (!v) return; t[k] = (t[k] || 0) + v; const dk = r.tarih + "|" + (Number(r.vno) || 0), d = det[k] || (det[k] = {}); d[dk] = (d[dk] || 0) + v; });
       if (data.length < 1000) break;
     }
-    gecmisMap = t; tamam = true;
+    gecmisMap = t; gecmisDetay = det; tamam = true;
   } catch (e) { /* okunamazsa seçili gün/vardiya değerleri gösterilir */ }
   gecmisYukleniyor = false;
   if (tamam) { try { renderShared(); } catch (e) {} }
@@ -1789,7 +1792,30 @@ function tonajPanelCiz(kap, R) {
     const gd = el("details", "tn-alt"); gd.open = true;
     const gNo = [...new Set(gruplu.map(x => x.grup))].sort((p, q) => p - q);
     gd.append(el("summary", "", "Elle seçilen gruplar (" + gNo.length + " grup · " + gruplu.length + " makine)"));
-    gd.append(el("p", "tn-not", gecmisMap ? "Atılan = bugüne kadar yazdığınız tüm sayılar (tüm tarih ve vardiyalar)." : "Geçmişte yazdığınız tüm sayılar yükleniyor… (şimdilik seçili tarih/vardiya gösteriliyor)"));
+    gd.append(el("p", "tn-not", gecmisMap ? "Atılan = bugüne kadar yazdığınız tüm sayılar (tüm tarih ve vardiyalar). Ne zaman yazdığınızı görmek için ATILAN değerine tıklayın." : "Geçmişte yazdığınız tüm sayılar yükleniyor… (şimdilik seçili tarih/vardiya gösteriliyor)"));
+    const tarihTR = t => new Date(t + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "short" });
+    // Bir makinenin (veya grubun) geçmişte ne zaman yazıldığını gösteren açılır satır
+    const zamanSatir = (liste) => {
+      const tr = el("tr", "tn-detay"), td = el("td"); td.colSpan = 5;
+      const gun = {};
+      liste.forEach(x => Object.entries(gecmisDetay[x.k] || {}).forEach(([dk, v]) => { (gun[dk] = gun[dk] || []).push([x.k, v]); }));
+      const anah = Object.keys(gun).sort().reverse();
+      if (!gecmisMap) td.append(el("div", "", "Yükleniyor…"));
+      else if (!anah.length) td.append(el("div", "", "Bu makine için geçmişte yazılmış sayı yok."));
+      else anah.forEach(dk => {
+        const [t, vn] = dk.split("|"), top = gun[dk].reduce((p, y) => p + y[1], 0);
+        td.append(el("div", "", tarihTR(t) + " · " + (VNO_AD[Number(vn)] || "?") + " → " + fmt(top) + (liste.length > 1 ? "   (" + gun[dk].map(y => y[0] + ": " + fmt(y[1])).join(", ") + ")" : "")));
+      });
+      tr.append(td); return tr;
+    };
+    const tikla = (td, anahtar, tr, liste) => {
+      td.classList.add("tn-tikla"); td.title = "Ne zaman yazdığınızı görmek için tıklayın";
+      td.onclick = () => {
+        const sn = tr.nextElementSibling;
+        if (sn && sn.classList.contains("tn-detay")) { sn.remove(); gecmisAcik.delete(anahtar); }
+        else { tr.after(zamanSatir(liste)); gecmisAcik.add(anahtar); }
+      };
+    };
     const gt = el("table"), gh = el("tr");
     ["GRUP / MAKİNE", "SAYI (gereken)", "ATILAN (tüm geçmiş)", "FARK", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
     const fark = f => f > 0 ? "−" + fmt(f) : (f < 0 ? "+" + fmt(-f) : "0");
@@ -1800,12 +1826,14 @@ function tonajPanelCiz(kap, R) {
       hr.append(el("td", "", g + ". Grup · " + L.length + " makine"), el("td", "", fmt(tg)), el("td", "", fmt(ta)),
         el("td", tf > 0 ? "tn-eksik" : "tn-tamam", fark(tf)), el("td", tf > 0 ? "tn-eksik" : "tn-tamam", tf > 0 ? "✗ eksik" : "✓ tamam"));
       gt.append(hr);
+      tikla(hr.children[2], "g" + g, hr, L); if (gecmisAcik.has("g" + g)) gt.append(zamanSatir(L));
       L.forEach(x => {
         const f = fx(x), r = el("tr", (ben[x.k] || 0) > 0 ? "tn-ben" : "");
         const durum = at(x) <= 0 ? "— atılmadı" : (f > 0 ? "✗ eksik" : "✓ tamam");
         r.append(el("td", "", x.k), el("td", "", fmt(x.g)), el("td", "", fmt(at(x))),
           el("td", f > 0 ? "tn-eksik" : "tn-tamam", fark(f)), el("td", f > 0 ? "tn-eksik" : (at(x) <= 0 ? "tn-yok" : "tn-tamam"), durum));
         gt.append(r);
+        tikla(r.children[2], "m" + x.k, r, [x]); if (gecmisAcik.has("m" + x.k)) gt.append(zamanSatir([x]));
       });
     });
     gd.append(gt);
