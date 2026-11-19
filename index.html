@@ -1934,7 +1934,10 @@ function tonajPanelCiz(kap, R) {
         else { tr.after(zamanSatir(liste, grupMu)); gecmisAcik.add(anahtar); }
       };
     };
-    const topAt = gruplu.reduce((p, x) => p + at(x), 0), topKalanPoz = Math.max(0, HEDEF_POZ - topAt);
+    const topAt = gruplu.reduce((p, x) => p + at(x), 0);
+    // 384 pozisyonluk döngü: her 384 düğümde sayaç yeni döngüye 384 kalanla başlar.
+    const donguIciAt = ((topAt % HEDEF_POZ) + HEDEF_POZ) % HEDEF_POZ;
+    const topKalanPoz = HEDEF_POZ - donguIciAt;
     const topKalanMak = gruplu.reduce((p, x) => p + Math.max(0, fx(x)), 0);
     const hedefP = el("p", "tn-say", "Atılması gereken: " + fmt(HEDEF_POZ) + " pozisyon · Atılan: " + fmt(topAt) + " · KALAN pozisyon: " + fmt(topKalanPoz) + "   |   Eksik makinelerin toplam kalanı: " + kalanMetin(topKalanMak) + " · vardiya başına " + VARDIYA_HEDEF);
     gd.append(hedefP);
