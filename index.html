@@ -1888,7 +1888,9 @@ function tonajPanelCiz(kap, R) {
     if (atKip !== "dongu") kalanGun = 0;
     const fx = x => Math.round((x.g - at(x)) * 100) / 100;
     // Gereken tamamlanınca (fark ≤ 0) kalan, HEDEF_POZ (384) hedefine göre yeniden hesaplanır
-    const kalanX = x => { const f = fx(x); return f > 0 ? f : Math.max(0, HEDEF_POZ - at(x)); };
+    // Gereken tamamlanınca: atılan 384'lük turlara bölünür; içinde bulunulan turun kalanı gösterilir (ör. 981 → 2 tur tamam, 213 atıldı, kalan 171)
+    const tur384 = x => Math.floor(Math.max(0, at(x)) / HEDEF_POZ);
+    const kalanX = x => { const f = fx(x); return f > 0 ? f : HEDEF_POZ - (Math.max(0, at(x)) - tur384(x) * HEDEF_POZ); };
     const gd = el("details", "tn-alt"); gd.open = true;
     const gNo = [...new Set(gruplu.map(x => x.grup))].sort((p, q) => p - q);
     gd.append(el("summary", "", "Elle seçilen gruplar (" + gNo.length + " grup · " + gruplu.length + " makine)"));
@@ -1974,7 +1976,7 @@ function tonajPanelCiz(kap, R) {
         const f = fx(x), r = el("tr", (ben[x.k] || 0) > 0 ? "tn-ben" : "");
         const durum = at(x) <= 0 ? "— atılmadı" : (f > 0 ? "✗ eksik" : "✓ tamam");
         r.append(el("td", "", x.k), el("td", "", fmt(x.g)), el("td", "", fmt(at(x))),
-          el("td", f > 0 ? "tn-eksik" : "tn-tamam", fark(f)), el("td", kalanX(x) > 0 ? "tn-eksik" : "tn-tamam", kalanMetin(kalanX(x)) + (f <= 0 && kalanX(x) > 0 ? " · 384 hedefi" : "")), el("td", f > 0 ? "tn-eksik" : (at(x) <= 0 ? "tn-yok" : "tn-tamam"), durum));
+          el("td", f > 0 ? "tn-eksik" : "tn-tamam", fark(f)), el("td", kalanX(x) > 0 ? "tn-eksik" : "tn-tamam", kalanMetin(kalanX(x)) + (f <= 0 ? " · 384 hedefi · 384 döngüsü: " + tur384(x) + " tamam" : "")), el("td", f > 0 ? "tn-eksik" : (at(x) <= 0 ? "tn-yok" : "tn-tamam"), durum));
         gt.append(r);
         tikla(r.children[2], "m" + x.k, r, [x]); if (gecmisAcik.has("m" + x.k)) gt.append(zamanSatir([x]));
       });
