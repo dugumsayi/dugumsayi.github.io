@@ -1722,7 +1722,18 @@ $("aggResim").onclick = () => tabloResim($("agg").querySelector("table"), "Genel
 // Tonajlar "Makine Listesi" sayfasının kaydından (makine_listesi tablosu) okunur; makine adı 3, S3 veya s3 yazılabilir.
 const TONAJ_BOL = 45;
 const VARDIYA_HEDEF = 92;   // vardiya başına atılması gereken düğüm
-const kalanMetin = k => k > 0 ? fmt(k) + " (" + Math.ceil(k / VARDIYA_HEDEF) + " vardiya)" : "0";
+let kalanGun = 0;   // döngü modunda: seçili günden döngü sonuna kalan çalışma günü
+const tatilGunleri = () => lsGet("tatilGunleriV1", []);
+// Çalışma günü: hafta sonu ve tatil listesindeki günler sayılmaz
+const calismaGunleri = (b, e) => {
+  const tat = new Set(tatilGunleri()), r = [];
+  for (let d = new Date(b + "T12:00:00Z"); d <= new Date(e + "T12:00:00Z"); d = new Date(d.getTime() + 86400000)) {
+    const w = d.getUTCDay(), t = d.toISOString().slice(0, 10);
+    if (w !== 0 && w !== 6 && !tat.has(t)) r.push(t);
+  }
+  return r;
+};
+const kalanMetin = k => k > 0 ? fmt(k) + " (" + Math.ceil(k / VARDIYA_HEDEF) + " vardiya" + (atKip === "dongu" && kalanGun > 0 ? " · günde " + Math.ceil(k / kalanGun) : "") + ")" : "0";
 const HEDEF_POZ = 384;   // atılması gereken toplam pozisyon (düğüm) hedefi
 const tonajYuvarla = v => Math.round(v / TONAJ_BOL);   // Makine Listesi'ndeki "SAYI" sütunuyla aynı yuvarlama
 let tonajMap = null, tonajZaman = 0, tonajAcik = true;
@@ -1874,6 +1885,7 @@ function tonajPanelCiz(kap, R) {
       });
       return top;
     };
+    if (atKip !== "dongu") kalanGun = 0;
     const fx = x => Math.round((x.g - at(x)) * 100) / 100;
     const gd = el("details", "tn-alt"); gd.open = true;
     const gNo = [...new Set(gruplu.map(x => x.grup))].sort((p, q) => p - q);
@@ -1894,7 +1906,13 @@ function tonajPanelCiz(kap, R) {
       const hazir = el("div", "tn-not"); hazir.style.marginTop = "6px";
       DONGULER.forEach(([x, y]) => { const bt = el("button", "alt sm", fmtG(x).replace(" 2026", "") + " – " + fmtG(y).replace(" 2026", "")); bt.type = "button"; bt.style.marginRight = "6px"; if (x === b && y === e) bt.style.outline = "2px solid var(--vc,#4f8cff)"; bt.onclick = () => { donguAyarla(x, y); renderShared(); }; hazir.append(bt); });
       const gun = Math.round((new Date(e + "T12:00:00Z") - new Date(b + "T12:00:00Z")) / 86400000) + 1;
-      kipBar.append("  → " + fmtG(b) + " (08:00–16:00 vardiyası) – " + fmtG(e) + " (08:00–16:00 vardiyası) · " + gun + " gün", hazir, satir);
+      const cg = calismaGunleri(b, e), kg = cg.filter(t => t >= secili);
+      kalanGun = kg.length;
+      const tI = el("input"); tI.type = "text"; tI.placeholder = "2026-11-24, 2026-11-25"; tI.value = tatilGunleri().join(", "); tI.style.cssText = "height:30px;border-radius:6px;padding:0 6px;margin:0 6px;width:260px";
+      tI.onchange = () => { lsSet("tatilGunleriV1", tI.value.split(/[\s,;]+/).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x))); renderShared(); };
+      const tatSatir = el("div", "tn-not"); tatSatir.style.marginTop = "6px";
+      tatSatir.append("Ek tatil günleri (hafta sonu zaten sayılmaz):", tI);
+      kipBar.append("  → " + fmtG(b) + " (08:00–16:00 vardiyası) – " + fmtG(e) + " (08:00–16:00 vardiyası) · " + gun + " gün · çalışma günü: " + cg.length + " · kalan çalışma günü (seçili günden itibaren): " + kg.length, hazir, satir, tatSatir);
     } else if (atKip === "sabah") kipBar.append("  → " + new Date(secili + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" }) + " 08:00 → " + new Date(gunKaydir(secili, 1) + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" }) + " 08:00");
     else if (atKip !== "tum") kipBar.append("  → " + new Date(secili + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "long" }) + (atKip === "vardiya" ? " · " + (VNO_AD[gv] || "?") : ""));
     gd.append(kipBar);
@@ -1934,10 +1952,7 @@ function tonajPanelCiz(kap, R) {
         else { tr.after(zamanSatir(liste, grupMu)); gecmisAcik.add(anahtar); }
       };
     };
-    const topAt = gruplu.reduce((p, x) => p + at(x), 0);
-    // 384 pozisyonluk döngü: her 384 düğümde sayaç yeni döngüye 384 kalanla başlar.
-    const donguIciAt = ((topAt % HEDEF_POZ) + HEDEF_POZ) % HEDEF_POZ;
-    const topKalanPoz = HEDEF_POZ - donguIciAt;
+    const topAt = gruplu.reduce((p, x) => p + at(x), 0), topKalanPoz = Math.max(0, HEDEF_POZ - topAt);
     const topKalanMak = gruplu.reduce((p, x) => p + Math.max(0, fx(x)), 0);
     const hedefP = el("p", "tn-say", "Atılması gereken: " + fmt(HEDEF_POZ) + " pozisyon · Atılan: " + fmt(topAt) + " · KALAN pozisyon: " + fmt(topKalanPoz) + "   |   Eksik makinelerin toplam kalanı: " + kalanMetin(topKalanMak) + " · vardiya başına " + VARDIYA_HEDEF);
     gd.append(hedefP);
