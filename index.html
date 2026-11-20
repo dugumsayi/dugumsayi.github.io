@@ -1871,6 +1871,7 @@ function tonajPanelCiz(kap, R) {
   // Makine Listesi'nde ELLE seçilen gruplar: ATILAN = benim bugüne kadar (tüm tarih ve vardiyalarda) yazdığım tüm sayılar
   const gruplu = R.liste.filter(x => x.grup);
   if (gruplu.length) {
+    if (atKip === "sabah") atKip = "tum"; // kaldırılan eski seçenekten kalan durumu güvenli biçimde sıfırla
     gecmisYukle();
     // Hesaplama yöntemi: tum = tüm geçmiş, gun = seçili tarih (tüm vardiyalar), vardiya = seçili tarih + görüntülenen vardiya
     const at = x => {
@@ -1880,7 +1881,6 @@ function tonajPanelCiz(kap, R) {
       Object.entries(gecmisDetay[x.k] || {}).forEach(([dk, v]) => {
         const [t, vn] = dk.split("|");
         if (atKip === "dongu") { if (donguIcinde(t, Number(vn))) top += v; }
-        else if (atKip === "sabah") { if ((t === secili && Number(vn) >= 1) || (t === gunKaydir(secili, 1) && Number(vn) === 0)) top += v; }
         else if (t === secili && (atKip === "gun" || Number(vn) === gv)) top += v;
       });
       return top;
@@ -1897,7 +1897,7 @@ function tonajPanelCiz(kap, R) {
     gd.append(el("p", "tn-not", gecmisMap && atKip !== "tum" ? "Atılan = " + (myId() ? "yalnızca sizin" : "tüm kullanıcıların") + " yazdığı sayılar; yalnızca aşağıdaki hesaplama yöntemindeki gün/vardiya aralığı sayılır. ATILAN değerine tıklayınca tüm geçmiş günler listelenir." : gecmisMap ? (myId() ? "Atılan = bugüne kadar yazdığınız tüm sayılar (tüm tarih ve vardiyalar). Ne zaman yazdığınızı görmek için ATILAN değerine, o günün kullanıcı tablosunu görmek için de tarihe tıklayın." : "Giriş yapılmadığı için Atılan = tüm kullanıcıların bugüne kadar yazdığı sayıların toplamı. Kendi toplamınızı görmek için giriş yapın.") : "Geçmişte yazılan tüm sayılar yükleniyor… (şimdilik seçili tarih/vardiya gösteriliyor)"));
     const kipBar = el("div", "tn-not");
     const kipSel = el("select"); kipSel.style.cssText = "margin-left:6px;height:30px;border-radius:6px;padding:0 8px";
-    [["tum", "Tüm geçmiş"], ["gun", "Seçili gün (tüm vardiyalar)"], ["vardiya", "Seçili gün + vardiya"], ["sabah", "Sabahtan sabaha (08:00 → ertesi 08:00)"], ["dongu", "Vardiya döngüsü (08:00 → 08:00)"]].forEach(([v, t]) => { const o = el("option", "", t); o.value = v; kipSel.append(o); });
+    [["tum", "Tüm geçmiş"], ["gun", "Seçili gün (tüm vardiyalar)"], ["vardiya", "Seçili gün + vardiya"], ["dongu", "Vardiya döngüsü (08:00 → 08:00)"]].forEach(([v, t]) => { const o = el("option", "", t); o.value = v; kipSel.append(o); });
     kipSel.value = atKip;
     kipSel.onchange = () => { atKip = kipSel.value; renderShared(); };
     kipBar.append("Hesaplama yöntemi:", kipSel);
@@ -1917,7 +1917,6 @@ function tonajPanelCiz(kap, R) {
       const tatSatir = el("div", "tn-not"); tatSatir.style.marginTop = "6px";
       tatSatir.append("Ek tatil günleri (hafta sonu zaten sayılmaz):", tI);
       kipBar.append("  → " + fmtG(b) + " (08:00–16:00 vardiyası) – " + fmtG(e) + " (08:00–16:00 vardiyası) · " + gun + " gün · çalışma günü: " + cg.length + " · kalan çalışma günü (seçili günden itibaren): " + kg.length, hazir, satir, tatSatir);
-    } else if (atKip === "sabah") kipBar.append("  → " + new Date(secili + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" }) + " 08:00 → " + new Date(gunKaydir(secili, 1) + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" }) + " 08:00");
     else if (atKip !== "tum") kipBar.append("  → " + new Date(secili + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "long" }) + (atKip === "vardiya" ? " · " + (VNO_AD[gv] || "?") : ""));
     gd.append(kipBar);
     const tarihTR = t => new Date(t + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "short" });
@@ -1961,7 +1960,7 @@ function tonajPanelCiz(kap, R) {
     const hedefP = el("p", "tn-say", "Atılması gereken: " + fmt(HEDEF_POZ) + " pozisyon · Atılan: " + fmt(topAt) + " · KALAN pozisyon: " + fmt(topKalanPoz) + "   |   Makinelerin toplam kalanı: " + kalanMetin(topKalanMak) + " · vardiya başına " + VARDIYA_HEDEF);
     gd.append(hedefP);
     const gt = el("table", "tn-gt"), gh = el("tr");
-    ["GRUP / MAKİNE", "SAYI (gereken)", "ATILAN (" + (atKip === "tum" ? (myId() ? "tüm geçmiş" : "tüm kullanıcılar") : atKip === "gun" ? "seçili gün" : atKip === "dongu" ? "vardiya döngüsü" : atKip === "sabah" ? "sabahtan sabaha" : "seçili vardiya") + ")", "FARK", "KALAN (" + (atKip === "tum" ? (myId() ? "tüm geçmiş" : "tüm kullanıcılar") : atKip === "gun" ? "seçili gün" : atKip === "dongu" ? "vardiya döngüsü" : atKip === "sabah" ? "sabahtan sabaha" : "seçili vardiya") + ")", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
+    ["GRUP / MAKİNE", "SAYI (gereken)", "ATILAN (" + (atKip === "tum" ? (myId() ? "tüm geçmiş" : "tüm kullanıcılar") : atKip === "gun" ? "seçili gün" : atKip === "dongu" ? "vardiya döngüsü" : "seçili vardiya") + ")", "FARK", "KALAN (" + (atKip === "tum" ? (myId() ? "tüm geçmiş" : "tüm kullanıcılar") : atKip === "gun" ? "seçili gün" : atKip === "dongu" ? "vardiya döngüsü" : "seçili vardiya") + ")", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
     const fark = f => f > 0 ? "−" + fmt(f) : (f < 0 ? "+" + fmt(-f) : "0");
     gNo.forEach(g => {
       const L = gruplu.filter(x => x.grup === g);
@@ -1975,8 +1974,10 @@ function tonajPanelCiz(kap, R) {
       L.forEach(x => {
         const f = fx(x), r = el("tr", (ben[x.k] || 0) > 0 ? "tn-ben" : "");
         const durum = at(x) <= 0 ? "— atılmadı" : (f > 0 ? "✗ eksik" : "✓ tamam");
+        const tamTur = tur384(x), turKalan = Math.max(0, HEDEF_POZ - (Math.max(0, at(x)) - tamTur * HEDEF_POZ));
+        const turYazi = tamTur + " kere fullendi" + (turKalan < HEDEF_POZ ? " · sonraki fullenmeye " + fmt(turKalan) + " kaldı" : "");
         r.append(el("td", "", x.k), el("td", "", fmt(x.g)), el("td", "", fmt(at(x))),
-          el("td", f > 0 ? "tn-eksik" : "tn-tamam", fark(f)), el("td", kalanX(x) > 0 ? "tn-eksik" : "tn-tamam", kalanMetin(kalanX(x)) + (f <= 0 ? " · 384 hedefi · 384 döngüsü: " + tur384(x) + " tamam" : "")), el("td", f > 0 ? "tn-eksik" : (at(x) <= 0 ? "tn-yok" : "tn-tamam"), durum));
+          el("td", f > 0 ? "tn-eksik" : "tn-tamam", fark(f)), el("td", tamTur > 0 ? "tn-tamam" : (turKalan < HEDEF_POZ ? "tn-eksik" : "tn-yok"), turYazi), el("td", f > 0 ? "tn-eksik" : (at(x) <= 0 ? "tn-yok" : "tn-tamam"), durum));
         gt.append(r);
         tikla(r.children[2], "m" + x.k, r, [x]); if (gecmisAcik.has("m" + x.k)) gt.append(zamanSatir([x]));
       });
