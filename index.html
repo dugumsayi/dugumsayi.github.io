@@ -903,6 +903,8 @@ html.hz-kilit .sohbet-panel {
       <label id="pYoneticiGizleBilgi" class="mut hide">Bu ayar normal kullanıcıların ve ziyaretçilerin listelerinde geçerlidir. Yönetim yetkiniz değişmez.</label>
       <label class="mut" for="pVardiya">Vardiyam</label>
       <select id="pVardiya"><option value="">Vardiya seçilmedi</option><option value="A">A vardiyası</option><option value="B">B vardiyası</option><option value="C">C vardiyası</option><option value="D">D vardiyası</option></select>
+      <label class="mut" for="pGrup">Grubum (vardiyadan ayrı)</label>
+      <select id="pGrup"><option value="">Grup seçilmedi</option></select>
       <div id="tabloRenkSatir" class="hide" style="display:flex;flex-direction:column;gap:6px">
         <label class="mut">Tablo rengim <input id="tabloRenkKisisel" type="color" value="#3159b7"></label>
         <button id="tabloRenkSifirlaKisisel" type="button" class="alt sm">Yönetici rengine dön</button>
@@ -1751,7 +1753,7 @@ async function tonajYukle(zorla) {
       const gp = Number(x.grup);
       m[String(x.name).trim().toUpperCase()] = { ton: Number.isFinite(t) ? t : null, acik: x.included !== false, grup: (Number.isFinite(gp) && gp > 0) ? gp : null };
     });
-    tonajMap = m; renderShared();
+    tonajMap = m; try { pGrupDoldur(); } catch (e) {} renderShared();
   } catch (e) { /* okunamazsa kontrol gösterilmez */ }
 }
 function tonajAnahtar(ad) { const m = /^S?\s*0*(\d{1,3})$/.exec(String(ad || "").trim().toUpperCase()); return m ? "S" + m[1] : null; }
@@ -1777,6 +1779,36 @@ function tonajRapor(kt) {
   liste.sort((x, y) => Number(x.k.slice(1)) - Number(y.k.slice(1)));
   return { liste, topGer, eksik: liste.filter(x => x.f > 0) };
 }
+// ---- Kullanıcı grubu: vardiyadan AYRI, kullanıcı bazında tutulur. Makine grubu ise makine ADI bazında (Makine Listesi) tutulur;
+// aynı makineye kim girerse girsin sayı o makinenin grubuna yazılır. Kapsam: tum = tüm kullanıcılar | ben | grubum ----
+let kulGrup = {}, kapsam = "tum";   // kulGrup: user_id -> grup no
+const grupOf = id => kulGrup[id] || null;
+const kapsamMi = uid => !myId() || kapsam === "tum" || (kapsam === "ben" ? uid === myId() : (!!grupOf(myId()) && grupOf(uid) === grupOf(myId())));
+const kapEtiket = () => (!myId() || kapsam === "tum") ? "tüm kullanıcılar" : kapsam === "ben" ? "tüm geçmiş · sadece siz" : "tüm geçmiş · grubunuz";
+function grupNolari(mevcut) {
+  const nos = new Set(mevcut ? [Number(mevcut)] : []);
+  Object.values(tonajMap || {}).forEach(m => { if (m.grup) nos.add(m.grup); });
+  if (!nos.size) [1, 2, 3, 4].forEach(n => nos.add(n));
+  return [...nos].sort((a, b) => a - b);
+}
+function pGrupDoldur() {
+  const sl = $("pGrup"); if (!sl) return;
+  const mevcut = me ? grupOf(myId()) : null;
+  sl.textContent = "";
+  const o0 = el("option", "", "Grup seçilmedi"); o0.value = ""; sl.append(o0);
+  grupNolari(mevcut).forEach(n => { const o = el("option", "", n + ". Grup"); o.value = String(n); sl.append(o); });
+  sl.value = mevcut ? String(mevcut) : "";
+}
+async function kulGrupYukle() {
+  if (!sb) return;
+  try {
+    const { data, error } = await sb.rpc("kullanici_gruplari"); if (error) throw error;
+    const m = {}; (data || []).forEach(x => { const g = Number(x.grup); if (x.id && g > 0) m[x.id] = g; });
+    kulGrup = m; pGrupDoldur(); renderShared();
+  } catch (e) { /* grup-alani.sql çalıştırılmadıysa grup alanı boş kalır, diğer hesaplar etkilenmez */ }
+}
+// Gün|vardiya -> toplam; seçili kapsamdaki kullanıcıların sayıları (gecmisDetay: makine -> gün|vno -> user_id -> toplam)
+const kapDet = k => { const o = {}; Object.entries(gecmisDetay[k] || {}).forEach(([dk, u]) => Object.entries(u).forEach(([uid, v]) => { if (kapsamMi(uid)) o[dk] = (o[dk] || 0) + v; })); return o; };
 // Benim bugüne kadar yazdığım TÜM sayılar (tüm tarih ve vardiyalar), makine bazında toplam
 let gecmisMap = null, gecmisDetay = {}, gecmisZaman = 0, gecmisYukleniyor = false, gecmisKip = null;   // gecmisKip: kullanıcı id'si (kişisel) veya "tum" (çıkış yapılmışken herkesin toplamı)
 let atKip = "tum", atYon = "son";   
@@ -1807,10 +1839,9 @@ async function gecmisYukle(zorla) {
     const t = {}, det = {};
     for (let from = 0; ; from += 1000) {   // Supabase tek sorguda en fazla 1000 satır verir; sayfa sayfa çekilir
       let q = sb.from("sayilar").select("user_id,tarih,vno,name,n1,n2,n3,n4,n5,n6");
-      if (myId()) q = q.eq("user_id", myId());
       const { data, error } = await q.order("tarih").order("vno").order("satir").range(from, from + 999);
       if (error) throw error;
-      data.forEach(r => { const k = tonajAnahtar(r.name); if (!k) return; const v = rsum(r); if (!v) return; t[k] = (t[k] || 0) + v; const dk = r.tarih + "|" + (Number(r.vno) || 0), d = det[k] || (det[k] = {}); d[dk] = (d[dk] || 0) + v; });
+      data.forEach(r => { const k = tonajAnahtar(r.name); if (!k) return; const v = rsum(r); if (!v) return; t[k] = (t[k] || 0) + v; const dk = r.tarih + "|" + (Number(r.vno) || 0), d = det[k] || (det[k] = {}), u = d[dk] || (d[dk] = {}); u[r.user_id] = (u[r.user_id] || 0) + v; });
       if (data.length < 1000) break;
     }
     if (gecmisKip === kip) { gecmisMap = t; gecmisDetay = det; tamam = true; }
@@ -1851,7 +1882,7 @@ async function gunKullaniciTablosu(kap, tarih, vno, anahtarlar) {
       Object.keys(u.m).sort((p, q) => (Number(p.slice(1)) || 9999) - (Number(q.slice(1)) || 9999) || p.localeCompare(q, "tr")).forEach(k => {
         top += u.m[k];
         t.append(el("tr", (uid === myId() ? "tn-ben" : "") + (anahtarlar.has(k) ? " tn-sec" : "")));
-        t.lastChild.append(el("td", "", u.ad + (uid === myId() ? " (ben)" : "")), el("td", "", k), el("td", "", fmt(u.m[k])));
+        t.lastChild.append(el("td", "", u.ad + (uid === myId() ? " (ben)" : "") + (grupOf(uid) ? " · " + grupOf(uid) + ". Grup" : "")), el("td", "", k), el("td", "", fmt(u.m[k])));
       });
     });
     const ft = el("tr", "tn-grup-bas"); ft.append(el("td", "", "TOPLAM"), el("td", ""), el("td", "", fmt(top))); t.append(ft);
@@ -1876,9 +1907,10 @@ function tonajPanelCiz(kap, R) {
     // Hesaplama yöntemi: tum = tüm geçmiş, gun = seçili tarih (tüm vardiyalar), vardiya = seçili tarih + görüntülenen vardiya
     const at = x => {
       if (!gecmisMap) return x.a;
-      if (atKip === "tum") return gecmisMap[x.k] || 0;
+      const kd = kapDet(x.k);
+      if (atKip === "tum") return Object.values(kd).reduce((p, v) => p + v, 0);
       let top = 0;
-      Object.entries(gecmisDetay[x.k] || {}).forEach(([dk, v]) => {
+      Object.entries(kd).forEach(([dk, v]) => {
         const [t, vn] = dk.split("|");
         if (atKip === "dongu") { if (donguIcinde(t, Number(vn))) top += v; }
         else if (t === secili && (atKip === "gun" || Number(vn) === gv)) top += v;
@@ -1894,13 +1926,19 @@ function tonajPanelCiz(kap, R) {
     const gd = el("details", "tn-alt"); gd.open = true;
     const gNo = [...new Set(gruplu.map(x => x.grup))].sort((p, q) => p - q);
     gd.append(el("summary", "", "Elle seçilen gruplar (" + gNo.length + " grup · " + gruplu.length + " makine)"));
-    gd.append(el("p", "tn-not", gecmisMap && atKip !== "tum" ? "Atılan = " + (myId() ? "yalnızca sizin" : "tüm kullanıcıların") + " yazdığı sayılar; yalnızca aşağıdaki hesaplama yöntemindeki gün/vardiya aralığı sayılır. ATILAN değerine tıklayınca tüm geçmiş günler listelenir." : gecmisMap ? (myId() ? "Atılan = bugüne kadar yazdığınız tüm sayılar (tüm tarih ve vardiyalar). Ne zaman yazdığınızı görmek için ATILAN değerine, o günün kullanıcı tablosunu görmek için de tarihe tıklayın." : "Giriş yapılmadığı için Atılan = tüm kullanıcıların bugüne kadar yazdığı sayıların toplamı. Kendi toplamınızı görmek için giriş yapın.") : "Geçmişte yazılan tüm sayılar yükleniyor… (şimdilik seçili tarih/vardiya gösteriliyor)"));
+    gd.append(el("p", "tn-not", gecmisMap && atKip !== "tum" ? "Atılan = " + (!myId() || kapsam === "tum" ? "tüm kullanıcıların" : kapsam === "ben" ? "yalnızca sizin" : "grubunuzdaki kullanıcıların") + " yazdığı sayılar; yalnızca aşağıdaki hesaplama yöntemindeki gün/vardiya aralığı sayılır. ATILAN değerine tıklayınca tüm geçmiş günler listelenir." : gecmisMap ? (myId() ? "Atılan = bugüne kadar yazdığınız tüm sayılar (tüm tarih ve vardiyalar). Ne zaman yazdığınızı görmek için ATILAN değerine, o günün kullanıcı tablosunu görmek için de tarihe tıklayın." : "Giriş yapılmadığı için Atılan = tüm kullanıcıların bugüne kadar yazdığı sayıların toplamı. Kendi toplamınızı görmek için giriş yapın.") : "Geçmişte yazılan tüm sayılar yükleniyor… (şimdilik seçili tarih/vardiya gösteriliyor)"));
     const kipBar = el("div", "tn-not");
     const kipSel = el("select"); kipSel.style.cssText = "margin-left:6px;height:30px;border-radius:6px;padding:0 8px";
     [["tum", "Tüm geçmiş"], ["gun", "Seçili gün (tüm vardiyalar)"], ["vardiya", "Seçili gün + vardiya"], ["dongu", "Vardiya döngüsü (08:00 → 08:00)"]].forEach(([v, t]) => { const o = el("option", "", t); o.value = v; kipSel.append(o); });
     kipSel.value = atKip;
     kipSel.onchange = () => { atKip = kipSel.value; renderShared(); };
     kipBar.append("Hesaplama yöntemi:", kipSel);
+    if (myId()) {
+      const ks = el("select"); ks.style.cssText = kipSel.style.cssText;
+      [["tum", "Tüm kullanıcılar (makine adına göre ortak)"], ["ben", "Sadece ben"], ["grubum", "Kendi grubum" + (grupOf(myId()) ? " (" + grupOf(myId()) + ". Grup)" : " (grup seçilmedi)")]].forEach(([v, t]) => { const o = el("option", "", t); o.value = v; ks.append(o); });
+      ks.value = kapsam; ks.onchange = () => { kapsam = ks.value; renderShared(); };
+      kipBar.append("   Kapsam:", ks);
+    }
     if (atKip === "dongu") {
       const [b, e] = donguAralik();
       const fmtG = t => new Date(t + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
@@ -1924,7 +1962,7 @@ function tonajPanelCiz(kap, R) {
     const zamanSatir = (liste, grupMu) => {
       const tr = el("tr", "tn-detay"), td = el("td"); td.colSpan = 6;
       const gun = {};
-      liste.forEach(x => Object.entries(gecmisDetay[x.k] || {}).forEach(([dk, v]) => { (gun[dk] = gun[dk] || []).push([x.k, v]); }));
+      liste.forEach(x => Object.entries(kapDet(x.k)).forEach(([dk, v]) => { (gun[dk] = gun[dk] || []).push([x.k, v]); }));
       const anah = Object.keys(gun).sort().reverse();
       if (!gecmisMap) td.append(el("div", "", "Yükleniyor…"));
       else if (!anah.length) td.append(el("div", "", "Bu makine için geçmişte yazılmış sayı yok."));
@@ -1960,7 +1998,7 @@ function tonajPanelCiz(kap, R) {
     const hedefP = el("p", "tn-say", "Atılması gereken: " + fmt(HEDEF_POZ) + " pozisyon · Atılan: " + fmt(topAt) + " · KALAN pozisyon: " + fmt(topKalanPoz) + "   |   Makinelerin toplam kalanı: " + kalanMetin(topKalanMak) + " · vardiya başına " + VARDIYA_HEDEF);
     gd.append(hedefP);
     const gt = el("table", "tn-gt"), gh = el("tr");
-    ["GRUP / MAKİNE", "SAYI (gereken)", "ATILAN (" + (atKip === "tum" ? (myId() ? "tüm geçmiş" : "tüm kullanıcılar") : atKip === "gun" ? "seçili gün" : atKip === "dongu" ? "vardiya döngüsü" : "seçili vardiya") + ")", "FARK", "KALAN (" + (atKip === "tum" ? (myId() ? "tüm geçmiş" : "tüm kullanıcılar") : atKip === "gun" ? "seçili gün" : atKip === "dongu" ? "vardiya döngüsü" : "seçili vardiya") + ")", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
+    ["GRUP / MAKİNE", "SAYI (gereken)", "ATILAN (" + (atKip === "tum" ? kapEtiket() : atKip === "gun" ? "seçili gün" : atKip === "dongu" ? "vardiya döngüsü" : "seçili vardiya") + ")", "FARK", "KALAN (" + (atKip === "tum" ? kapEtiket() : atKip === "gun" ? "seçili gün" : atKip === "dongu" ? "vardiya döngüsü" : "seçili vardiya") + ")", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
     const fark = f => f > 0 ? "−" + fmt(f) : (f < 0 ? "+" + fmt(-f) : "0");
     gNo.forEach(g => {
       const L = gruplu.filter(x => x.grup === g);
@@ -2404,6 +2442,7 @@ const vardiyaOf = id => { const x = vardiyaList.find(u => u.id === id); return x
 async function vardiyaYukle() {
   const box = $("vardiyaBox");
   if (!sb) { box.classList.add("hide"); return; }
+  kulGrupYukle();
   const { data, error } = await sb.rpc("vardiya_listesi", { gun: secili });   // gizli yönetici kayıtları sunucuda filtrelenir
   if (error) { vardiyaList = []; vardiyaListeHazir = true; box.classList.add("hide"); renderShared(); return; }
   vardiyaList = (data || []).map(u => ({ ...u, ad: adBuyut(u.ad) }));
@@ -2702,6 +2741,15 @@ async function adminVardiya(u, v) {
   await vardiyaYukle();
 }
 $("vardiyaYenile").onclick = vardiyaYukle;
+// Kullanıcı kendi grubunu seçer / yönetici başkasının grubunu atar (vardiyadan bağımsız)
+async function grupKaydet(fn, args, ok, hataSonrasi) {
+  msg("Grup kaydediliyor…");
+  const { error } = await sb.rpc(fn, args);
+  if (error) { msg("Grup kaydedilemedi: " + error.message + " — Supabase'de grup-alani.sql çalıştırılmalı."); await kulGrupYukle(); return; }
+  msg(ok); await kulGrupYukle();
+}
+$("pGrup").onchange = () => { const g = $("pGrup").value; grupKaydet("grup_sec", { yeni: g ? Number(g) : null }, g ? g + ". gruba atandınız." : "Grup seçiminiz kaldırıldı."); };
+const adminGrup = (u, g) => grupKaydet("admin_grup", { hedef: u.id, yeni: g ? Number(g) : null }, (u.ad || "Kullanıcı") + (g ? " → " + g + ". Grup." : " gruptan çıkarıldı."));
 
 async function adminYukle() {
   await kayitDurumuYukle();
@@ -2729,7 +2777,7 @@ function adminCiz() {
   $("aSayi").textContent = list.length + " / " + adminList.length + " kullanıcı";
   if (!list.length) { box.append(el("p", "mut", "Kullanıcı bulunamadı.")); return; }
   const tbl = el("table", "at"), head = el("thead"), hr = el("tr"), body = el("tbody");
-  ["SİCİL", "AD SOYAD", "ROL", "VARDİYA", "DURUM", "SON GİRİŞ", "İŞLEM"].forEach(h => hr.append(el("th", "", h)));
+  ["SİCİL", "AD SOYAD", "ROL", "VARDİYA", "GRUP", "DURUM", "SON GİRİŞ", "İŞLEM"].forEach(h => hr.append(el("th", "", h)));
   head.append(hr); tbl.append(head);
   list.forEach(u => {
     const tr = el("tr", u.banli ? "ban" : ""), self = u.id === myId();
@@ -2739,6 +2787,10 @@ function adminCiz() {
     const tdV = el("td"), sel = el("select"), vk = vardiyaOf(u.id);
     [["", "—"], ...VARDIYALAR.map(v => [v, v])].forEach(([val, txt]) => { const o = el("option", "", txt); o.value = val; sel.append(o); });
     sel.value = vk || ""; sel.onchange = () => adminVardiya(u, sel.value); tdV.append(sel); tr.append(tdV);
+    const tdG = el("td"), gsel = el("select"), gk = grupOf(u.id);
+    const go0 = el("option", "", "—"); go0.value = ""; gsel.append(go0);
+    grupNolari(gk).forEach(n => { const o = el("option", "", n + ". Grup"); o.value = String(n); gsel.append(o); });
+    gsel.value = gk ? String(gk) : ""; gsel.onchange = () => adminGrup(u, gsel.value); tdG.append(gsel); tr.append(tdG);
     const tdD = el("td"); tdD.append(el("span", "badge " + (u.banli ? "ban" : "ok"), u.banli ? "Banlı" : "Aktif"));
     if (u.banli && u.ban_sebep) tdD.append(el("div", "mut", "Sebep: " + u.ban_sebep));
     tr.append(tdD);
