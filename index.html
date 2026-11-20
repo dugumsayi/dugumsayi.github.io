@@ -1917,7 +1917,7 @@ function tonajPanelCiz(kap, R) {
       const tatSatir = el("div", "tn-not"); tatSatir.style.marginTop = "6px";
       tatSatir.append("Ek tatil günleri (hafta sonu zaten sayılmaz):", tI);
       kipBar.append("  → " + fmtG(b) + " (08:00–16:00 vardiyası) – " + fmtG(e) + " (08:00–16:00 vardiyası) · " + gun + " gün · çalışma günü: " + cg.length + " · kalan çalışma günü (seçili günden itibaren): " + kg.length, hazir, satir, tatSatir);
-    else if (atKip !== "tum") kipBar.append("  → " + new Date(secili + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "long" }) + (atKip === "vardiya" ? " · " + (VNO_AD[gv] || "?") : ""));
+    } else if (atKip !== "tum") kipBar.append("  → " + new Date(secili + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "long" }) + (atKip === "vardiya" ? " · " + (VNO_AD[gv] || "?") : ""));
     gd.append(kipBar);
     const tarihTR = t => new Date(t + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "short" });
     // Bir makinenin (veya grubun) geçmişte ne zaman yazıldığını gösteren açılır satır
