@@ -863,9 +863,6 @@ html.hz-kilit .sohbet-panel {
 #secModal #secBody>#ozetBox:not(.gz),#secModal #secBody>#listeBox:not(.gz),#secModal #secBody>#ortPanel:not(.gz){display:block}
 #secModal .pen-btn{display:none}
 #secModal .pen-bas>h2{pointer-events:none;cursor:default}
-
-/* İstenen: çevrimiçi kullanıcı bekleme alanını ve kullanıcı tabloları bölümünü gizle */
-.online-pill, #gunPanel, #gunBtn { display:none !important; }
 </style>
 </head>
 <body>
@@ -881,13 +878,13 @@ html.hz-kilit .sohbet-panel {
 </div>
 <div id="duyuruBant" class="duyuru-bant hide" role="status" aria-live="polite"><span id="dbIkon" class="db-ikon"></span><div class="db-ic"><strong id="dbBaslik">Yönetici duyurusu</strong><div id="dbMetin" class="db-metin"></div><small id="dbZaman" class="db-zaman"></small></div><button id="dbOkudum" type="button">Okudum</button></div>
 <header class="top">
-  <div class="brand"><div><p id="st"></p></div></div>
+  <div class="brand"><div><p id="st">Yükleniyor…</p></div></div>
   <div class="online-pill" aria-live="polite" title="Şu anda siteyi açık tutan ziyaretçiler">
     <div class="online-head"><span class="online-dot"></span><span id="onlineCount">0 kişi çevrimiçi</span></div>
     <div id="onlineNames">Kullanıcılar bekleniyor…</div>
   </div>
   <button id="kurBtn" type="button" class="alt sm hide">📲 Ana ekrana ekle</button>
-  <a id="makineListesiLink" class="gz" href="makinelistesi.html" target="_blank" rel="noopener"
+  <a id="makineListesiLink" href="makinelistesi.html" target="_blank" rel="noopener"
      style="display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 10px;margin:2px 4px 2px 0;border:1px solid var(--line);border-radius:4px;color:var(--fg);text-decoration:none;font-size:13px;font-weight:600">
     📋 Makine Listesi
   </a>
@@ -1100,7 +1097,7 @@ html.hz-kilit .sohbet-panel {
 </div>
 
 <div id="navBtns">
-  <button id="vtBtn" type="button" class="alt gz">📅 Vardiya Takvimi</button>
+  <button id="vtBtn" type="button" class="alt">📅 Vardiya Takvimi</button>
   <button id="ozetBtn" type="button" class="alt hide">📊 Özet</button>
   <button id="vlistBtn" type="button" class="alt hide">👥 Vardiya Listesi</button>
   <button id="ortBtn" type="button" class="alt hide">📈 Ortalama</button>
@@ -2940,8 +2937,8 @@ function tabloRenkUygula() {
 // Yöneticinin herkes için gizlediği hedefler (HEDEFLER dizisindeki sıraya göre: 0 = birinci, 1 = ikinci)
 const hedefGizliMi = hd => { const i = HEDEFLER.indexOf(hd); return i >= 0 && !!(gorAyar.hedefGizli && gorAyar.hedefGizli[i]); };
 // Makine Listesi düğmesi eskiden herkese açıktı: kayıt yoksa misafire de görünür kalır (yönetici kapatınca gizlenir).
-const GOR_MISAFIR_ACIK = [];
-const misafirAcikMi = k => gorAyar.misafir[k] === true;
+const GOR_MISAFIR_ACIK = ["makineListesi", "vardiyaTakvimi"];
+const misafirAcikMi = k => GOR_MISAFIR_ACIK.includes(k) ? gorAyar.misafir[k] !== false : gorAyar.misafir[k] === true;
 const gorunur = k => isAdmin() || (me ? gorAyar.uye[k] !== false : misafirAcikMi(k));
 
 // ================= AÇILIR-KAPANIR PENCERELER =================
@@ -6655,13 +6652,13 @@ html.hz-kilit .sohbet-panel {
 </div>
 <div id="duyuruBant" class="duyuru-bant hide" role="status" aria-live="polite"><span id="dbIkon" class="db-ikon"></span><div class="db-ic"><strong id="dbBaslik">Yönetici duyurusu</strong><div id="dbMetin" class="db-metin"></div><small id="dbZaman" class="db-zaman"></small></div><button id="dbOkudum" type="button">Okudum</button></div>
 <header class="top">
-  <div class="brand"><div><p id="st"></p></div></div>
+  <div class="brand"><div><p id="st">Yükleniyor…</p></div></div>
   <div class="online-pill" aria-live="polite" title="Şu anda siteyi açık tutan ziyaretçiler">
     <div class="online-head"><span class="online-dot"></span><span id="onlineCount">0 kişi çevrimiçi</span></div>
     <div id="onlineNames">Kullanıcılar bekleniyor…</div>
   </div>
   <button id="kurBtn" type="button" class="alt sm hide">📲 Ana ekrana ekle</button>
-  <a id="makineListesiLink" class="gz" href="makinelistesi.html" target="_blank" rel="noopener"
+  <a id="makineListesiLink" href="makinelistesi.html" target="_blank" rel="noopener"
      style="display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 10px;margin:2px 4px 2px 0;border:1px solid var(--line);border-radius:4px;color:var(--fg);text-decoration:none;font-size:13px;font-weight:600">
     📋 Makine Listesi
   </a>
@@ -6876,7 +6873,7 @@ html.hz-kilit .sohbet-panel {
 </div>
 
 <div id="navBtns">
-  <button id="vtBtn" type="button" class="alt gz">📅 Vardiya Takvimi</button>
+  <button id="vtBtn" type="button" class="alt">📅 Vardiya Takvimi</button>
   <button id="ozetBtn" type="button" class="alt hide">📊 Özet</button>
   <button id="vlistBtn" type="button" class="alt hide">👥 Vardiya Listesi</button>
   <button id="ortBtn" type="button" class="alt hide">📈 Ortalama</button>
@@ -8766,8 +8763,8 @@ function tabloRenkUygula() {
 // Yöneticinin herkes için gizlediği hedefler (HEDEFLER dizisindeki sıraya göre: 0 = birinci, 1 = ikinci)
 const hedefGizliMi = hd => { const i = HEDEFLER.indexOf(hd); return i >= 0 && !!(gorAyar.hedefGizli && gorAyar.hedefGizli[i]); };
 // Makine Listesi düğmesi eskiden herkese açıktı: kayıt yoksa misafire de görünür kalır (yönetici kapatınca gizlenir).
-const GOR_MISAFIR_ACIK = [];
-const misafirAcikMi = k => gorAyar.misafir[k] === true;
+const GOR_MISAFIR_ACIK = ["makineListesi", "vardiyaTakvimi"];
+const misafirAcikMi = k => GOR_MISAFIR_ACIK.includes(k) ? gorAyar.misafir[k] !== false : gorAyar.misafir[k] === true;
 const gorunur = k => isAdmin() || (me ? gorAyar.uye[k] !== false : misafirAcikMi(k));
 
 // ================= AÇILIR-KAPANIR PENCERELER =================
