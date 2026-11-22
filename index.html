@@ -3774,8 +3774,18 @@ function logCizAsil() {
     const tdD = el("td", "lg-d");
     if (!ad && d != null && d > 0 && l.yeni != null) {
       const vb = vbBul(new Date(l.zaman).getTime());
-      if (!vardiyaBittiMi(vb)) tdD.append(el("span", "lg-alt", "Vardiya sürüyor"));
-      else { const top = vTop.get(l.user_id + "|" + vb) || 0, sup = top > SUPHE_LIMIT; tdD.append(el("span", "lg-dr " + (sup ? "sup" : "nor"), sup ? "Şüpheli" : "Normal"), el("div", "lg-alt", "vardiya: " + fmt(Math.round(top * 100) / 100))); }
+      if (!vardiyaBittiMi(vb)) {
+        // Vardiya bitmeden de hesapla: şu ana kadarki toplam, 08:00'dan beri geçen süre ve saatlik hız
+        const top = vTop.get(l.user_id + "|" + vb) || 0, gSn = Math.max(0, (Date.now() - vb) / 1000);
+        tdD.append(el("span", "lg-alt", "Vardiya sürüyor"), el("div", "lg-alt", "vardiya: " + fmt(Math.round(top * 100) / 100)));
+        if (gSn > 0) tdD.append(el("div", "lg-alt", saatOf(vb).slice(0, 5) + "'dan beri: " + sure(Math.round(gSn)) + " · " + fmt(Math.round(top / (gSn / 3600) * 10) / 10) + "/sa"));
+        // Bu hızla vardiya sonu tahmini (en az 10 dk veri varsa)
+        if (gSn >= 600) { const tah = Math.round(top / gSn * 8 * 3600); tdD.append(el("div", "lg-alt", "tahmini vardiya sonu: ≈ " + fmt(tah) + (tah > SUPHE_LIMIT ? " ⚠ limit " + fmt(SUPHE_LIMIT) : ""))); }
+      }
+      else { const top = vTop.get(l.user_id + "|" + vb) || 0, sup = top > SUPHE_LIMIT; tdD.append(el("span", "lg-dr " + (sup ? "sup" : "nor"), sup ? "Şüpheli" : "Normal"), el("div", "lg-alt", "vardiya: " + fmt(Math.round(top * 100) / 100)));
+        // Vardiya başlangıcından (ör. 08:00) beri geçen süre ve saatlik hız
+        const gSn = Math.max(0, (Math.min(Date.now(), vb + 8 * 3600000) - vb) / 1000);
+        if (gSn > 0) tdD.append(el("div", "lg-alt", saatOf(vb).slice(0, 5) + "'dan beri: " + sure(Math.round(gSn)) + " · " + fmt(Math.round(top / (gSn / 3600) * 10) / 10) + "/sa")); }
     } else tdD.append(el("span", "lg-alt", "—"));
     tr.append(el("td", "lg-t", saatOf(l.zaman)),
       el("td", "", (adBuyut(l.kullanici) || "?") + (isAdmin() && sm.get(l.user_id) ? " [" + sm.get(l.user_id) + "]" : "") + (l.user_id === myId() ? " (siz)" : "")),
