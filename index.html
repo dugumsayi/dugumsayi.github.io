@@ -942,6 +942,150 @@ html.hz-kilit .sohbet-panel {
   #app td.sy>.ab-giris input{height:36px}
 }
 
+
+
+/* ===== A/B paneli kesin yerlesim ve opak arka plan duzeltmesi ===== */
+#app td.sy{
+  align-content:start !important;
+  vertical-align:top !important;
+  height:auto !important;
+  overflow:visible !important;
+}
+#app td.sy > .ab-giris{
+  display:none;
+  grid-column:1 / -1;
+  position:relative !important;
+  z-index:2;
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  margin:6px 0 2px !important;
+  padding:10px !important;
+  background:#111827 !important;
+  color:#f3f4f6 !important;
+  border:1px solid #52627a !important;
+  border-radius:8px;
+  box-shadow:0 5px 14px rgba(0,0,0,.38);
+  overflow:visible;
+}
+#app td.sy > .ab-giris.acik{display:block !important}
+#app td.sy > .ab-giris label{
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:stretch;
+  gap:4px;
+  width:100%;
+  margin:0 0 8px !important;
+  color:#d1d9e6 !important;
+  font-size:12px;
+  line-height:1.25;
+}
+#app td.sy > .ab-giris label input{
+  display:block;
+  box-sizing:border-box;
+  width:100% !important;
+  height:38px !important;
+  margin:0;
+  padding:0 10px;
+  background:#202c3d !important;
+  color:#fff !important;
+  border:1px solid #718096 !important;
+  border-radius:6px;
+  text-align:center;
+  line-height:normal;
+}
+#app td.sy > .ab-giris label input::placeholder{color:#aebbd0;opacity:1}
+#app td.sy > .ab-giris button{
+  display:block;
+  box-sizing:border-box;
+  width:100% !important;
+  min-height:38px;
+  height:auto !important;
+  margin:2px 0 0 !important;
+  padding:7px 10px !important;
+  white-space:normal !important;
+  line-height:1.25;
+  overflow-wrap:anywhere;
+}
+#app td.sy > .ab-giris .ab-mini{
+  margin-top:6px;
+  color:#c1ccdc !important;
+  font-size:11px;
+  line-height:1.3;
+}
+@media(max-width:600px){
+  #app td.sy{grid-auto-rows:min-content;}
+  #app td.sy > .ab-giris{padding:9px !important;}
+  #app td.sy > .ab-giris label input{height:36px !important;font-size:14px;}
+  #app td.sy > .ab-giris button{font-size:13px;}
+}
+
+
+/* A/B paneli: ana makine satırından bağımsız, tam genişlikte ayrı tablo satırı */
+#app tr.ab-extra > td{
+  padding:8px 10px 10px !important;
+  background:#111827 !important;
+  border:1px solid #52627a !important;
+  border-top:0 !important;
+}
+#app tr.ab-extra .ab-giris{
+  display:grid !important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+  gap:8px 10px !important;
+  width:100% !important;
+  min-width:0 !important;
+  margin:0 !important;
+  padding:2px !important;
+  box-sizing:border-box !important;
+  position:static !important;
+  background:#111827 !important;
+  color:#f3f4f6 !important;
+  border:0 !important;
+  box-shadow:none !important;
+}
+#app tr.ab-extra .ab-giris label{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:5px !important;
+  min-width:0 !important;
+  margin:0 !important;
+  color:#d1d9e6 !important;
+  font-size:12px !important;
+  line-height:1.25 !important;
+}
+#app tr.ab-extra .ab-giris label input{
+  display:block !important;
+  width:100% !important;
+  height:38px !important;
+  box-sizing:border-box !important;
+  margin:0 !important;
+  padding:0 9px !important;
+  background:#202c3d !important;
+  color:#fff !important;
+  border:1px solid #718096 !important;
+  border-radius:6px !important;
+  text-align:center !important;
+}
+#app tr.ab-extra .ab-giris button{
+  grid-column:1 / -1 !important;
+  width:100% !important;
+  min-height:38px !important;
+  margin:0 !important;
+  white-space:normal !important;
+  line-height:1.25 !important;
+}
+#app tr.ab-extra .ab-giris .ab-mini{
+  grid-column:1 / -1 !important;
+  margin:0 !important;
+  color:#c1ccdc !important;
+  font-size:11px !important;
+}
+@media(max-width:600px){
+  #app tr.ab-extra > td{padding:7px !important;}
+  #app tr.ab-extra .ab-giris{gap:7px !important;}
+  #app tr.ab-extra .ab-giris label input{height:36px !important;}
+}
+
 </style>
 </head>
 <body>
@@ -1619,9 +1763,13 @@ function satirEkle(r) {
   const ab = el("div", "ab-giris"), labA = el("label", "", "A tarafı"), labB = el("label", "", "B tarafı");
   const iA = el("input"), iB = el("input"), btnAB = el("button", "", "A + B toplamını kaydet"), abInfo = el("div", "ab-mini", "A ve B değerleri ayrı ayrı saklanır.");
   [iA,iB].forEach(x => { x.type="number"; x.min="0"; x.step="any"; x.inputMode="decimal"; });
-  iA.placeholder="A sayısı"; iB.placeholder="B sayısı"; labA.append(iA); labB.append(iB); btnAB.type="button"; ab.append(labA,labB,btnAB,abInfo); tdS.append(iSayi,btn,btnABAc,ab); tr.append(tdS);
+  iA.placeholder="A sayısı"; iB.placeholder="B sayısı"; labA.append(iA); labB.append(iB); btnAB.type="button"; ab.append(labA,labB,btnAB,abInfo); tdS.append(iSayi,btn,btnABAc); tr.append(tdS);
+  // A/B paneli artık sayı hücresinin içinde değil, tablonun ayrı ve tam genişlikte satırında.
+  const abTr = el("tr", "ab-extra"), abTd = el("td");
+  abTd.colSpan = 3; abTd.append(ab); abTr.append(abTd); abTr.style.display = "none";
   const abModu = row => !!row && row.n2 != null;
   const abAc = row => {
+    abTr.style.display = "table-row";
     ab.classList.add("acik");
     if (row && abModu(row)) { iA.value=show(row.n1); iB.value=show(row.n2); }
     else { iA.value=""; iB.value=""; }
@@ -1653,7 +1801,7 @@ function satirEkle(r) {
     row.n1=Math.round(av*1e6)/1e6; row.n2=Math.round(bv*1e6)/1e6;
     tt.textContent=fmt(rsum(row)); mineToplamGuncelle(); renderShared();
     kirli[r]=true; clearTimeout(otoTimer[r]); save(r).then(()=>tabloDoluKontrol());
-    ab.classList.remove("acik"); iSayi.value=""; msg("A ve B sayıları kaydedildi. Toplam: "+fmt(rsum(row)));
+    ab.classList.remove("acik"); abTr.style.display="none"; iSayi.value=""; msg("A ve B sayıları kaydedildi. Toplam: "+fmt(rsum(row)));
   };
   iSayi.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); ekle(); } };
   iSayi.onchange = ekle;
@@ -1661,7 +1809,7 @@ function satirEkle(r) {
   btn.onclick = ekle; btnABAc.onclick = abBaslat; btnAB.onclick=abKaydet;
   [iA,iB].forEach(x=>x.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();abKaydet();}});
   const controls=[iA,iB,btnAB];
-  body.append(tr); const inputPair=[iAd, iSayi]; inputPair.ab=[ab,iA,iB,btnAB]; myInputs.push(inputPair); myTr.push(tr);
+  body.append(tr, abTr); const inputPair=[iAd, iSayi]; inputPair.ab=[ab,iA,iB,btnAB]; myInputs.push(inputPair); myTr.push(tr);
 }
 
 // Tüm satırlar dolunca altına yeni boş satır ekle
