@@ -127,12 +127,14 @@ button.grn{background:#2a9d4a}
   #users h3,h3{margin:14px 0 4px}
 }
 /* Paylaşılan tablolarda MAKİNE ve SAYI sütunları eşit genişlikte */
-#agg table,#users table{table-layout:fixed;width:300px;max-width:100%}
-#agg th,#agg td,#users th,#users td{width:50%;min-width:0}
+#agg table,#users table{table-layout:fixed;width:100%;max-width:100%}
+#agg th,#agg td,#users th,#users td{width:auto;min-width:0}
 /* ===== Profesyonel tema ===== */
 td.sy{min-width:200px;white-space:nowrap}
 td.sy input{width:calc(100% - 46px)}
 td.sy button.ekle{width:38px;height:30px;padding:0;margin:0 4px 0 0;font-size:20px;line-height:1;vertical-align:middle}
+td.sy button.ab-toggle{height:30px;padding:0 7px;margin:0 3px 0 0;font-size:12px;vertical-align:middle}
+.ab-giris{display:none;margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-width:190px}.ab-giris.acik{display:block}.ab-giris label{display:block;font-size:12px;color:var(--mut);margin:4px 0}.ab-giris input{width:100%;height:34px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg);text-align:center}.ab-giris button{width:100%;height:32px;margin-top:6px}.ab-mini{font-size:12px;color:var(--mut);margin-top:4px}
 body{max-width:1180px;padding:20px 16px 56px;line-height:1.35}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:0;background:none;border:none;border-radius:0;box-shadow:none;margin:0 0 14px}
 .brand{display:flex;gap:12px;align-items:center;min-width:0}
@@ -298,6 +300,7 @@ table.lg tr.lg-ad td{opacity:.75}
   #app td.m input{font-size:15px}
   #app td.sy input{width:calc(100% - 38px)}
   #app td.sy button.ekle{width:34px;margin:0 2px 0 0}
+  #app td.sy button.ab-toggle{padding:0 5px;margin:0 2px 0 0}
   #profil,#admin,#logBox{padding:12px}
   #profil{max-width:none}
   #logBox .bar select,#logBox .bar button{flex:1 1 140px}
@@ -1532,25 +1535,57 @@ function satirEkle(r) {
   tdM.append(iAd); tr.append(tdM);
   // TOPLAM
   const tt = el("td", "t", "0"); tr.append(tt); myTot.push(tt);
-  // SAYI: yazılan sayı satırın toplamına eklenir, kutu boşalır
-  const tdS = el("td", "sy"), iSayi = el("input"), btn = el("button", "ekle", "+");
+  // SAYI: 1 girildiğinde A/B giriş alanları açılır; diğer sayılar normal toplam olarak eklenir.
+  const tdS = el("td", "sy"), iSayi = el("input"), btn = el("button", "ekle", "+"), btnABAc = el("button", "ab-toggle", "A/B");
   iSayi.type = "text"; iSayi.inputMode = "decimal"; iSayi.placeholder = "Sayı yaz";
   btn.type = "button"; btn.title = "Toplama ekle";
+  btnABAc.type = "button"; btnABAc.title = "A ve B sayılarını ayrı girmek için";
+  const ab = el("div", "ab-giris"), labA = el("label", "", "A tarafı"), labB = el("label", "", "B tarafı");
+  const iA = el("input"), iB = el("input"), btnAB = el("button", "", "A + B toplamını kaydet"), abInfo = el("div", "ab-mini", "A ve B değerleri ayrı ayrı saklanır.");
+  [iA,iB].forEach(x => { x.type="number"; x.min="0"; x.step="any"; x.inputMode="decimal"; });
+  iA.placeholder="A sayısı"; iB.placeholder="B sayısı"; labA.append(iA); labB.append(iB); btnAB.type="button"; ab.append(labA,labB,btnAB,abInfo); tdS.append(iSayi,btn,btnABAc,ab); tr.append(tdS);
+  const abModu = row => !!row && row.n2 != null;
+  const abAc = row => {
+    ab.classList.add("acik");
+    if (row && abModu(row)) { iA.value=show(row.n1); iB.value=show(row.n2); }
+    else { iA.value=""; iB.value=""; }
+    iA.focus();
+  };
+  const abBaslat = () => {
+    const row = myRow();
+    if (!row) { msg("Satır henüz hazır değil, birkaç saniye sonra tekrar deneyin."); return; }
+    iSayi.value = "";
+    abAc(row);
+    msg("A ve B taraflarının sayılarını girin.");
+  };
   const ekle = () => {
     const ham = iSayi.value.trim(); if (!ham) return;
     const v = parseFloat(ham.replace(",", "."));
     if (isNaN(v)) { msg("Geçerli bir sayı yazın."); iSayi.value = ""; return; }
     const row = myRow(); if (!row) { msg("Satır henüz hazır değil, birkaç saniye sonra tekrar deneyin."); return; }
-    row.n1 = Math.round((num(row.n1) + v) * 1e6) / 1e6;     // toplam n1'de birikir (eski n2-n6 değerleri de toplamda sayılır)
+    const hedef = abModu(row) ? "n3" : "n1";
+    row[hedef] = Math.round((num(row[hedef]) + v) * 1e6) / 1e6;
     iSayi.value = ""; tt.textContent = fmt(rsum(row)); mineToplamGuncelle(); renderShared();
     kirli[r] = true; clearTimeout(otoTimer[r]); save(r).then(() => tabloDoluKontrol());
   };
+  const abKaydet = () => {
+    const row=myRow(); if(!row) return;
+    const a=iA.value.trim(), b=iB.value.trim();
+    if(a==="" && b==="") { msg("A veya B tarafına bir sayı girin."); return; }
+    const av=a===""?0:parseFloat(a.replace(",",".")), bv=b===""?0:parseFloat(b.replace(",","."));
+    if(!Number.isFinite(av)||!Number.isFinite(bv)||av<0||bv<0){ msg("A ve B için sıfır veya daha büyük geçerli sayılar girin."); return; }
+    row.n1=Math.round(av*1e6)/1e6; row.n2=Math.round(bv*1e6)/1e6;
+    tt.textContent=fmt(rsum(row)); mineToplamGuncelle(); renderShared();
+    kirli[r]=true; clearTimeout(otoTimer[r]); save(r).then(()=>tabloDoluKontrol());
+    ab.classList.remove("acik"); iSayi.value=""; msg("A ve B sayıları kaydedildi. Toplam: "+fmt(rsum(row)));
+  };
   iSayi.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); ekle(); } };
   iSayi.onchange = ekle;
-  btn.onmousedown = e => e.preventDefault();   // tıklayınca kutu odağını kaybedip çift ekleme olmasın
-  btn.onclick = ekle;
-  tdS.append(iSayi, btn); tr.append(tdS);
-  body.append(tr); myInputs.push([iAd, iSayi]); myTr.push(tr);
+  btn.onmousedown = e => e.preventDefault();
+  btn.onclick = ekle; btnABAc.onclick = abBaslat; btnAB.onclick=abKaydet;
+  [iA,iB].forEach(x=>x.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();abKaydet();}});
+  const controls=[iA,iB,btnAB];
+  body.append(tr); const inputPair=[iAd, iSayi]; inputPair.ab=[ab,iA,iB,btnAB]; myInputs.push(inputPair); myTr.push(tr);
 }
 
 // Tüm satırlar dolunca altına yeni boş satır ekle
@@ -1624,7 +1659,7 @@ $("satirSilBtn").onclick = satirSil;
 // "Gönder": bekleyen kayıtları sunucuya yazar, sonra bu vardiyanın tablosunu dondurur (hiçbir işlem yapılamaz)
 function dondurUygula() {
   const d = donduMu();
-  myInputs.forEach(f => { f[0].disabled = d; f[1].disabled = d; });
+  myInputs.forEach(f => { f[0].disabled = d; f[1].disabled = d; (f.ab||[]).forEach(x=>{ if(x && "disabled" in x) x.disabled=d; }); });
   document.querySelectorAll("#mine button").forEach(b => { b.disabled = d; });
   ["satirBtn", "satirSilBtn", "sayiSil"].forEach(i => { const b = $(i); if (b) b.disabled = d; });
   $("app").classList.toggle("dondu", d);
@@ -1670,6 +1705,7 @@ function fillMine() {
     const f = myInputs[r];
     if (document.activeElement !== f[0]) f[0].value = row.name || ""; else row.name = f[0].value;
     myTot[r].textContent = fmt(rsum(row));
+    const pair=myInputs[r]; if(pair && pair.ab){ const [panel,a,b]=pair.ab; if(row.n2!=null){ panel.classList.add("acik"); if(document.activeElement!==a) a.value=show(row.n1); if(document.activeElement!==b) b.value=show(row.n2); } }
   }
   mineToplamGuncelle();
   siralaMine();
@@ -1893,28 +1929,11 @@ function tonajPanelCiz(kap, R) {
   // Benim şimdiye kadar attığım düğümler (makine bazında)
   const ben = {};
   try { rows.forEach(r => { if (r.user_id !== myId()) return; const k = tonajAnahtar(r.name); if (k) ben[k] = (ben[k] || 0) + rsum(r); }); } catch (e) {}
-  const atilmis = R.liste.filter(x => x.a > 0), atilmamis = R.liste.filter(x => x.a <= 0);
-  const iyi = atilmis.filter(x => x.f <= 0), kotu = atilmis.filter(x => x.f > 0);
   const det = el("details", "tn-panel"); det.open = tonajAcik;
   det.ontoggle = () => { tonajAcik = det.open; };
   det.append(el("summary", "", R.eksik.length ? "⚠ Eksik düğüm olan makine: " + R.eksik.length : "✓ Tüm açık makinelerde düğüm tamam"));
-  det.append(el("p", "tn-say", "Düğüm atılan makineler → ✓ İyi: " + iyi.length + " · ✗ Kötü (eksik): " + kotu.length + "   |   Henüz düğüm atılmayan: " + atilmamis.length));
-  // Makine Listesi'nde ELLE seçilen gruplar: ATILAN = benim bugüne kadar (tüm tarih ve vardiyalarda) yazdığım tüm sayılar
-  // Elle seçilen makine gruplarını R.liste filtresinden bağımsız oluştur.
-  // R.liste yalnızca açık ve tonajı girilmiş makineleri içerdiği için,
-  // kapalı/tonajı boş makineler elle seçilmiş gruplardan kaybolabiliyordu.
-  const raporMap = new Map(R.liste.map(x => [x.k, x]));
-  const gruplu = Object.entries(tonajMap || {})
-    .filter(([k, m]) => Number(m.grup) > 0)
-    .map(([k, m]) => {
-      const mevcut = raporMap.get(k);
-      if (mevcut) return mevcut;
-      const gereken = (m.ton == null || !Number.isFinite(Number(m.ton))) ? 0 : tonajYuvarla(Number(m.ton));
-      const atilan = 0;
-      return { k, g: gereken, a: atilan, f: gereken, grup: Number(m.grup), grupDisiRapor: true };
-    })
-    .sort((a, b) => Number(a.grup) - Number(b.grup) ||
-      (Number(a.k.slice(1)) - Number(b.k.slice(1))));
+  // Makine Listesi'nde ELLE seçilen gruplar da düğüm atılan/atılmayan sayımına dahil edilir.
+  const gruplu = R.liste.filter(x => x.grup);
   if (gruplu.length) {
     if (atKip === "sabah") atKip = "tum"; // kaldırılan eski seçenekten kalan durumu güvenli biçimde sıfırla
     gecmisYukle();
@@ -1931,6 +1950,13 @@ function tonajPanelCiz(kap, R) {
       });
       return top;
     };
+    // Elle seçilmiş makine gruplarında üst özet, yalnızca seçili günün geçici
+    // R.liste.a değerini değil, seçilen hesaplama yöntemine göre hesaplanan atılanı kullanır.
+    const atilmis = R.liste.filter(x => (x.grup ? at(x) : x.a) > 0);
+    const atilmamis = R.liste.filter(x => (x.grup ? at(x) : x.a) <= 0);
+    const iyi = atilmis.filter(x => (x.grup ? at(x) : x.a) >= x.g);
+    const kotu = atilmis.filter(x => (x.grup ? at(x) : x.a) < x.g);
+    det.append(el("p", "tn-say", "Düğüm atılan makineler → ✓ İyi: " + iyi.length + " · ✗ Kötü (eksik): " + kotu.length + "   |   Henüz düğüm atılmayan: " + atilmamis.length));
     if (atKip !== "dongu") kalanGun = 0;
     const fx = x => Math.round((x.g - at(x)) * 100) / 100;
     // Gereken tamamlanınca (fark ≤ 0) kalan, HEDEF_POZ (384) hedefine göre yeniden hesaplanır
@@ -2096,8 +2122,8 @@ function renderShared() {
       const nm = (r.name || "").trim() || "(adsız)";
       const key = nm.toLocaleLowerCase("tr");
       let g = makineGruplari.get(key);
-      if (!g) { g = { name: nm, total: 0, satir: r.satir }; makineGruplari.set(key, g); }
-      g.total += rsum(r);
+      if (!g) { g = { name: nm, total: 0, a: 0, b: 0, ab: false, satir: r.satir }; makineGruplari.set(key, g); }
+      g.total += rsum(r); if (r.n2 != null) { g.ab=true; g.a+=num(r.n1); g.b+=num(r.n2); }
       g.satir = Math.min(g.satir, r.satir);
     });
     const list = [...makineGruplari.values()].sort((a, b) => adKar(a.name, b.name) || a.satir - b.satir);
@@ -2110,18 +2136,18 @@ function renderShared() {
     // Kontrol, birleştirilmiş satırlar üzerinde değil gerçek kayıt satırları üzerinde yapılmalı.
     if (!hamListe.length || !hamListe.some(r => COLS.some(k => r[k] != null && String(r[k]).trim() !== ""))) return;
     const wrap = el("div", "scroll"), tbl = el("table"), head = el("thead"), hr = el("tr");
-    ["MAKİNE","SAYI"].forEach(h => hr.append(el("th", "", h)));
+    ["MAKİNE","A","B","TOPLAM"].forEach(h => hr.append(el("th", "", h)));
     head.append(hr); tbl.append(head);
     const body = el("tbody"); let total = 0;
     list.forEach(r => {
       const tr = el("tr"), s = r.total; total += s;
       const nm = r.name, key = nm.toLocaleLowerCase("tr");
-      const cur = agg.get(key) || { nm, s: 0 }; cur.s += s; agg.set(key, cur);
+      const cur = agg.get(key) || { nm, s: 0, a: 0, b: 0, ab: false }; cur.s += s; if(r.ab){cur.ab=true;cur.a+=r.a;cur.b+=r.b;} agg.set(key, cur);
       tr.append(el("td", "sn", nm === "(adsız)" ? "" : nm));
-      tr.append(el("td", "t", fmt(s))); body.append(tr);
+      tr.append(el("td", "t", r.ab ? fmt(r.a) : "—")); tr.append(el("td", "t", r.ab ? fmt(r.b) : "—")); tr.append(el("td", "t", fmt(s))); body.append(tr);
     });
     const ft = el("tr", "tot");
-    ft.append(el("td", "", "TOPLAM"), el("td", "", fmt(total))); body.append(ft);
+    ft.append(el("td", "", "TOPLAM"), el("td", "", ""), el("td", "", ""), el("td", "", fmt(total))); body.append(ft);
     tbl.append(body); wrap.append(tbl);
     const rb = el("button", "alt sm", "Resim olarak kaydet"); rb.type = "button";
     const krBtn = el("button", "alt sm", "📊 Rekor / Özet"); krBtn.type = "button";
@@ -2146,13 +2172,13 @@ function renderShared() {
   if (agg.size) {
     const tbl = el("table"), head = el("thead"), hr = el("tr"), body = el("tbody");
     const TN = tonajHazir(), kt = TN ? tonajToplamlari(agg) : {}, R = TN ? tonajRapor(kt) : null;
-    (TN ? ["MAKİNE","SAYI","GEREKEN","DURUM"] : ["MAKİNE","SAYI"]).forEach(h => hr.append(el("th", "", h))); head.append(hr); tbl.append(head);
+    (TN ? ["MAKİNE","A","B","TOPLAM","GEREKEN","DURUM"] : ["MAKİNE","A","B","TOPLAM"]).forEach(h => hr.append(el("th", "", h))); head.append(hr); tbl.append(head);
     [...agg.values()].sort((a, b) => adKar(a.nm === "(adsız)" ? "" : a.nm, b.nm === "(adsız)" ? "" : b.nm)).forEach(x => {
-      const tr = el("tr"); tr.append(el("td", "sn", x.nm), el("td", "t", fmt(x.s)));
+      const tr = el("tr"); tr.append(el("td", "sn", x.nm), el("td", "t", x.ab?fmt(x.a):"—"), el("td", "t", x.ab?fmt(x.b):"—"), el("td", "t", fmt(x.s)));
       if (TN) { const d = tonajDurum(x.nm, kt); tr.append(el("td", "t", d.gereken == null ? "" : fmt(d.gereken)), el("td", "tn-d " + d.sinif, d.metin)); }
       body.append(tr);
     });
-    const ft = el("tr", "tot"); ft.append(el("td", "", "GENEL TOPLAM"), el("td", "", fmt(grand)));
+    const ft = el("tr", "tot"); ft.append(el("td", "", "GENEL TOPLAM"), el("td", "", ""), el("td", "", ""), el("td", "", fmt(grand)));
     if (TN) ft.append(el("td", "", fmt(R.topGer)), el("td", "", R.eksik.length ? R.eksik.length + " makine eksik" : "✓ Tamam"));
     body.append(ft);
     tbl.append(body); ab.append(tbl);
