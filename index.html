@@ -874,6 +874,8 @@ html.hz-kilit .sohbet-panel {
   align-items:center;
   gap:4px;
   min-width:0;
+  height:auto!important; /* A/B panel açılınca tablo satırı da büyüsün */
+  vertical-align:top;
   padding:4px 5px;
   white-space:normal;
 }
@@ -895,11 +897,23 @@ html.hz-kilit .sohbet-panel {
 }
 #app td.sy>.ab-giris{
   grid-column:1/-1;
+  position:static!important; /* diğer makine satırlarının üzerine binmesin */
+  display:none;
   width:100%;
   min-width:0;
-  margin:4px 0 0;
-  padding:8px;
+  height:auto!important;
+  margin:4px 0 2px;
+  padding:10px;
+  border:1px solid var(--blue);
+  border-radius:9px;
+  background:var(--card);
+  box-shadow:0 3px 10px rgba(0,0,0,.12);
 }
+#app td.sy>.ab-giris.acik{display:grid!important;grid-template-columns:1fr 1fr;gap:7px 9px;align-items:end}
+#app td.sy>.ab-giris label{min-width:0;margin:0;font-size:12px;font-weight:650}
+#app td.sy>.ab-giris input{display:block;margin-top:4px;height:38px;padding:0 8px}
+#app td.sy>.ab-giris button{grid-column:1/-1;height:36px;margin:2px 0 0}
+#app td.sy>.ab-giris .ab-mini{grid-column:1/-1;margin:0;font-size:11px}
 #app td.sy>.ab-giris label,
 #app td.sy>.ab-giris input,
 #app td.sy>.ab-giris button{
@@ -924,6 +938,8 @@ html.hz-kilit .sohbet-panel {
     padding:0;
   }
   #app td.sy>.ab-giris{padding:7px}
+  #app td.sy>.ab-giris.acik{grid-template-columns:1fr 1fr;gap:6px}
+  #app td.sy>.ab-giris input{height:36px}
 }
 
 </style>
