@@ -1898,7 +1898,7 @@ function satirEkle(r) {
   btnABAc.type = "button"; btnABAc.title = "A ve B sayılarını ayrı girmek için";
   syControls.append(iSayi,btn,btnABAc); tdS.append(syControls);
   const ab = el("div", "ab-giris"), labA = el("label", "", "A tarafı"), labB = el("label", "", "B tarafı");
-  const iA = el("input"), iB = el("input"), btnAB = el("button", "", "A + B toplamını kaydet"), abInfo = el("div", "ab-mini", "A ve B değerleri ayrı ayrı saklanır.");
+  const iA = el("input"), iB = el("input"), btnAB = el("button", "", "Girilen sayıları toplama ekle"), abInfo = el("div", "ab-mini", "A ve B değerleri ayrı ayrı saklanır.");
   [iA,iB].forEach(x => { x.type="number"; x.min="0"; x.step="any"; x.inputMode="decimal"; });
   iA.placeholder="A sayısı"; iB.placeholder="B sayısı"; labA.append(iA); labB.append(iB); btnAB.type="button"; ab.append(labA,labB,btnAB,abInfo); tr.append(tdS);
   // A/B girişi tablo satırlarının üzerine binmesin diye bağımsız bir pencere olarak açılır.
@@ -1927,8 +1927,10 @@ function satirEkle(r) {
     abOverlay.append(kart);
     abOverlay.addEventListener("click", e => { if (e.target === abOverlay) abKapat(); });
     document.body.append(abOverlay);
-    if (row && abModu(row)) { iA.value=show(row.n1); iB.value=show(row.n2); }
-    else { iA.value=""; iB.value=""; }
+    // Her açılışta yalnızca yeni eklenecek miktarlar girilir; mevcut toplamlar bilgi olarak gösterilir.
+    iA.value=""; iB.value="";
+    abInfo.textContent = "Mevcut toplam: A " + fmt(num(row && row.n1)) + " · B " + fmt(num(row && row.n2)) + ". Girdiğiniz sayılar mevcut toplama eklenecek.";
+    iA.placeholder="A'ya eklenecek"; iB.placeholder="B'ye eklenecek";
     iA.focus();
   };
   const abBaslat = () => {
@@ -1951,22 +1953,14 @@ function satirEkle(r) {
   const abKaydet = () => {
     const row=myRow(); if(!row) return;
     const a=iA.value.trim(), b=iB.value.trim();
-    // Her iki alan da boş bırakıldıysa mevcut A/B değerlerini gerçekten sil.
-    // Eski değerlerin tabloda kalmasının nedeni, önceki sürümün boş kaydı reddetmesiydi.
-    if(a==="" && b==="") {
-      row.n1=null; row.n2=null;
-      tt.textContent=fmt(rsum(row)); mineToplamGuncelle(); renderShared();
-      kirli[r]=true; clearTimeout(otoTimer[r]);
-      save(r).then(()=>tabloDoluKontrol());
-      abKapat(); iSayi.value=""; msg("A ve B sayıları silindi. Kalan toplam: "+fmt(rsum(row)));
-      return;
-    }
+    if(a==="" && b==="") { msg("Eklenecek A veya B sayısını girin."); return; }
     const av=a===""?0:parseFloat(a.replace(",",".")), bv=b===""?0:parseFloat(b.replace(",","."));
     if(!Number.isFinite(av)||!Number.isFinite(bv)||av<0||bv<0){ msg("A ve B için sıfır veya daha büyük geçerli sayılar girin."); return; }
-    row.n1=Math.round(av*1e6)/1e6; row.n2=Math.round(bv*1e6)/1e6;
+    row.n1=Math.round((num(row.n1)+av)*1e6)/1e6;
+    row.n2=Math.round((num(row.n2)+bv)*1e6)/1e6;
     tt.textContent=fmt(rsum(row)); mineToplamGuncelle(); renderShared();
     kirli[r]=true; clearTimeout(otoTimer[r]); save(r).then(()=>tabloDoluKontrol());
-    abKapat(); iSayi.value=""; msg("A ve B sayıları kaydedildi. Toplam: "+fmt(rsum(row)));
+    abKapat(); iSayi.value=""; msg("Girilen sayılar mevcut toplama eklendi. A: "+fmt(row.n1)+" · B: "+fmt(row.n2)+" · Toplam: "+fmt(rsum(row)));
   };
   iSayi.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); ekle(); } };
   iSayi.onchange = ekle;
