@@ -1951,7 +1951,16 @@ function satirEkle(r) {
   const abKaydet = () => {
     const row=myRow(); if(!row) return;
     const a=iA.value.trim(), b=iB.value.trim();
-    if(a==="" && b==="") { msg("A veya B tarafına bir sayı girin."); return; }
+    // Her iki alan da boş bırakıldıysa mevcut A/B değerlerini gerçekten sil.
+    // Eski değerlerin tabloda kalmasının nedeni, önceki sürümün boş kaydı reddetmesiydi.
+    if(a==="" && b==="") {
+      row.n1=null; row.n2=null;
+      tt.textContent=fmt(rsum(row)); mineToplamGuncelle(); renderShared();
+      kirli[r]=true; clearTimeout(otoTimer[r]);
+      save(r).then(()=>tabloDoluKontrol());
+      abKapat(); iSayi.value=""; msg("A ve B sayıları silindi. Kalan toplam: "+fmt(rsum(row)));
+      return;
+    }
     const av=a===""?0:parseFloat(a.replace(",",".")), bv=b===""?0:parseFloat(b.replace(",","."));
     if(!Number.isFinite(av)||!Number.isFinite(bv)||av<0||bv<0){ msg("A ve B için sıfır veya daha büyük geçerli sayılar girin."); return; }
     row.n1=Math.round(av*1e6)/1e6; row.n2=Math.round(bv*1e6)/1e6;
