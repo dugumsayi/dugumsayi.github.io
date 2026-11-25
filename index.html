@@ -2515,7 +2515,7 @@ function renderShared() {
     // Kontrol, birleştirilmiş satırlar üzerinde değil gerçek kayıt satırları üzerinde yapılmalı.
     if (!hamListe.length || !hamListe.some(r => COLS.some(k => r[k] != null && String(r[k]).trim() !== ""))) return;
     const wrap = el("div", "scroll"), tbl = el("table"), head = el("thead"), hr = el("tr");
-    ["MAKİNE","A","B","TOPLAM"].forEach(h => hr.append(el("th", "", h)));
+    ["MAKİNE","A","B","TOPLAM","İŞLEM"].forEach(h => hr.append(el("th", "", h)));
     head.append(hr); tbl.append(head);
     const body = el("tbody"); let total = 0;
     list.forEach(r => {
@@ -2523,7 +2523,51 @@ function renderShared() {
       const nm = r.name, key = nm.toLocaleLowerCase("tr");
       const cur = agg.get(key) || { nm, s: 0, a: 0, b: 0, ab: false }; cur.s += s; if(r.ab){cur.ab=true;cur.a+=r.a;cur.b+=r.b;} agg.set(key, cur);
       tr.append(el("td", "sn", nm === "(adsız)" ? "" : nm));
-      tr.append(el("td", "t", r.ab ? fmt(r.a) : "—")); tr.append(el("td", "t", r.ab ? fmt(r.b) : "—")); tr.append(el("td", "t", fmt(s))); body.append(tr);
+      tr.append(el("td", "t", r.ab ? fmt(r.a) : "—")); tr.append(el("td", "t", r.ab ? fmt(r.b) : "—")); tr.append(el("td", "t", fmt(s)));
+      const islem = el("td", "t");
+      if (uid === myId() && duzenlenir() && !donduMu()) {
+        const duzelt = el("button", "alt sm", "Düzelt"); duzelt.type = "button";
+        duzelt.title = "Bu makinenin A ve B toplamlarını düzelt";
+        duzelt.onclick = async (e) => {
+          e.stopPropagation();
+          const hedefler = u.list.filter(x => (x.name || "").trim().toLocaleLowerCase("tr") === key);
+          if (!hedefler.length) { msg("Düzeltilecek makine kaydı bulunamadı."); return; }
+          const yeniA = prompt(nm + " için doğru A toplamını yazın:", fmt(r.a));
+          if (yeniA === null) return;
+          const yeniB = prompt(nm + " için doğru B toplamını yazın:", fmt(r.b));
+          if (yeniB === null) return;
+          const parseDuzelt = v => {
+            const t = String(v).trim().replace(",", ".");
+            if (!t) return null;
+            const n = Number(t);
+            return Number.isFinite(n) && n >= 0 ? n : NaN;
+          };
+          const a0 = parseDuzelt(yeniA), b0 = parseDuzelt(yeniB);
+          if (Number.isNaN(a0) || Number.isNaN(b0) || a0 === null || b0 === null) {
+            alert("A ve B için sıfır veya daha büyük geçerli sayılar girin."); return;
+          }
+          if (!confirm(nm + " makinesinin A toplamı " + fmt(a0) + ", B toplamı " + fmt(b0) + " olarak düzeltilecek. Onaylıyor musunuz?")) return;
+          // Aynı makine birden fazla satırda kayıtlıysa toplamı ilk kayda al, diğer A/B değerlerini sıfırla.
+          hedefler.sort((x,y) => x.satir-y.satir);
+          hedefler.forEach((x,i) => {
+            x.n1 = i === 0 ? a0 : 0;
+            x.n2 = i === 0 ? b0 : 0;
+            kirli[x.satir] = true;
+            clearTimeout(otoTimer[x.satir]);
+          });
+          try {
+            await Promise.all(hedefler.map(x => save(x.satir)));
+            fillMine(); renderShared();
+            msg(nm + " makinesinin sayıları düzeltildi ve kaydedildi.");
+          } catch (err) {
+            msg("Düzeltme kaydedilemedi: " + (err && err.message ? err.message : err));
+          }
+        };
+        islem.append(duzelt);
+      } else {
+        islem.textContent = "—";
+      }
+      tr.append(islem); body.append(tr);
     });
     const ft = el("tr", "tot");
     ft.append(el("td", "", "TOPLAM"), el("td", "", ""), el("td", "", ""), el("td", "", fmt(total))); body.append(ft);
