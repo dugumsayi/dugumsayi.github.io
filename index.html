@@ -2369,6 +2369,25 @@ function tonajPanelCiz(kap, R) {
       return top;
     };
     if (atKip !== "dongu") kalanGun = 0;
+    // Makinenin kendi grubundan farklı bir gruba kayıtlı kullanıcıların attığı sayı.
+    // Aynı tarih/vardiya filtresi ve kullanıcı kapsamı (tüm kullanıcılar/ben/grubum) uygulanır.
+    const baskaGrupAt = x => {
+      if (!gecmisMap || !x.grup) return 0;
+      const detay = gecmisDetay[x.k] || {};
+      let toplam = 0;
+      Object.entries(detay).forEach(([dk, kullanicilar]) => {
+        const [t, vn] = dk.split("|");
+        const aralikta = atKip === "tum" ||
+          (atKip === "dongu" ? donguIcinde(t, Number(vn)) :
+            (t === secili && (atKip === "gun" || Number(vn) === gv)));
+        if (!aralikta) return;
+        Object.entries(kullanicilar).forEach(([uid, sayi]) => {
+          const kullaniciGrubu = Number(grupOf(uid) || 0);
+          if (kapsamMi(uid) && kullaniciGrubu > 0 && kullaniciGrubu !== Number(x.grup)) toplam += sayi;
+        });
+      });
+      return toplam;
+    };
     const fx = x => Math.round((x.g - at(x)) * 100) / 100;
     // Gereken tamamlanınca (fark ≤ 0) kalan, HEDEF_POZ (384) hedefine göre yeniden hesaplanır
     // Gereken tamamlanınca: atılan 384'lük turlara bölünür; içinde bulunulan turun kalanı gösterilir (ör. 981 → 2 tur tamam, 213 atıldı, kalan 171)
@@ -2445,8 +2464,9 @@ function tonajPanelCiz(kap, R) {
       };
     };
     const topAt = gruplu.reduce((p, x) => p + at(x), 0), topKalanPoz = Math.max(0, HEDEF_POZ - topAt);
+    const topBaskaGrup = gruplu.reduce((p, x) => p + baskaGrupAt(x), 0);
     const topKalanMak = gruplu.reduce((p, x) => p + kalanX(x), 0);
-    const hedefP = el("p", "tn-say", "Atılması gereken: " + fmt(HEDEF_POZ) + " pozisyon · Atılan: " + fmt(topAt) + " · KALAN pozisyon: " + fmt(topKalanPoz) + "   |   Makinelerin toplam kalanı: " + kalanMetin(topKalanMak) + " · vardiya başına " + VARDIYA_HEDEF);
+    const hedefP = el("p", "tn-say", "Atılması gereken: " + fmt(HEDEF_POZ) + " pozisyon · Atılan: " + fmt(topAt) + " (başka gruptan: " + fmt(topBaskaGrup) + ") · KALAN pozisyon: " + fmt(topKalanPoz) + "   |   Makinelerin toplam kalanı: " + kalanMetin(topKalanMak) + " · vardiya başına " + VARDIYA_HEDEF);
     gd.append(hedefP);
     const gt = el("table", "tn-gt"), gh = el("tr");
     ["GRUP / MAKİNE", "SAYI (gereken)", "ATILAN (" + (atKip === "tum" ? kapEtiket() : atKip === "gun" ? "seçili gün" : atKip === "dongu" ? "vardiya döngüsü" : "seçili vardiya") + ")", "FARK", "KALAN (" + (atKip === "tum" ? kapEtiket() : atKip === "gun" ? "seçili gün" : atKip === "dongu" ? "vardiya döngüsü" : "seçili vardiya") + ")", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
