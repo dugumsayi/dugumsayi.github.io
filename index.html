@@ -1900,7 +1900,21 @@ function tonajPanelCiz(kap, R) {
   det.append(el("summary", "", R.eksik.length ? "⚠ Eksik düğüm olan makine: " + R.eksik.length : "✓ Tüm açık makinelerde düğüm tamam"));
   det.append(el("p", "tn-say", "Düğüm atılan makineler → ✓ İyi: " + iyi.length + " · ✗ Kötü (eksik): " + kotu.length + "   |   Henüz düğüm atılmayan: " + atilmamis.length));
   // Makine Listesi'nde ELLE seçilen gruplar: ATILAN = benim bugüne kadar (tüm tarih ve vardiyalarda) yazdığım tüm sayılar
-  const gruplu = R.liste.filter(x => x.grup);
+  // Elle seçilen makine gruplarını R.liste filtresinden bağımsız oluştur.
+  // R.liste yalnızca açık ve tonajı girilmiş makineleri içerdiği için,
+  // kapalı/tonajı boş makineler elle seçilmiş gruplardan kaybolabiliyordu.
+  const raporMap = new Map(R.liste.map(x => [x.k, x]));
+  const gruplu = Object.entries(tonajMap || {})
+    .filter(([k, m]) => Number(m.grup) > 0)
+    .map(([k, m]) => {
+      const mevcut = raporMap.get(k);
+      if (mevcut) return mevcut;
+      const gereken = (m.ton == null || !Number.isFinite(Number(m.ton))) ? 0 : tonajYuvarla(Number(m.ton));
+      const atilan = 0;
+      return { k, g: gereken, a: atilan, f: gereken, grup: Number(m.grup), grupDisiRapor: true };
+    })
+    .sort((a, b) => Number(a.grup) - Number(b.grup) ||
+      (Number(a.k.slice(1)) - Number(b.k.slice(1))));
   if (gruplu.length) {
     if (atKip === "sabah") atKip = "tum"; // kaldırılan eski seçenekten kalan durumu güvenli biçimde sıfırla
     gecmisYukle();
