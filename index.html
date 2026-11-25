@@ -1787,12 +1787,19 @@ async function tonajYukle(zorla) {
     ((data && data.deger && data.deger.machines) || []).forEach(x => {
       const t = (x.ton === "" || x.ton == null) ? null : Number(x.ton);
       const gp = Number(x.grup);
-      m[String(x.name).trim().toUpperCase()] = { ton: Number.isFinite(t) ? t : null, acik: x.included !== false, grup: (Number.isFinite(gp) && gp > 0) ? gp : null };
+      // Makine adını her yerde aynı anahtara çevir: 27, S27 ve "Makine 27" = S27.
+      const anahtar = tonajAnahtar(x.name);
+      if (!anahtar) return;
+      m[anahtar] = { ton: Number.isFinite(t) ? t : null, acik: x.included !== false, grup: (Number.isFinite(gp) && gp > 0) ? gp : null };
     });
     tonajMap = m; try { pGrupDoldur(); } catch (e) {} renderShared();
   } catch (e) { /* okunamazsa kontrol gösterilmez */ }
 }
-function tonajAnahtar(ad) { const m = /^S?\s*0*(\d{1,3})$/.exec(String(ad || "").trim().toUpperCase()); return m ? "S" + m[1] : null; }
+function tonajAnahtar(ad) {
+  // "27", "S27", "s027", "Makine 27" ve "Makine S27" aynı makine anahtarına dönüşür.
+  const m = /^(?:MAKİNE|MAKINE)?\s*S?\s*0*(\d{1,3})$/.exec(String(ad || "").trim().toLocaleUpperCase("tr-TR"));
+  return m ? "S" + Number(m[1]) : null;
+}
 function tonajToplamlari(agg) { const t = {}; agg.forEach(x => { const k = tonajAnahtar(x.nm); if (k) t[k] = (t[k] || 0) + x.s; }); return t; }
 function tonajDurum(ad, kt) {
   const k = tonajAnahtar(ad); if (!k) return { sinif: "", metin: "", gereken: null };
