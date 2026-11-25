@@ -1929,13 +1929,10 @@ function tonajPanelCiz(kap, R) {
   // Benim şimdiye kadar attığım düğümler (makine bazında)
   const ben = {};
   try { rows.forEach(r => { if (r.user_id !== myId()) return; const k = tonajAnahtar(r.name); if (k) ben[k] = (ben[k] || 0) + rsum(r); }); } catch (e) {}
-  const atilmis = R.liste.filter(x => x.a > 0), atilmamis = R.liste.filter(x => x.a <= 0);
-  const iyi = atilmis.filter(x => x.f <= 0), kotu = atilmis.filter(x => x.f > 0);
   const det = el("details", "tn-panel"); det.open = tonajAcik;
   det.ontoggle = () => { tonajAcik = det.open; };
   det.append(el("summary", "", R.eksik.length ? "⚠ Eksik düğüm olan makine: " + R.eksik.length : "✓ Tüm açık makinelerde düğüm tamam"));
-  det.append(el("p", "tn-say", "Düğüm atılan makineler → ✓ İyi: " + iyi.length + " · ✗ Kötü (eksik): " + kotu.length + "   |   Henüz düğüm atılmayan: " + atilmamis.length));
-  // Makine Listesi'nde ELLE seçilen gruplar: ATILAN = benim bugüne kadar (tüm tarih ve vardiyalarda) yazdığım tüm sayılar
+  // Makine Listesi'nde ELLE seçilen gruplar da düğüm atılan/atılmayan sayımına dahil edilir.
   const gruplu = R.liste.filter(x => x.grup);
   if (gruplu.length) {
     if (atKip === "sabah") atKip = "tum"; // kaldırılan eski seçenekten kalan durumu güvenli biçimde sıfırla
@@ -1953,6 +1950,13 @@ function tonajPanelCiz(kap, R) {
       });
       return top;
     };
+    // Elle seçilmiş makine gruplarında üst özet, yalnızca seçili günün geçici
+    // R.liste.a değerini değil, seçilen hesaplama yöntemine göre hesaplanan atılanı kullanır.
+    const atilmis = R.liste.filter(x => (x.grup ? at(x) : x.a) > 0);
+    const atilmamis = R.liste.filter(x => (x.grup ? at(x) : x.a) <= 0);
+    const iyi = atilmis.filter(x => (x.grup ? at(x) : x.a) >= x.g);
+    const kotu = atilmis.filter(x => (x.grup ? at(x) : x.a) < x.g);
+    det.append(el("p", "tn-say", "Düğüm atılan makineler → ✓ İyi: " + iyi.length + " · ✗ Kötü (eksik): " + kotu.length + "   |   Henüz düğüm atılmayan: " + atilmamis.length));
     if (atKip !== "dongu") kalanGun = 0;
     const fx = x => Math.round((x.g - at(x)) * 100) / 100;
     // Gereken tamamlanınca (fark ≤ 0) kalan, HEDEF_POZ (384) hedefine göre yeniden hesaplanır
