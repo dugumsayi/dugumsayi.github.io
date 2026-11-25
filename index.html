@@ -78,10 +78,6 @@ tr.tot td{background:var(--tot)!important;color:#111;font-weight:600;text-align:
 .tn-panel table.tn-gt th:first-child,.tn-panel table.tn-gt td:first-child{min-width:78px}
 .tn-panel table.tn-gt td:last-child{white-space:nowrap}
 @media(max-width:600px){.tn-panel table.tn-gt th{font-size:11px;padding:5px 3px}.tn-panel table.tn-gt td{font-size:13px;padding:5px 3px}.tn-panel table.tn-gt th:first-child,.tn-panel table.tn-gt td:first-child{min-width:64px}}
-.tn-kirmizi{color:#ff3b3b;font-weight:700}
-.tn-gun{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;padding:3px 0!important}
-.tn-panel tr.tn-sec td{font-weight:800;background:rgba(37,99,235,.16)}
-.tn-gunk{margin:4px 0 8px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card)}.tn-gunb{font-weight:700;margin-bottom:4px}
 .tn-tikla{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 .tn-panel tr.tn-detay td{text-align:left;font-weight:400;font-size:13px;background:var(--bg)}.tn-detay div{padding:2px 0}
 .tn-panel tr.tn-grup-bas td{background:var(--bg);font-weight:800;border-top:2px solid var(--line)}
@@ -127,14 +123,12 @@ button.grn{background:#2a9d4a}
   #users h3,h3{margin:14px 0 4px}
 }
 /* Paylaşılan tablolarda MAKİNE ve SAYI sütunları eşit genişlikte */
-#agg table,#users table{table-layout:fixed;width:100%;max-width:100%}
-#agg th,#agg td,#users th,#users td{width:auto;min-width:0}
+#agg table,#users table{table-layout:fixed;width:300px;max-width:100%}
+#agg th,#agg td,#users th,#users td{width:50%;min-width:0}
 /* ===== Profesyonel tema ===== */
 td.sy{min-width:200px;white-space:nowrap}
 td.sy input{width:calc(100% - 46px)}
 td.sy button.ekle{width:38px;height:30px;padding:0;margin:0 4px 0 0;font-size:20px;line-height:1;vertical-align:middle}
-td.sy button.ab-toggle{height:30px;padding:0 7px;margin:0 3px 0 0;font-size:12px;vertical-align:middle}
-.ab-giris{display:none;margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-width:190px}.ab-giris.acik{display:block}.ab-giris label{display:block;font-size:12px;color:var(--mut);margin:4px 0}.ab-giris input{width:100%;height:34px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg);text-align:center}.ab-giris button{width:100%;height:32px;margin-top:6px}.ab-mini{font-size:12px;color:var(--mut);margin-top:4px}
 body{max-width:1180px;padding:20px 16px 56px;line-height:1.35}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:0;background:none;border:none;border-radius:0;box-shadow:none;margin:0 0 14px}
 .brand{display:flex;gap:12px;align-items:center;min-width:0}
@@ -300,7 +294,6 @@ table.lg tr.lg-ad td{opacity:.75}
   #app td.m input{font-size:15px}
   #app td.sy input{width:calc(100% - 38px)}
   #app td.sy button.ekle{width:34px;margin:0 2px 0 0}
-  #app td.sy button.ab-toggle{padding:0 5px;margin:0 2px 0 0}
   #profil,#admin,#logBox{padding:12px}
   #profil{max-width:none}
   #logBox .bar select,#logBox .bar button{flex:1 1 140px}
@@ -906,8 +899,6 @@ html.hz-kilit .sohbet-panel {
       <label id="pYoneticiGizleBilgi" class="mut hide">Bu ayar normal kullanıcıların ve ziyaretçilerin listelerinde geçerlidir. Yönetim yetkiniz değişmez.</label>
       <label class="mut" for="pVardiya">Vardiyam</label>
       <select id="pVardiya"><option value="">Vardiya seçilmedi</option><option value="A">A vardiyası</option><option value="B">B vardiyası</option><option value="C">C vardiyası</option><option value="D">D vardiyası</option></select>
-      <label class="mut" for="pGrup">Grubum (vardiyadan ayrı)</label>
-      <select id="pGrup"><option value="">Grup seçilmedi</option></select>
       <div id="tabloRenkSatir" class="hide" style="display:flex;flex-direction:column;gap:6px">
         <label class="mut">Tablo rengim <input id="tabloRenkKisisel" type="color" value="#3159b7"></label>
         <button id="tabloRenkSifirlaKisisel" type="button" class="alt sm">Yönetici rengine dön</button>
@@ -1416,7 +1407,6 @@ $("cikis").onclick = async () => {
   try { [localStorage, sessionStorage].forEach(st0 => Object.keys(st0).filter(k => /^sb-.*-auth-token/.test(k)).forEach(k => st0.removeItem(k))); } catch (e) {}
   lsDel(OTURUM_KEY); cevrimdisiOturum = false; bellekSifre = null;
   me = null; profil = null; sonBan = ""; btn.disabled = false;
-  gecmisMap = null; gecmisDetay = {}; gecmisZaman = 0; gecmisYukleniyor = false; gecmisAcik.clear();   // önceki kullanıcının geçmişi kalmasın
   $("profil").classList.add("hide"); $("admin").classList.add("hide");
   hazirla();
 };
@@ -1535,57 +1525,25 @@ function satirEkle(r) {
   tdM.append(iAd); tr.append(tdM);
   // TOPLAM
   const tt = el("td", "t", "0"); tr.append(tt); myTot.push(tt);
-  // SAYI: 1 girildiğinde A/B giriş alanları açılır; diğer sayılar normal toplam olarak eklenir.
-  const tdS = el("td", "sy"), iSayi = el("input"), btn = el("button", "ekle", "+"), btnABAc = el("button", "ab-toggle", "A/B");
+  // SAYI: yazılan sayı satırın toplamına eklenir, kutu boşalır
+  const tdS = el("td", "sy"), iSayi = el("input"), btn = el("button", "ekle", "+");
   iSayi.type = "text"; iSayi.inputMode = "decimal"; iSayi.placeholder = "Sayı yaz";
   btn.type = "button"; btn.title = "Toplama ekle";
-  btnABAc.type = "button"; btnABAc.title = "A ve B sayılarını ayrı girmek için";
-  const ab = el("div", "ab-giris"), labA = el("label", "", "A tarafı"), labB = el("label", "", "B tarafı");
-  const iA = el("input"), iB = el("input"), btnAB = el("button", "", "A + B toplamını kaydet"), abInfo = el("div", "ab-mini", "A ve B değerleri ayrı ayrı saklanır.");
-  [iA,iB].forEach(x => { x.type="number"; x.min="0"; x.step="any"; x.inputMode="decimal"; });
-  iA.placeholder="A sayısı"; iB.placeholder="B sayısı"; labA.append(iA); labB.append(iB); btnAB.type="button"; ab.append(labA,labB,btnAB,abInfo); tdS.append(iSayi,btn,btnABAc,ab); tr.append(tdS);
-  const abModu = row => !!row && row.n2 != null;
-  const abAc = row => {
-    ab.classList.add("acik");
-    if (row && abModu(row)) { iA.value=show(row.n1); iB.value=show(row.n2); }
-    else { iA.value=""; iB.value=""; }
-    iA.focus();
-  };
-  const abBaslat = () => {
-    const row = myRow();
-    if (!row) { msg("Satır henüz hazır değil, birkaç saniye sonra tekrar deneyin."); return; }
-    iSayi.value = "";
-    abAc(row);
-    msg("A ve B taraflarının sayılarını girin.");
-  };
   const ekle = () => {
     const ham = iSayi.value.trim(); if (!ham) return;
     const v = parseFloat(ham.replace(",", "."));
     if (isNaN(v)) { msg("Geçerli bir sayı yazın."); iSayi.value = ""; return; }
     const row = myRow(); if (!row) { msg("Satır henüz hazır değil, birkaç saniye sonra tekrar deneyin."); return; }
-    const hedef = abModu(row) ? "n3" : "n1";
-    row[hedef] = Math.round((num(row[hedef]) + v) * 1e6) / 1e6;
+    row.n1 = Math.round((num(row.n1) + v) * 1e6) / 1e6;     // toplam n1'de birikir (eski n2-n6 değerleri de toplamda sayılır)
     iSayi.value = ""; tt.textContent = fmt(rsum(row)); mineToplamGuncelle(); renderShared();
     kirli[r] = true; clearTimeout(otoTimer[r]); save(r).then(() => tabloDoluKontrol());
   };
-  const abKaydet = () => {
-    const row=myRow(); if(!row) return;
-    const a=iA.value.trim(), b=iB.value.trim();
-    if(a==="" && b==="") { msg("A veya B tarafına bir sayı girin."); return; }
-    const av=a===""?0:parseFloat(a.replace(",",".")), bv=b===""?0:parseFloat(b.replace(",","."));
-    if(!Number.isFinite(av)||!Number.isFinite(bv)||av<0||bv<0){ msg("A ve B için sıfır veya daha büyük geçerli sayılar girin."); return; }
-    row.n1=Math.round(av*1e6)/1e6; row.n2=Math.round(bv*1e6)/1e6;
-    tt.textContent=fmt(rsum(row)); mineToplamGuncelle(); renderShared();
-    kirli[r]=true; clearTimeout(otoTimer[r]); save(r).then(()=>tabloDoluKontrol());
-    ab.classList.remove("acik"); iSayi.value=""; msg("A ve B sayıları kaydedildi. Toplam: "+fmt(rsum(row)));
-  };
   iSayi.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); ekle(); } };
   iSayi.onchange = ekle;
-  btn.onmousedown = e => e.preventDefault();
-  btn.onclick = ekle; btnABAc.onclick = abBaslat; btnAB.onclick=abKaydet;
-  [iA,iB].forEach(x=>x.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();abKaydet();}});
-  const controls=[iA,iB,btnAB];
-  body.append(tr); const inputPair=[iAd, iSayi]; inputPair.ab=[ab,iA,iB,btnAB]; myInputs.push(inputPair); myTr.push(tr);
+  btn.onmousedown = e => e.preventDefault();   // tıklayınca kutu odağını kaybedip çift ekleme olmasın
+  btn.onclick = ekle;
+  tdS.append(iSayi, btn); tr.append(tdS);
+  body.append(tr); myInputs.push([iAd, iSayi]); myTr.push(tr);
 }
 
 // Tüm satırlar dolunca altına yeni boş satır ekle
@@ -1659,7 +1617,7 @@ $("satirSilBtn").onclick = satirSil;
 // "Gönder": bekleyen kayıtları sunucuya yazar, sonra bu vardiyanın tablosunu dondurur (hiçbir işlem yapılamaz)
 function dondurUygula() {
   const d = donduMu();
-  myInputs.forEach(f => { f[0].disabled = d; f[1].disabled = d; (f.ab||[]).forEach(x=>{ if(x && "disabled" in x) x.disabled=d; }); });
+  myInputs.forEach(f => { f[0].disabled = d; f[1].disabled = d; });
   document.querySelectorAll("#mine button").forEach(b => { b.disabled = d; });
   ["satirBtn", "satirSilBtn", "sayiSil"].forEach(i => { const b = $(i); if (b) b.disabled = d; });
   $("app").classList.toggle("dondu", d);
@@ -1705,7 +1663,6 @@ function fillMine() {
     const f = myInputs[r];
     if (document.activeElement !== f[0]) f[0].value = row.name || ""; else row.name = f[0].value;
     myTot[r].textContent = fmt(rsum(row));
-    const pair=myInputs[r]; if(pair && pair.ab){ const [panel,a,b]=pair.ab; if(row.n2!=null){ panel.classList.add("acik"); if(document.activeElement!==a) a.value=show(row.n1); if(document.activeElement!==b) b.value=show(row.n2); } }
   }
   mineToplamGuncelle();
   siralaMine();
@@ -1759,20 +1716,6 @@ $("aggResim").onclick = () => tabloResim($("agg").querySelector("table"), "Genel
 // ================= TONAJ KONTROLÜ: gereken düğüm = makine tonajı / 45 =================
 // Tonajlar "Makine Listesi" sayfasının kaydından (makine_listesi tablosu) okunur; makine adı 3, S3 veya s3 yazılabilir.
 const TONAJ_BOL = 45;
-const VARDIYA_HEDEF = 92;   // vardiya başına atılması gereken düğüm
-let kalanGun = 0;   // döngü modunda: seçili günden döngü sonuna kalan çalışma günü
-const tatilGunleri = () => lsGet("tatilGunleriV1", []);
-// Çalışma günü: hafta sonu ve tatil listesindeki günler sayılmaz
-const calismaGunleri = (b, e) => {
-  const tat = new Set(tatilGunleri()), r = [];
-  for (let d = new Date(b + "T12:00:00Z"); d <= new Date(e + "T12:00:00Z"); d = new Date(d.getTime() + 86400000)) {
-    const w = d.getUTCDay(), t = d.toISOString().slice(0, 10);
-    if (w !== 0 && w !== 6 && !tat.has(t)) r.push(t);
-  }
-  return r;
-};
-const kalanMetin = k => k > 0 ? fmt(k) + " (" + Math.ceil(k / VARDIYA_HEDEF) + " vardiya" + (atKip === "dongu" && kalanGun > 0 ? " · günde " + Math.ceil(k / kalanGun) : "") + (atKip === "dongu" ? " · döngü" : "") + ")" : "0";
-const HEDEF_POZ = 384;   // atılması gereken toplam pozisyon (düğüm) hedefi
 const tonajYuvarla = v => Math.round(v / TONAJ_BOL);   // Makine Listesi'ndeki "SAYI" sütunuyla aynı yuvarlama
 let tonajMap = null, tonajZaman = 0, tonajAcik = true;
 const tonajHazir = () => !!tonajMap && Object.keys(tonajMap).length > 0;
@@ -1789,7 +1732,7 @@ async function tonajYukle(zorla) {
       const gp = Number(x.grup);
       m[String(x.name).trim().toUpperCase()] = { ton: Number.isFinite(t) ? t : null, acik: x.included !== false, grup: (Number.isFinite(gp) && gp > 0) ? gp : null };
     });
-    tonajMap = m; try { pGrupDoldur(); } catch (e) {} renderShared();
+    tonajMap = m; renderShared();
   } catch (e) { /* okunamazsa kontrol gösterilmez */ }
 }
 function tonajAnahtar(ad) { const m = /^S?\s*0*(\d{1,3})$/.exec(String(ad || "").trim().toUpperCase()); return m ? "S" + m[1] : null; }
@@ -1815,115 +1758,27 @@ function tonajRapor(kt) {
   liste.sort((x, y) => Number(x.k.slice(1)) - Number(y.k.slice(1)));
   return { liste, topGer, eksik: liste.filter(x => x.f > 0) };
 }
-// ---- Kullanıcı grubu: vardiyadan AYRI, kullanıcı bazında tutulur. Makine grubu ise makine ADI bazında (Makine Listesi) tutulur;
-// aynı makineye kim girerse girsin sayı o makinenin grubuna yazılır. Kapsam: tum = tüm kullanıcılar | ben | grubum ----
-let kulGrup = {}, kapsam = "tum";   // kulGrup: user_id -> grup no
-const grupOf = id => kulGrup[id] || null;
-const kapsamMi = uid => !myId() || kapsam === "tum" || (kapsam === "ben" ? uid === myId() : (!!grupOf(myId()) && grupOf(uid) === grupOf(myId())));
-const kapEtiket = () => (!myId() || kapsam === "tum") ? "tüm kullanıcılar" : kapsam === "ben" ? "tüm geçmiş · sadece siz" : "tüm geçmiş · grubunuz";
-function grupNolari(mevcut) {
-  const nos = new Set(mevcut ? [Number(mevcut)] : []);
-  Object.values(tonajMap || {}).forEach(m => { if (m.grup) nos.add(m.grup); });
-  if (!nos.size) [1, 2, 3, 4].forEach(n => nos.add(n));
-  return [...nos].sort((a, b) => a - b);
-}
-function pGrupDoldur() {
-  const sl = $("pGrup"); if (!sl) return;
-  const mevcut = me ? grupOf(myId()) : null;
-  sl.textContent = "";
-  const o0 = el("option", "", "Grup seçilmedi"); o0.value = ""; sl.append(o0);
-  grupNolari(mevcut).forEach(n => { const o = el("option", "", n + ". Grup"); o.value = String(n); sl.append(o); });
-  sl.value = mevcut ? String(mevcut) : "";
-}
-async function kulGrupYukle() {
-  if (!sb) return;
-  try {
-    const { data, error } = await sb.rpc("kullanici_gruplari"); if (error) throw error;
-    const m = {}; (data || []).forEach(x => { const g = Number(x.grup); if (x.id && g > 0) m[x.id] = g; });
-    kulGrup = m; pGrupDoldur(); renderShared();
-  } catch (e) { /* grup-alani.sql çalıştırılmadıysa grup alanı boş kalır, diğer hesaplar etkilenmez */ }
-}
-// Gün|vardiya -> toplam; seçili kapsamdaki kullanıcıların sayıları (gecmisDetay: makine -> gün|vno -> user_id -> toplam)
-const kapDet = k => { const o = {}; Object.entries(gecmisDetay[k] || {}).forEach(([dk, u]) => Object.entries(u).forEach(([uid, v]) => { if (kapsamMi(uid)) o[dk] = (o[dk] || 0) + v; })); return o; };
 // Benim bugüne kadar yazdığım TÜM sayılar (tüm tarih ve vardiyalar), makine bazında toplam
-let gecmisMap = null, gecmisDetay = {}, gecmisZaman = 0, gecmisYukleniyor = false, gecmisKip = null;   // gecmisKip: kullanıcı id'si (kişisel) veya "tum" (çıkış yapılmışken herkesin toplamı)
-let atKip = "tum", atYon = "son";   
-const gunKaydir = (t, n) => new Date(new Date(t + "T12:00:00Z").getTime() + n * 86400000).toISOString().slice(0, 10);
-// Vardiya döngüsü: ilk sayı günü (08:00–16:00 vardiyası) → son sayı günü (08:00–16:00 vardiyası, dahil). Aradaki tatil günleri sayılmaz.
-const DONGULER = [["2026-11-01", "2026-11-18"], ["2026-11-21", "2026-12-12"]];   // bilinen dönemler (başlangıç, bitiş)
-let donguB = null, donguE = null;
-const donguAralik = () => {
-  if (!donguB || !donguE) {
-    const k = lsGet("donguAralikV2", null);
-    if (k && k[0] && k[1]) { donguB = k[0]; donguE = k[1]; }
-    else { const d = DONGULER.find(x => secili >= x[0] && secili <= x[1]) || DONGULER[DONGULER.length - 1]; donguB = d[0]; donguE = d[1]; }
-  }
-  return [donguB, donguE];
-};
-const donguAyarla = (b, e) => { donguB = b; donguE = e; lsSet("donguAralikV2", [b, e]); };
-// (tarih, vardiya no) döngü aralığında mı? İlk gün 08:00 vardiyasından başlar, son gün 08:00–16:00 vardiyasında biter.
-const donguIcinde = (t, n) => { const [b, e] = donguAralik(); return (t > b || (t === b && n >= 1)) && (t < e || (t === e && n <= 1)); };
+let gecmisMap = null, gecmisDetay = {}, gecmisZaman = 0, gecmisYukleniyor = false;
 const gecmisAcik = new Set();   // açık bırakılan "ne zaman yazılmış" satırları
 async function gecmisYukle(zorla) {
-  if (!sb || !navigator.onLine || gecmisYukleniyor) return;
-  const kip = myId() || "tum";
-  if (gecmisKip !== kip) { gecmisKip = kip; gecmisMap = null; gecmisDetay = {}; gecmisZaman = 0; zorla = true; gecmisAcik.clear(); }   // giriş/çıkış değişince veri türü de değişir
+  if (!sb || !navigator.onLine || !myId() || gecmisYukleniyor) return;
   if (!zorla && Date.now() - gecmisZaman < 60000) return;
   gecmisYukleniyor = true; gecmisZaman = Date.now();
   let tamam = false;
   try {
     const t = {}, det = {};
     for (let from = 0; ; from += 1000) {   // Supabase tek sorguda en fazla 1000 satır verir; sayfa sayfa çekilir
-      let q = sb.from("sayilar").select("user_id,tarih,vno,name,n1,n2,n3,n4,n5,n6");
-      const { data, error } = await q.order("tarih").order("vno").order("satir").range(from, from + 999);
+      const { data, error } = await sb.from("sayilar").select("tarih,vno,name,n1,n2,n3,n4,n5,n6").eq("user_id", myId())
+        .order("tarih").order("vno").order("satir").range(from, from + 999);
       if (error) throw error;
-      data.forEach(r => { const k = tonajAnahtar(r.name); if (!k) return; const v = rsum(r); if (!v) return; t[k] = (t[k] || 0) + v; const dk = r.tarih + "|" + (Number(r.vno) || 0), d = det[k] || (det[k] = {}), u = d[dk] || (d[dk] = {}); u[r.user_id] = (u[r.user_id] || 0) + v; });
+      data.forEach(r => { const k = tonajAnahtar(r.name); if (!k) return; const v = rsum(r); if (!v) return; t[k] = (t[k] || 0) + v; const dk = r.tarih + "|" + (Number(r.vno) || 0), d = det[k] || (det[k] = {}); d[dk] = (d[dk] || 0) + v; });
       if (data.length < 1000) break;
     }
-    if (gecmisKip === kip) { gecmisMap = t; gecmisDetay = det; tamam = true; }
+    gecmisMap = t; gecmisDetay = det; tamam = true;
   } catch (e) { /* okunamazsa seçili gün/vardiya değerleri gösterilir */ }
   gecmisYukleniyor = false;
   if (tamam) { try { renderShared(); } catch (e) {} }
-}
-// Seçilen tarih + vardiyada, ilgili makinelere sayı yazan kullanıcıların tablosu
-async function gunKullaniciTablosu(kap, tarih, vno, anahtarlar) {
-  kap.textContent = "";
-  try {
-    const hamlar = [];
-    for (let from = 0; ; from += 1000) {
-      const { data, error } = await sb.from("sayilar").select("user_id,kullanici,name,n1,n2,n3,n4,n5,n6")
-        .eq("tarih", tarih).eq("vno", vno).order("satir").range(from, from + 999);
-      if (error) throw error;
-      hamlar.push(...data);
-      if (data.length < 1000) break;
-    }
-    const gorunen = vardiyaListeHazir ? new Set(vardiyaList.map(u => u.id)) : null;
-    const kisi = new Map();   // user_id -> { ad, m: { makine: toplam } }
-    hamlar.forEach(r => {
-      const k = tonajAnahtar(r.name) || (r.name || "").trim() || "(adsız)";
-      if (gorunen && !gorunen.has(r.user_id)) return;
-      const v = rsum(r); if (!v) return;
-      let u = kisi.get(r.user_id); if (!u) { u = { ad: adBuyut(r.kullanici) || "?", m: {} }; kisi.set(r.user_id, u); }
-      if (adBuyut(r.kullanici)) u.ad = adBuyut(r.kullanici);
-      u.m[k] = (u.m[k] || 0) + v;
-    });
-    const liste = [...kisi.entries()].sort((p, q) => (p[0] === myId() ? -1 : 0) - (q[0] === myId() ? -1 : 0) || p[1].ad.localeCompare(q[1].ad, "tr"));
-    const bas = el("div", "tn-gunb", new Date(tarih + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "short" }) + " · " + (VNO_AD[vno] || "?") + " · kullanıcı tablosu (tüm makineler; tıkladığınız makine koyu)");
-    kap.append(bas);
-    if (!liste.length) { kap.append(el("div", "tn-not", "Bu gün için kullanıcı kaydı bulunamadı.")); return; }
-    const t = el("table", "tn-gt"), h = el("tr");
-    ["KULLANICI", "MAKİNE", "SAYI"].forEach(x => h.append(el("th", "", x))); t.append(h);
-    let top = 0;
-    liste.forEach(([uid, u]) => {
-      Object.keys(u.m).sort((p, q) => (Number(p.slice(1)) || 9999) - (Number(q.slice(1)) || 9999) || p.localeCompare(q, "tr")).forEach(k => {
-        top += u.m[k];
-        t.append(el("tr", (uid === myId() ? "tn-ben" : "") + (anahtarlar.has(k) ? " tn-sec" : "")));
-        t.lastChild.append(el("td", "", u.ad + (uid === myId() ? " (ben)" : "") + (grupOf(uid) ? " · " + grupOf(uid) + ". Grup" : "")), el("td", "", k), el("td", "", fmt(u.m[k])));
-      });
-    });
-    const ft = el("tr", "tn-grup-bas"); ft.append(el("td", "", "TOPLAM"), el("td", ""), el("td", "", fmt(top))); t.append(ft);
-    const w = el("div", "tn-gkap"); w.append(t); kap.append(w);
-  } catch (e) { kap.textContent = "Kullanıcı tablosu yüklenemedi."; }
 }
 function tonajPanelCiz(kap, R) {
   // Benim şimdiye kadar attığım düğümler (makine bazında)
@@ -1938,120 +1793,52 @@ function tonajPanelCiz(kap, R) {
   // Makine Listesi'nde ELLE seçilen gruplar: ATILAN = benim bugüne kadar (tüm tarih ve vardiyalarda) yazdığım tüm sayılar
   const gruplu = R.liste.filter(x => x.grup);
   if (gruplu.length) {
-    if (atKip === "sabah") atKip = "tum"; // kaldırılan eski seçenekten kalan durumu güvenli biçimde sıfırla
     gecmisYukle();
-    // Hesaplama yöntemi: tum = tüm geçmiş, gun = seçili tarih (tüm vardiyalar), vardiya = seçili tarih + görüntülenen vardiya
-    const at = x => {
-      if (!gecmisMap) return x.a;
-      const kd = kapDet(x.k);
-      if (atKip === "tum") return Object.values(kd).reduce((p, v) => p + v, 0);
-      let top = 0;
-      Object.entries(kd).forEach(([dk, v]) => {
-        const [t, vn] = dk.split("|");
-        if (atKip === "dongu") { if (donguIcinde(t, Number(vn))) top += v; }
-        else if (t === secili && (atKip === "gun" || Number(vn) === gv)) top += v;
-      });
-      return top;
-    };
-    if (atKip !== "dongu") kalanGun = 0;
+    const at = x => gecmisMap ? (gecmisMap[x.k] || 0) : x.a;
     const fx = x => Math.round((x.g - at(x)) * 100) / 100;
-    // Gereken tamamlanınca (fark ≤ 0) kalan, HEDEF_POZ (384) hedefine göre yeniden hesaplanır
-    // Gereken tamamlanınca: atılan 384'lük turlara bölünür; içinde bulunulan turun kalanı gösterilir (ör. 981 → 2 tur tamam, 213 atıldı, kalan 171)
-    const tur384 = x => Math.floor(Math.max(0, at(x)) / HEDEF_POZ);
-    const kalanX = x => { const f = fx(x); return f > 0 ? f : HEDEF_POZ - (Math.max(0, at(x)) - tur384(x) * HEDEF_POZ); };
     const gd = el("details", "tn-alt"); gd.open = true;
     const gNo = [...new Set(gruplu.map(x => x.grup))].sort((p, q) => p - q);
     gd.append(el("summary", "", "Elle seçilen gruplar (" + gNo.length + " grup · " + gruplu.length + " makine)"));
-    gd.append(el("p", "tn-not", gecmisMap && atKip !== "tum" ? "Atılan = " + (!myId() || kapsam === "tum" ? "tüm kullanıcıların" : kapsam === "ben" ? "yalnızca sizin" : "grubunuzdaki kullanıcıların") + " yazdığı sayılar; yalnızca aşağıdaki hesaplama yöntemindeki gün/vardiya aralığı sayılır. ATILAN değerine tıklayınca tüm geçmiş günler listelenir." : gecmisMap ? (myId() ? "Atılan = bugüne kadar yazdığınız tüm sayılar (tüm tarih ve vardiyalar). Ne zaman yazdığınızı görmek için ATILAN değerine, o günün kullanıcı tablosunu görmek için de tarihe tıklayın." : "Giriş yapılmadığı için Atılan = tüm kullanıcıların bugüne kadar yazdığı sayıların toplamı. Kendi toplamınızı görmek için giriş yapın.") : "Geçmişte yazılan tüm sayılar yükleniyor… (şimdilik seçili tarih/vardiya gösteriliyor)"));
-    const kipBar = el("div", "tn-not");
-    const kipSel = el("select"); kipSel.style.cssText = "margin-left:6px;height:30px;border-radius:6px;padding:0 8px";
-    [["tum", "Tüm geçmiş"], ["gun", "Seçili gün (tüm vardiyalar)"], ["vardiya", "Seçili gün + vardiya"], ["dongu", "Vardiya döngüsü (08:00 → 08:00)"]].forEach(([v, t]) => { const o = el("option", "", t); o.value = v; kipSel.append(o); });
-    kipSel.value = atKip;
-    kipSel.onchange = () => { atKip = kipSel.value; renderShared(); };
-    kipBar.append("Hesaplama yöntemi:", kipSel);
-    if (myId()) {
-      const ks = el("select"); ks.style.cssText = kipSel.style.cssText;
-      [["tum", "Tüm kullanıcılar (makine adına göre ortak)"], ["ben", "Sadece ben"], ["grubum", "Kendi grubum" + (grupOf(myId()) ? " (" + grupOf(myId()) + ". Grup)" : " (grup seçilmedi)")]].forEach(([v, t]) => { const o = el("option", "", t); o.value = v; ks.append(o); });
-      ks.value = kapsam; ks.onchange = () => { kapsam = ks.value; renderShared(); };
-      kipBar.append("   Kapsam:", ks);
-    }
-    if (atKip === "dongu") {
-      const [b, e] = donguAralik();
-      const fmtG = t => new Date(t + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
-      const mk = (v, f) => { const i = el("input"); i.type = "date"; i.value = v; i.style.cssText = "height:30px;border-radius:6px;padding:0 6px;margin:0 6px"; i.onchange = () => { if (i.value) { f(i.value); renderShared(); } }; return i; };
-      const satir = el("div", "tn-not"); satir.style.marginTop = "6px";
-      satir.append("İlk sayı günü:", mk(b, v => donguAyarla(v, donguE)), " Son sayı günü:", mk(e, v => donguAyarla(donguB, v)));
-      const hazir = el("div", "tn-not"); hazir.style.marginTop = "6px";
-      DONGULER.forEach(([x, y]) => { const bt = el("button", "alt sm", fmtG(x).replace(" 2026", "") + " – " + fmtG(y).replace(" 2026", "")); bt.type = "button"; bt.style.marginRight = "6px"; if (x === b && y === e) bt.style.outline = "2px solid var(--vc,#4f8cff)"; bt.onclick = () => { donguAyarla(x, y); renderShared(); }; hazir.append(bt); });
-      const gun = Math.round((new Date(e + "T12:00:00Z") - new Date(b + "T12:00:00Z")) / 86400000) + 1;
-      const cg = calismaGunleri(b, e), kg = cg.filter(t => t >= secili);
-      kalanGun = kg.length;
-      const tI = el("input"); tI.type = "text"; tI.placeholder = "2026-11-24, 2026-11-25"; tI.value = tatilGunleri().join(", "); tI.style.cssText = "height:30px;border-radius:6px;padding:0 6px;margin:0 6px;width:260px";
-      tI.onchange = () => { lsSet("tatilGunleriV1", tI.value.split(/[\s,;]+/).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x))); renderShared(); };
-      const tatSatir = el("div", "tn-not"); tatSatir.style.marginTop = "6px";
-      tatSatir.append("Ek tatil günleri (hafta sonu zaten sayılmaz):", tI);
-      kipBar.append("  → " + fmtG(b) + " (08:00–16:00 vardiyası) – " + fmtG(e) + " (08:00–16:00 vardiyası) · " + gun + " gün · çalışma günü: " + cg.length + " · kalan çalışma günü (seçili günden itibaren): " + kg.length, hazir, satir, tatSatir);
-    } else if (atKip !== "tum") kipBar.append("  → " + new Date(secili + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "long" }) + (atKip === "vardiya" ? " · " + (VNO_AD[gv] || "?") : ""));
-    gd.append(kipBar);
+    gd.append(el("p", "tn-not", gecmisMap ? "Atılan = bugüne kadar yazdığınız tüm sayılar (tüm tarih ve vardiyalar). Ne zaman yazdığınızı görmek için ATILAN değerine tıklayın." : "Geçmişte yazdığınız tüm sayılar yükleniyor… (şimdilik seçili tarih/vardiya gösteriliyor)"));
     const tarihTR = t => new Date(t + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "short" });
     // Bir makinenin (veya grubun) geçmişte ne zaman yazıldığını gösteren açılır satır
-    const zamanSatir = (liste, grupMu) => {
-      const tr = el("tr", "tn-detay"), td = el("td"); td.colSpan = 6;
+    const zamanSatir = (liste) => {
+      const tr = el("tr", "tn-detay"), td = el("td"); td.colSpan = 5;
       const gun = {};
-      liste.forEach(x => Object.entries(kapDet(x.k)).forEach(([dk, v]) => { (gun[dk] = gun[dk] || []).push([x.k, v]); }));
+      liste.forEach(x => Object.entries(gecmisDetay[x.k] || {}).forEach(([dk, v]) => { (gun[dk] = gun[dk] || []).push([x.k, v]); }));
       const anah = Object.keys(gun).sort().reverse();
       if (!gecmisMap) td.append(el("div", "", "Yükleniyor…"));
       else if (!anah.length) td.append(el("div", "", "Bu makine için geçmişte yazılmış sayı yok."));
       else anah.forEach(dk => {
         const [t, vn] = dk.split("|"), top = gun[dk].reduce((p, y) => p + y[1], 0);
-        const gd2 = el("div", "tn-gun", tarihTR(t) + " · " + (VNO_AD[Number(vn)] || "?") + " → ");
-        const gerekGrup = liste.reduce((p, y) => p + (Number(y.g) || 0), 0);
-        const topSp = el("span", grupMu && top < gerekGrup ? "tn-kirmizi" : "", fmt(top));
-        gd2.append(topSp, (grupMu || liste.length > 1) ? "   (" + gun[dk].map(y => y[0] + ": " + fmt(y[1])).join(", ") + ")" : "");
-        gd2.title = "Bu günün kullanıcı tablosunu görmek için tıklayın";
-        const gk = el("div", "tn-gunk"); gk.hidden = true;
-        gd2.onclick = async () => {
-          if (!gk.hidden) { gk.hidden = true; return; }
-          gk.hidden = false;
-          if (gk.dataset.yuk) return;
-          gk.textContent = "Yükleniyor…"; gk.dataset.yuk = "1";
-          await gunKullaniciTablosu(gk, t, Number(vn), new Set(liste.map(y => y.k)));
-        };
-        td.append(gd2, gk);
+        td.append(el("div", "", tarihTR(t) + " · " + (VNO_AD[Number(vn)] || "?") + " → " + fmt(top) + (liste.length > 1 ? "   (" + gun[dk].map(y => y[0] + ": " + fmt(y[1])).join(", ") + ")" : "")));
       });
       tr.append(td); return tr;
     };
-    const tikla = (td, anahtar, tr, liste, grupMu) => {
+    const tikla = (td, anahtar, tr, liste) => {
       td.classList.add("tn-tikla"); td.title = "Ne zaman yazdığınızı görmek için tıklayın";
       td.onclick = () => {
         const sn = tr.nextElementSibling;
         if (sn && sn.classList.contains("tn-detay")) { sn.remove(); gecmisAcik.delete(anahtar); }
-        else { tr.after(zamanSatir(liste, grupMu)); gecmisAcik.add(anahtar); }
+        else { tr.after(zamanSatir(liste)); gecmisAcik.add(anahtar); }
       };
     };
-    const topAt = gruplu.reduce((p, x) => p + at(x), 0), topKalanPoz = Math.max(0, HEDEF_POZ - topAt);
-    const topKalanMak = gruplu.reduce((p, x) => p + kalanX(x), 0);
-    const hedefP = el("p", "tn-say", "Atılması gereken: " + fmt(HEDEF_POZ) + " pozisyon · Atılan: " + fmt(topAt) + " · KALAN pozisyon: " + fmt(topKalanPoz) + "   |   Makinelerin toplam kalanı: " + kalanMetin(topKalanMak) + " · vardiya başına " + VARDIYA_HEDEF);
-    gd.append(hedefP);
     const gt = el("table", "tn-gt"), gh = el("tr");
-    ["GRUP / MAKİNE", "SAYI (gereken)", "ATILAN (" + (atKip === "tum" ? kapEtiket() : atKip === "gun" ? "seçili gün" : atKip === "dongu" ? "vardiya döngüsü" : "seçili vardiya") + ")", "FARK", "KALAN (" + (atKip === "tum" ? kapEtiket() : atKip === "gun" ? "seçili gün" : atKip === "dongu" ? "vardiya döngüsü" : "seçili vardiya") + ")", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
+    ["GRUP / MAKİNE", "SAYI (gereken)", "ATILAN (tüm geçmiş)", "FARK", "DURUM"].forEach(x => gh.append(el("th", "", x))); gt.append(gh);
     const fark = f => f > 0 ? "−" + fmt(f) : (f < 0 ? "+" + fmt(-f) : "0");
     gNo.forEach(g => {
       const L = gruplu.filter(x => x.grup === g);
       const tg = L.reduce((p, x) => p + x.g, 0), ta = L.reduce((p, x) => p + at(x), 0), tf = Math.round((tg - ta) * 100) / 100;
-      const gKalan = L.reduce((p, x) => p + kalanX(x), 0);   // gruptaki eksik makinelerin kalan toplamı
       const hr = el("tr", "tn-grup-bas");
       hr.append(el("td", "", g + ". Grup · " + L.length + " makine"), el("td", "", fmt(tg)), el("td", "", fmt(ta)),
-        el("td", tf > 0 ? "tn-eksik" : "tn-tamam", fark(tf)), el("td", gKalan > 0 ? "tn-eksik" : "tn-tamam", kalanMetin(gKalan)), el("td", tf > 0 ? "tn-eksik" : "tn-tamam", tf > 0 ? "✗ eksik" : "✓ tamam"));
+        el("td", tf > 0 ? "tn-eksik" : "tn-tamam", fark(tf)), el("td", tf > 0 ? "tn-eksik" : "tn-tamam", tf > 0 ? "✗ eksik" : "✓ tamam"));
       gt.append(hr);
-      tikla(hr.children[2], "g" + g, hr, L, true); if (gecmisAcik.has("g" + g)) gt.append(zamanSatir(L, true));
+      tikla(hr.children[2], "g" + g, hr, L); if (gecmisAcik.has("g" + g)) gt.append(zamanSatir(L));
       L.forEach(x => {
         const f = fx(x), r = el("tr", (ben[x.k] || 0) > 0 ? "tn-ben" : "");
         const durum = at(x) <= 0 ? "— atılmadı" : (f > 0 ? "✗ eksik" : "✓ tamam");
-        const tamTur = tur384(x), turKalan = Math.max(0, HEDEF_POZ - (Math.max(0, at(x)) - tamTur * HEDEF_POZ));
-        const turYazi = tamTur + " kere fullendi" + (turKalan < HEDEF_POZ ? " · sonraki fullenmeye " + fmt(turKalan) + " kaldı" : "");
         r.append(el("td", "", x.k), el("td", "", fmt(x.g)), el("td", "", fmt(at(x))),
-          el("td", f > 0 ? "tn-eksik" : "tn-tamam", fark(f)), el("td", tamTur > 0 ? "tn-tamam" : (turKalan < HEDEF_POZ ? "tn-eksik" : "tn-yok"), turYazi), el("td", f > 0 ? "tn-eksik" : (at(x) <= 0 ? "tn-yok" : "tn-tamam"), durum));
+          el("td", f > 0 ? "tn-eksik" : "tn-tamam", fark(f)), el("td", f > 0 ? "tn-eksik" : (at(x) <= 0 ? "tn-yok" : "tn-tamam"), durum));
         gt.append(r);
         tikla(r.children[2], "m" + x.k, r, [x]); if (gecmisAcik.has("m" + x.k)) gt.append(zamanSatir([x]));
       });
@@ -2118,8 +1905,8 @@ function renderShared() {
       const nm = (r.name || "").trim() || "(adsız)";
       const key = nm.toLocaleLowerCase("tr");
       let g = makineGruplari.get(key);
-      if (!g) { g = { name: nm, total: 0, a: 0, b: 0, ab: false, satir: r.satir }; makineGruplari.set(key, g); }
-      g.total += rsum(r); if (r.n2 != null) { g.ab=true; g.a+=num(r.n1); g.b+=num(r.n2); }
+      if (!g) { g = { name: nm, total: 0, satir: r.satir }; makineGruplari.set(key, g); }
+      g.total += rsum(r);
       g.satir = Math.min(g.satir, r.satir);
     });
     const list = [...makineGruplari.values()].sort((a, b) => adKar(a.name, b.name) || a.satir - b.satir);
@@ -2132,18 +1919,18 @@ function renderShared() {
     // Kontrol, birleştirilmiş satırlar üzerinde değil gerçek kayıt satırları üzerinde yapılmalı.
     if (!hamListe.length || !hamListe.some(r => COLS.some(k => r[k] != null && String(r[k]).trim() !== ""))) return;
     const wrap = el("div", "scroll"), tbl = el("table"), head = el("thead"), hr = el("tr");
-    ["MAKİNE","A","B","TOPLAM"].forEach(h => hr.append(el("th", "", h)));
+    ["MAKİNE","SAYI"].forEach(h => hr.append(el("th", "", h)));
     head.append(hr); tbl.append(head);
     const body = el("tbody"); let total = 0;
     list.forEach(r => {
       const tr = el("tr"), s = r.total; total += s;
       const nm = r.name, key = nm.toLocaleLowerCase("tr");
-      const cur = agg.get(key) || { nm, s: 0, a: 0, b: 0, ab: false }; cur.s += s; if(r.ab){cur.ab=true;cur.a+=r.a;cur.b+=r.b;} agg.set(key, cur);
+      const cur = agg.get(key) || { nm, s: 0 }; cur.s += s; agg.set(key, cur);
       tr.append(el("td", "sn", nm === "(adsız)" ? "" : nm));
-      tr.append(el("td", "t", r.ab ? fmt(r.a) : "—")); tr.append(el("td", "t", r.ab ? fmt(r.b) : "—")); tr.append(el("td", "t", fmt(s))); body.append(tr);
+      tr.append(el("td", "t", fmt(s))); body.append(tr);
     });
     const ft = el("tr", "tot");
-    ft.append(el("td", "", "TOPLAM"), el("td", "", ""), el("td", "", ""), el("td", "", fmt(total))); body.append(ft);
+    ft.append(el("td", "", "TOPLAM"), el("td", "", fmt(total))); body.append(ft);
     tbl.append(body); wrap.append(tbl);
     const rb = el("button", "alt sm", "Resim olarak kaydet"); rb.type = "button";
     const krBtn = el("button", "alt sm", "📊 Rekor / Özet"); krBtn.type = "button";
@@ -2168,13 +1955,13 @@ function renderShared() {
   if (agg.size) {
     const tbl = el("table"), head = el("thead"), hr = el("tr"), body = el("tbody");
     const TN = tonajHazir(), kt = TN ? tonajToplamlari(agg) : {}, R = TN ? tonajRapor(kt) : null;
-    (TN ? ["MAKİNE","A","B","TOPLAM","GEREKEN","DURUM"] : ["MAKİNE","A","B","TOPLAM"]).forEach(h => hr.append(el("th", "", h))); head.append(hr); tbl.append(head);
+    (TN ? ["MAKİNE","SAYI","GEREKEN","DURUM"] : ["MAKİNE","SAYI"]).forEach(h => hr.append(el("th", "", h))); head.append(hr); tbl.append(head);
     [...agg.values()].sort((a, b) => adKar(a.nm === "(adsız)" ? "" : a.nm, b.nm === "(adsız)" ? "" : b.nm)).forEach(x => {
-      const tr = el("tr"); tr.append(el("td", "sn", x.nm), el("td", "t", x.ab?fmt(x.a):"—"), el("td", "t", x.ab?fmt(x.b):"—"), el("td", "t", fmt(x.s)));
+      const tr = el("tr"); tr.append(el("td", "sn", x.nm), el("td", "t", fmt(x.s)));
       if (TN) { const d = tonajDurum(x.nm, kt); tr.append(el("td", "t", d.gereken == null ? "" : fmt(d.gereken)), el("td", "tn-d " + d.sinif, d.metin)); }
       body.append(tr);
     });
-    const ft = el("tr", "tot"); ft.append(el("td", "", "GENEL TOPLAM"), el("td", "", ""), el("td", "", ""), el("td", "", fmt(grand)));
+    const ft = el("tr", "tot"); ft.append(el("td", "", "GENEL TOPLAM"), el("td", "", fmt(grand)));
     if (TN) ft.append(el("td", "", fmt(R.topGer)), el("td", "", R.eksik.length ? R.eksik.length + " makine eksik" : "✓ Tamam"));
     body.append(ft);
     tbl.append(body); ab.append(tbl);
@@ -2276,7 +2063,6 @@ async function hazirla() {
   $("app").classList.toggle("hide", !duzenle);
   const ah = $("app").querySelector("h2"); if (ah) ah.textContent = "Benim girişlerim (" + (secili === bugun ? "bugün" : "yeni vardiya") + " · " + VNO_AD[gv] + ")";
   if (me) kimYaz();
-  gecmisYukle(true);   // giriş/çıkış sonrası geçmiş toplamlar (yeşil tablo) hemen yeniden yüklensin
   await gorYukle();
   await hedefYukle();
   await kalpAt();
@@ -2478,7 +2264,6 @@ const vardiyaOf = id => { const x = vardiyaList.find(u => u.id === id); return x
 async function vardiyaYukle() {
   const box = $("vardiyaBox");
   if (!sb) { box.classList.add("hide"); return; }
-  kulGrupYukle();
   const { data, error } = await sb.rpc("vardiya_listesi", { gun: secili });   // gizli yönetici kayıtları sunucuda filtrelenir
   if (error) { vardiyaList = []; vardiyaListeHazir = true; box.classList.add("hide"); renderShared(); return; }
   vardiyaList = (data || []).map(u => ({ ...u, ad: adBuyut(u.ad) }));
@@ -2777,15 +2562,6 @@ async function adminVardiya(u, v) {
   await vardiyaYukle();
 }
 $("vardiyaYenile").onclick = vardiyaYukle;
-// Kullanıcı kendi grubunu seçer / yönetici başkasının grubunu atar (vardiyadan bağımsız)
-async function grupKaydet(fn, args, ok, hataSonrasi) {
-  msg("Grup kaydediliyor…");
-  const { error } = await sb.rpc(fn, args);
-  if (error) { msg("Grup kaydedilemedi: " + error.message + " — Supabase'de grup-alani.sql çalıştırılmalı."); await kulGrupYukle(); return; }
-  msg(ok); await kulGrupYukle();
-}
-$("pGrup").onchange = () => { const g = $("pGrup").value; grupKaydet("grup_sec", { yeni: g ? Number(g) : null }, g ? g + ". gruba atandınız." : "Grup seçiminiz kaldırıldı."); };
-const adminGrup = (u, g) => grupKaydet("admin_grup", { hedef: u.id, yeni: g ? Number(g) : null }, (u.ad || "Kullanıcı") + (g ? " → " + g + ". Grup." : " gruptan çıkarıldı."));
 
 async function adminYukle() {
   await kayitDurumuYukle();
@@ -2813,7 +2589,7 @@ function adminCiz() {
   $("aSayi").textContent = list.length + " / " + adminList.length + " kullanıcı";
   if (!list.length) { box.append(el("p", "mut", "Kullanıcı bulunamadı.")); return; }
   const tbl = el("table", "at"), head = el("thead"), hr = el("tr"), body = el("tbody");
-  ["SİCİL", "AD SOYAD", "ROL", "VARDİYA", "GRUP", "DURUM", "SON GİRİŞ", "İŞLEM"].forEach(h => hr.append(el("th", "", h)));
+  ["SİCİL", "AD SOYAD", "ROL", "VARDİYA", "DURUM", "SON GİRİŞ", "İŞLEM"].forEach(h => hr.append(el("th", "", h)));
   head.append(hr); tbl.append(head);
   list.forEach(u => {
     const tr = el("tr", u.banli ? "ban" : ""), self = u.id === myId();
@@ -2823,10 +2599,6 @@ function adminCiz() {
     const tdV = el("td"), sel = el("select"), vk = vardiyaOf(u.id);
     [["", "—"], ...VARDIYALAR.map(v => [v, v])].forEach(([val, txt]) => { const o = el("option", "", txt); o.value = val; sel.append(o); });
     sel.value = vk || ""; sel.onchange = () => adminVardiya(u, sel.value); tdV.append(sel); tr.append(tdV);
-    const tdG = el("td"), gsel = el("select"), gk = grupOf(u.id);
-    const go0 = el("option", "", "—"); go0.value = ""; gsel.append(go0);
-    grupNolari(gk).forEach(n => { const o = el("option", "", n + ". Grup"); o.value = String(n); gsel.append(o); });
-    gsel.value = gk ? String(gk) : ""; gsel.onchange = () => adminGrup(u, gsel.value); tdG.append(gsel); tr.append(tdG);
     const tdD = el("td"); tdD.append(el("span", "badge " + (u.banli ? "ban" : "ok"), u.banli ? "Banlı" : "Aktif"));
     if (u.banli && u.ban_sebep) tdD.append(el("div", "mut", "Sebep: " + u.ban_sebep));
     tr.append(tdD);
@@ -3795,8 +3567,6 @@ function logCizAsil() {
   });
   const vTop = new Map();   // kullanıcı|vardiya -> vardiya boyunca girilen toplam
   logs.filter(l => l.sutun !== "makine").forEach(l => { const zt = new Date(l.zaman).getTime(); if (isNaN(zt)) return; const k = l.user_id + "|" + vbBul(zt); vTop.set(k, (vTop.get(k) || 0) + (logFark(l) || 0)); });
-  const cumAt = new Map(), cumRun = new Map();   // log id -> o ana kadar vardiya toplamı (kullanıcı|vardiya bazında)
-  logs.filter(l => l.sutun !== "makine").slice().sort((a, b) => new Date(a.zaman) - new Date(b.zaman)).forEach(l => { const zt = new Date(l.zaman).getTime(); if (isNaN(zt)) return; const k = l.user_id + "|" + vbBul(zt), r = (cumRun.get(k) || 0) + (logFark(l) || 0); cumRun.set(k, r); cumAt.set(l.id, r); });
   list.forEach(l => {
     const hs = th.get(l.id) || [], ad = l.sutun === "makine", d = logFark(l);
     const tr = el("tr", ad ? "lg-ad" : "");
@@ -3811,19 +3581,11 @@ function logCizAsil() {
     if (gn !== "—" && gn !== mk) tdS.append(el("div", "lg-alt", "genel: " + gn));
     const tdD = el("td", "lg-d");
     if (!ad && d != null && d > 0 && l.yeni != null) {
-      // O girişin yapıldığı ana göre hesap: vardiya başından o ana kadar girilen toplam, geçen süre ve saatlik hız
-      const zt = new Date(l.zaman).getTime(), vb = vbBul(zt), cum = cumAt.get(l.id) || 0, gSn = Math.max(0, (zt - vb) / 1000);
-      const hiz = gSn > 0 ? cum / (gSn / 3600) : 0, tah = Math.round(hiz * 8);
-      const bitti = vardiyaBittiMi(vb);
-      const sup = cum > SUPHE_LIMIT || (gSn >= 3600 && tah > SUPHE_LIMIT);   // ilk 1 saatte hız değerlendirilmez (erken sayı girişi yanıltmasın)
-      tdD.append(el("span", "lg-dr " + (sup ? "sup" : "nor"), sup ? "Şüpheli" : "Normal"));
-      tdD.append(el("div", "lg-alt", "bu ana kadar: " + fmt(Math.round(cum * 100) / 100) + (bitti ? "" : " · vardiya sürüyor")));
-      tdD.append(el("div", "lg-alt", saatOf(vb).slice(0, 5) + "'dan beri: " + sure(Math.round(gSn)) + " · " + (gSn >= 3600 ? fmt(Math.round(hiz * 10) / 10) + "/sa" : "hız için ≥1 sa gerekli")));
-      if (gSn >= 3600) tdD.append(el("div", "lg-alt", "bu hızla 8 sa: ≈ " + fmt(tah) + (tah > SUPHE_LIMIT ? " ⚠ limit " + fmt(SUPHE_LIMIT) : "")));
+      const vb = vbBul(new Date(l.zaman).getTime());
+      if (!vardiyaBittiMi(vb)) tdD.append(el("span", "lg-alt", "Vardiya sürüyor"));
+      else { const top = vTop.get(l.user_id + "|" + vb) || 0, sup = top > SUPHE_LIMIT; tdD.append(el("span", "lg-dr " + (sup ? "sup" : "nor"), sup ? "Şüpheli" : "Normal"), el("div", "lg-alt", "vardiya: " + fmt(Math.round(top * 100) / 100))); }
     } else tdD.append(el("span", "lg-alt", "—"));
-    const tdT = el("td", "lg-t", saatOf(l.zaman)), vbT = vbBul(new Date(l.zaman).getTime());
-    if (!isNaN(vbT)) tdT.append(el("div", "lg-alt", "vardiya " + saatOf(vbT).slice(0, 5) + " – " + saatOf(vbT + 8 * 3600000).slice(0, 5)));
-    tr.append(tdT,
+    tr.append(el("td", "lg-t", saatOf(l.zaman)),
       el("td", "", (adBuyut(l.kullanici) || "?") + (isAdmin() && sm.get(l.user_id) ? " [" + sm.get(l.user_id) + "]" : "") + (l.user_id === myId() ? " (siz)" : "")),
       tdMk, tdE, el("td", "lg-tp", toplamOkYaz(l, hs)), tdS, tdD);
     if (isAdmin()) {
