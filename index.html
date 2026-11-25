@@ -1548,12 +1548,19 @@ function satirEkle(r) {
     else { iA.value=""; iB.value=""; }
     iA.focus();
   };
+  const abBaslat = () => {
+    const row = myRow();
+    if (!row) { msg("Satır henüz hazır değil, birkaç saniye sonra tekrar deneyin."); return; }
+    iSayi.value = "";
+    abAc(row);
+    msg("A ve B taraflarının sayılarını girin.");
+  };
   const ekle = () => {
     const ham = iSayi.value.trim(); if (!ham) return;
     const v = parseFloat(ham.replace(",", "."));
     if (isNaN(v)) { msg("Geçerli bir sayı yazın."); iSayi.value = ""; return; }
     const row = myRow(); if (!row) { msg("Satır henüz hazır değil, birkaç saniye sonra tekrar deneyin."); return; }
-    if (v === 1) { iSayi.value=""; abAc(row); msg("A ve B taraflarının sayılarını girin."); return; }
+    if (v === 1) { abBaslat(); return; }
     if (abModu(row)) { msg("Bu makine A/B modunda. Sayıları A ve B alanlarından girin."); iSayi.value=""; abAc(row); return; }
     row.n1 = Math.round((num(row.n1) + v) * 1e6) / 1e6;
     iSayi.value = ""; tt.textContent = fmt(rsum(row)); mineToplamGuncelle(); renderShared();
@@ -1570,6 +1577,8 @@ function satirEkle(r) {
     kirli[r]=true; clearTimeout(otoTimer[r]); save(r).then(()=>tabloDoluKontrol());
     ab.classList.remove("acik"); iSayi.value=""; msg("A ve B sayıları kaydedildi. Toplam: "+fmt(rsum(row)));
   };
+  // Kullanıcı 1 rakamını yazdığı anda A/B alanlarını aç; + tuşuna basması gerekmez.
+  iSayi.oninput = () => { if (iSayi.value.trim().replace(",", ".") === "1") abBaslat(); };
   iSayi.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); ekle(); } };
   iSayi.onchange = ekle;
   btn.onmousedown = e => e.preventDefault();
