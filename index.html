@@ -1898,13 +1898,13 @@ function satirEkle(r) {
   btnABAc.type = "button"; btnABAc.title = "A ve B sayılarını ayrı girmek için";
   syControls.append(iSayi,btn,btnABAc); tdS.append(syControls);
   const ab = el("div", "ab-giris"), labA = el("label", "", "A tarafı"), labB = el("label", "", "B tarafı");
-  const iA = el("input"), iB = el("input"), btnAB = el("button", "", "Girilen sayıları toplama ekle"), abInfo = el("div", "ab-mini", "A ve B değerleri ayrı ayrı saklanır.");
+  const iA = el("input"), iB = el("input"), btnAB = el("button", "", "Girilen sayıları toplama ekle"), btnABDuzelt = el("button", "alt", "Yanlış sayıyı düzelt"), abInfo = el("div", "ab-mini", "A ve B değerleri ayrı ayrı saklanır.");
   [iA,iB].forEach(x => { x.type="number"; x.min="0"; x.step="any"; x.inputMode="decimal"; });
-  iA.placeholder="A sayısı"; iB.placeholder="B sayısı"; labA.append(iA); labB.append(iB); btnAB.type="button"; ab.append(labA,labB,btnAB,abInfo); tr.append(tdS);
+  iA.placeholder="A sayısı"; iB.placeholder="B sayısı"; labA.append(iA); labB.append(iB); btnAB.type="button"; btnABDuzelt.type="button"; ab.append(labA,labB,btnAB,btnABDuzelt,abInfo); tr.append(tdS);
   // A/B girişi tablo satırlarının üzerine binmesin diye bağımsız bir pencere olarak açılır.
   const abHolder = el("div", "ab-holder");
   abHolder.append(ab);
-  let abOverlay = null;
+  let abOverlay = null, abDuzeltmeModu = false;
   const abKapat = () => {
     if (abOverlay) { abOverlay.remove(); abOverlay = null; }
     ab.classList.remove("acik");
@@ -1927,9 +1927,12 @@ function satirEkle(r) {
     abOverlay.append(kart);
     abOverlay.addEventListener("click", e => { if (e.target === abOverlay) abKapat(); });
     document.body.append(abOverlay);
-    // Her açılışta yalnızca yeni eklenecek miktarlar girilir; mevcut toplamlar bilgi olarak gösterilir.
+    // Varsayılan işlem eklemedir. Hatalı kayıt, aynı sayı giriş penceresindeki düzeltme modundan değiştirilebilir.
+    abDuzeltmeModu = false;
     iA.value=""; iB.value="";
-    abInfo.textContent = "Mevcut toplam: A " + fmt(num(row && row.n1)) + " · B " + fmt(num(row && row.n2)) + ". Girdiğiniz sayılar mevcut toplama eklenecek.";
+    btnAB.textContent = "Girilen sayıları toplama ekle";
+    btnABDuzelt.textContent = "Yanlış sayıyı düzelt";
+    abInfo.textContent = "Mevcut toplam: A " + fmt(num(row && row.n1)) + " · B " + fmt(num(row && row.n2)) + ". Yeni girişler mevcut toplama eklenir.";
     iA.placeholder="A'ya eklenecek"; iB.placeholder="B'ye eklenecek";
     iA.focus();
   };
@@ -1953,14 +1956,43 @@ function satirEkle(r) {
   const abKaydet = () => {
     const row=myRow(); if(!row) return;
     const a=iA.value.trim(), b=iB.value.trim();
-    if(a==="" && b==="") { msg("Eklenecek A veya B sayısını girin."); return; }
+    if(a==="" && b==="") { msg(abDuzeltmeModu ? "Düzeltilecek A veya B değerini girin." : "Eklenecek A veya B sayısını girin."); return; }
     const av=a===""?0:parseFloat(a.replace(",",".")), bv=b===""?0:parseFloat(b.replace(",","."));
     if(!Number.isFinite(av)||!Number.isFinite(bv)||av<0||bv<0){ msg("A ve B için sıfır veya daha büyük geçerli sayılar girin."); return; }
-    row.n1=Math.round((num(row.n1)+av)*1e6)/1e6;
-    row.n2=Math.round((num(row.n2)+bv)*1e6)/1e6;
+    if (abDuzeltmeModu) {
+      row.n1=Math.round(av*1e6)/1e6;
+      row.n2=Math.round(bv*1e6)/1e6;
+    } else {
+      row.n1=Math.round((num(row.n1)+av)*1e6)/1e6;
+      row.n2=Math.round((num(row.n2)+bv)*1e6)/1e6;
+    }
     tt.textContent=fmt(rsum(row)); mineToplamGuncelle(); renderShared();
-    kirli[r]=true; clearTimeout(otoTimer[r]); save(r).then(()=>tabloDoluKontrol());
-    abKapat(); iSayi.value=""; msg("Girilen sayılar mevcut toplama eklendi. A: "+fmt(row.n1)+" · B: "+fmt(row.n2)+" · Toplam: "+fmt(rsum(row)));
+    kirli[r]=true; clearTimeout(otoTimer[r]);
+    save(r).then(()=>tabloDoluKontrol()).then(() => {
+      const mesaj = abDuzeltmeModu ? "A/B sayıları düzeltildi." : "Girilen sayılar mevcut toplama eklendi.";
+      abKapat(); iSayi.value="";
+      msg(mesaj+" A: "+fmt(row.n1)+" · B: "+fmt(row.n2)+" · Toplam: "+fmt(rsum(row)));
+    });
+  };
+  btnABDuzelt.onclick = () => {
+    const row=myRow(); if(!row) return;
+    if (!abDuzeltmeModu) {
+      abDuzeltmeModu = true;
+      iA.value = String(num(row.n1)); iB.value = String(num(row.n2));
+      iA.placeholder="Doğru A toplamı"; iB.placeholder="Doğru B toplamı";
+      btnAB.textContent = "Düzeltmeyi kaydet";
+      btnABDuzelt.textContent = "Vazgeç / sayı ekle";
+      abInfo.textContent = "Düzeltme modu: A ve B alanlarına olması gereken SON toplamları yazın. Kaydedince mevcut değerlerin yerine geçer.";
+      iA.focus();
+    } else {
+      abDuzeltmeModu = false;
+      iA.value=""; iB.value="";
+      iA.placeholder="A'ya eklenecek"; iB.placeholder="B'ye eklenecek";
+      btnAB.textContent = "Girilen sayıları toplama ekle";
+      btnABDuzelt.textContent = "Yanlış sayıyı düzelt";
+      const row=myRow();
+      abInfo.textContent = "Mevcut toplam: A " + fmt(num(row && row.n1)) + " · B " + fmt(num(row && row.n2)) + ". Yeni girişler mevcut toplama eklenir.";
+    }
   };
   iSayi.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); ekle(); } };
   iSayi.onchange = ekle;
@@ -2515,7 +2547,7 @@ function renderShared() {
     // Kontrol, birleştirilmiş satırlar üzerinde değil gerçek kayıt satırları üzerinde yapılmalı.
     if (!hamListe.length || !hamListe.some(r => COLS.some(k => r[k] != null && String(r[k]).trim() !== ""))) return;
     const wrap = el("div", "scroll"), tbl = el("table"), head = el("thead"), hr = el("tr");
-    ["MAKİNE","A","B","TOPLAM","İŞLEM"].forEach(h => hr.append(el("th", "", h)));
+    ["MAKİNE","A","B","TOPLAM"].forEach(h => hr.append(el("th", "", h)));
     head.append(hr); tbl.append(head);
     const body = el("tbody"); let total = 0;
     list.forEach(r => {
@@ -2523,51 +2555,7 @@ function renderShared() {
       const nm = r.name, key = nm.toLocaleLowerCase("tr");
       const cur = agg.get(key) || { nm, s: 0, a: 0, b: 0, ab: false }; cur.s += s; if(r.ab){cur.ab=true;cur.a+=r.a;cur.b+=r.b;} agg.set(key, cur);
       tr.append(el("td", "sn", nm === "(adsız)" ? "" : nm));
-      tr.append(el("td", "t", r.ab ? fmt(r.a) : "—")); tr.append(el("td", "t", r.ab ? fmt(r.b) : "—")); tr.append(el("td", "t", fmt(s)));
-      const islem = el("td", "t");
-      if (uid === myId() && duzenlenir() && !donduMu()) {
-        const duzelt = el("button", "alt sm", "Düzelt"); duzelt.type = "button";
-        duzelt.title = "Bu makinenin A ve B toplamlarını düzelt";
-        duzelt.onclick = async (e) => {
-          e.stopPropagation();
-          const hedefler = u.list.filter(x => (x.name || "").trim().toLocaleLowerCase("tr") === key);
-          if (!hedefler.length) { msg("Düzeltilecek makine kaydı bulunamadı."); return; }
-          const yeniA = prompt(nm + " için doğru A toplamını yazın:", fmt(r.a));
-          if (yeniA === null) return;
-          const yeniB = prompt(nm + " için doğru B toplamını yazın:", fmt(r.b));
-          if (yeniB === null) return;
-          const parseDuzelt = v => {
-            const t = String(v).trim().replace(",", ".");
-            if (!t) return null;
-            const n = Number(t);
-            return Number.isFinite(n) && n >= 0 ? n : NaN;
-          };
-          const a0 = parseDuzelt(yeniA), b0 = parseDuzelt(yeniB);
-          if (Number.isNaN(a0) || Number.isNaN(b0) || a0 === null || b0 === null) {
-            alert("A ve B için sıfır veya daha büyük geçerli sayılar girin."); return;
-          }
-          if (!confirm(nm + " makinesinin A toplamı " + fmt(a0) + ", B toplamı " + fmt(b0) + " olarak düzeltilecek. Onaylıyor musunuz?")) return;
-          // Aynı makine birden fazla satırda kayıtlıysa toplamı ilk kayda al, diğer A/B değerlerini sıfırla.
-          hedefler.sort((x,y) => x.satir-y.satir);
-          hedefler.forEach((x,i) => {
-            x.n1 = i === 0 ? a0 : 0;
-            x.n2 = i === 0 ? b0 : 0;
-            kirli[x.satir] = true;
-            clearTimeout(otoTimer[x.satir]);
-          });
-          try {
-            await Promise.all(hedefler.map(x => save(x.satir)));
-            fillMine(); renderShared();
-            msg(nm + " makinesinin sayıları düzeltildi ve kaydedildi.");
-          } catch (err) {
-            msg("Düzeltme kaydedilemedi: " + (err && err.message ? err.message : err));
-          }
-        };
-        islem.append(duzelt);
-      } else {
-        islem.textContent = "—";
-      }
-      tr.append(islem); body.append(tr);
+      tr.append(el("td", "t", r.ab ? fmt(r.a) : "—")); tr.append(el("td", "t", r.ab ? fmt(r.b) : "—")); tr.append(el("td", "t", fmt(s))); body.append(tr);
     });
     const ft = el("tr", "tot");
     ft.append(el("td", "", "TOPLAM"), el("td", "", ""), el("td", "", ""), el("td", "", fmt(total))); body.append(ft);
