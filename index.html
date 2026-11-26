@@ -1222,20 +1222,6 @@ html.hz-kilit .sohbet-panel {
 .ab-modal-card .ab-giris button{grid-column:1/-1 !important;display:block !important;width:100% !important;min-height:42px !important;height:auto !important;margin:4px 0 0 !important;white-space:normal !important;line-height:1.25 !important}
 .ab-modal-card .ab-giris .ab-mini{grid-column:1/-1 !important;margin:0 !important;color:#c1ccdc !important;font-size:11px !important}
 
-
-/* Makine durum işaretleri */
-#app td.durum{min-width:190px;padding:4px 5px;text-align:center}
-#app .durum-grup{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
-#app .durum-grup button{height:28px;padding:0 7px;font-size:11px;border:1px solid var(--line);background:var(--bg);color:var(--fg);box-shadow:none}
-#app .durum-grup button.secili{background:var(--btn);border-color:var(--btn);color:#fff}
-#app .durum-grup button.full.secili{background:var(--ok);border-color:var(--ok);color:#fff}
-@media(max-width:600px){
- #app td.durum{min-width:0;padding:3px 2px}
- #app .durum-grup{gap:2px}
- #app .durum-grup button{height:25px;padding:0 4px;font-size:10px}
- #app th:nth-child(1){width:25%}#app th:nth-child(2){width:16%}#app th:nth-child(3){width:31%}#app th:nth-child(4){width:28%}
-}
-
 </style>
 </head>
 <body>
@@ -1507,7 +1493,7 @@ html.hz-kilit .sohbet-panel {
   <div id="hedefKutu" class="hedef-kutu hide"><div class="sec-head" id="hedefHead"><h3>Hedef takibi</h3></div></div>
   <div class="bar"><button id="satirBtn" type="button" class="alt sm">+ Satır ekle</button><button id="satirSilBtn" type="button" class="alt sm">− Satır sil</button><button id="sayiSil" type="button" class="red sm">Sayıları sil (makine adları kalır)</button></div>
   <p id="gonderNot" class="mut hide">✓ Tablonuzu resim olarak kaydettiniz; bu vardiyanın tablosu donduruldu. Artık hiçbir değişiklik yapılamaz.</p>
-  <div class="scroll"><table id="mineTbl"><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>DURUM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody><tfoot><tr class="tot"><td>TOPLAM</td><td id="mineToplam">0</td><td></td></tr></tfoot></table></div>
+  <div class="scroll"><table id="mineTbl"><thead><tr><th>MAKİNE</th><th>TOPLAM</th><th>SAYI EKLE</th></tr></thead><tbody id="mine"></tbody><tfoot><tr class="tot"><td>TOPLAM</td><td id="mineToplam">0</td><td></td></tr></tfoot></table></div>
 </div>
 
 <section class="panel" id="gunPanel">
@@ -1881,51 +1867,9 @@ function vnoCiz() {
   });
 }
 
-
-// Makine durumları Supabase'de saklanır; tüm kullanıcılar okuyabilir ve anlık güncellemeleri alır.
-const MAKINE_DURUM_CACHE = {};
-const MAKINE_DURUM_BUTONLARI = {};
-function makineDurumAnahtar(r) { return [myId() || "misafir", girT(), gv, r].join("|"); }
-function makineDurumOku(r) { return MAKINE_DURUM_CACHE[makineDurumAnahtar(r)] || ""; }
-function makineDurumGorselGuncelle(r) {
-  const secili = makineDurumOku(r);
-  (MAKINE_DURUM_BUTONLARI[makineDurumAnahtar(r)] || []).forEach(([kod, b]) => b.classList.toggle("secili", kod === secili));
-}
-async function makineDurumYukle() {
-  if (!sb || !me || !navigator.onLine) return;
-  const bas = MAKINE_DURUM_CACHE;
-  const { data, error } = await sb.from("makine_durumlari").select("user_id,tarih,vardiya,satir,durum").eq("tarih", girT()).eq("vardiya", gv);
-  if (error) { console.warn("Makine durumları okunamadı:", error.message); return; }
-  Object.keys(bas).filter(k => k.split("|")[1] === girT() && Number(k.split("|")[2]) === Number(gv)).forEach(k => delete bas[k]);
-  (data || []).forEach(x => { bas[[x.user_id,x.tarih,x.vardiya,x.satir].join("|")] = x.durum; });
-  for (let r=0; r<N; r++) makineDurumGorselGuncelle(r);
-  if (typeof renderShared === "function") renderShared();
-}
-async function makineDurumYaz(r, durum) {
-  if (!sb || !me || !navigator.onLine) { msg("Ortak durum kaydı için internet bağlantısı gerekli."); return false; }
-  const payload = { user_id: myId(), tarih: girT(), vardiya: gv, satir: r, durum };
-  const result = durum
-    ? await sb.from("makine_durumlari").upsert(payload, { onConflict: "user_id,tarih,vardiya,satir" })
-    : await sb.from("makine_durumlari").delete().eq("user_id",myId()).eq("tarih",girT()).eq("vardiya",gv).eq("satir",r);
-  if (result.error) { msg("Ortak durum kaydedilemedi: " + result.error.message + " — Supabase'de makine-durumlari.sql kodunu çalıştırın."); return false; }
-  const k=makineDurumAnahtar(r); if (durum) MAKINE_DURUM_CACHE[k]=durum; else delete MAKINE_DURUM_CACHE[k];
-  makineDurumGorselGuncelle(r); return true;
-}
-function makineDurumCanliKur() {
-  if (!sb || window.makineDurumKanal) return;
-  window.makineDurumKanal = sb.channel("makine-durumlari-canli").on("postgres_changes", {event:"*",schema:"public",table:"makine_durumlari"}, payload => {
-    const x = payload.new && payload.new.user_id ? payload.new : payload.old;
-    if (!x || x.tarih !== girT() || Number(x.vardiya) !== Number(gv)) return;
-    const k=[x.user_id,x.tarih,x.vardiya,x.satir].join("|");
-    if (payload.eventType === "DELETE") delete MAKINE_DURUM_CACHE[k]; else MAKINE_DURUM_CACHE[k]=x.durum;
-    if (x.user_id === myId()) makineDurumGorselGuncelle(Number(x.satir));
-    if (typeof renderShared === "function") renderShared();
-  }).subscribe();
-}
 function buildMine() {
   const body = $("mine"); body.textContent = ""; myInputs = []; myTot = []; myTr = [];
   for (let r = 0; r < N; r++) satirEkle(r);
-  makineDurumYukle();
   if (me) lsSet(N_KEY + ":" + myId() + ":" + girT() + ":" + gv, N);
 }
 
@@ -1947,22 +1891,6 @@ function satirEkle(r) {
   tdM.append(iAd); tr.append(tdM);
   // TOPLAM
   const tt = el("td", "t", "0"); tr.append(tt); myTot.push(tt);
-  // A tarafı / B tarafı / makine fullendi işaretleri
-  const tdDurum=el("td","durum"), durumGrup=el("div","durum-grup");
-  const durumSecenekleri=[["A","A tarafı"],["B","B tarafı"],["FULL","Makine fullendi"]];
-  const durumBtnleri=[];
-  durumSecenekleri.forEach(([kod,yazi])=>{
-    const b=el("button",kod==="FULL"?"full":"",yazi); b.type="button"; b.title=yazi;
-    b.onclick=()=>{
-      if(!me){msg("Durum seçmek için giriş yapın.");return;}
-      if(!duzenlenir()){msg("Bu tablo artık düzenlenemez.");return;}
-      const yeni=makineDurumOku(r)===kod?"":kod;
-      makineDurumYaz(r,yeni).then(ok=>{ if(ok) msg(yeni ? (yazi+" herkese gösterilecek şekilde kaydedildi.") : "Makine durumu kaldırıldı."); });
-    };
-    durumBtnleri.push([kod,b]); durumGrup.append(b);
-  });
-  tdDurum.append(durumGrup); tr.append(tdDurum);
-  MAKINE_DURUM_BUTONLARI[makineDurumAnahtar(r)] = durumBtnleri;
   // SAYI: 1 girildiğinde A/B giriş alanları açılır; diğer sayılar normal toplam olarak eklenir.
   const tdS = el("td", "sy"), syControls = el("div", "sy-controls"), iSayi = el("input"), btn = el("button", "ekle", "+"), btnABAc = el("button", "ab-toggle", "A/B");
   iSayi.type = "text"; iSayi.inputMode = "decimal"; iSayi.placeholder = "Sayı yaz";
@@ -2072,7 +2000,6 @@ function satirEkle(r) {
   btn.onclick = ekle; btnABAc.onclick = abBaslat; btnAB.onclick=abKaydet;
   [iA,iB].forEach(x=>x.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();abKaydet();}});
   const controls=[iA,iB,btnAB];
-  const durumIlk=makineDurumOku(r); durumBtnleri.forEach(([k,b])=>b.classList.toggle("secili",k===durumIlk));
   body.append(tr); const inputPair=[iAd, iSayi]; inputPair.ab=[ab,iA,iB,btnAB]; myInputs.push(inputPair); myTr.push(tr);
 }
 
@@ -2626,9 +2553,8 @@ function renderShared() {
       const nm = (r.name || "").trim() || "(adsız)";
       const key = nm.toLocaleLowerCase("tr");
       let g = makineGruplari.get(key);
-      if (!g) { g = { name: nm, total: 0, a: 0, b: 0, ab: false, satir: r.satir, durumlar: new Set() }; makineGruplari.set(key, g); }
+      if (!g) { g = { name: nm, total: 0, a: 0, b: 0, ab: false, satir: r.satir }; makineGruplari.set(key, g); }
       g.total += rsum(r); if (r.n2 != null) { g.ab=true; g.a+=num(r.n1); g.b+=num(r.n2); }
-      const d = MAKINE_DURUM_CACHE[[r.user_id, r.tarih, r.vno, r.satir].join("|")]; if (d) g.durumlar.add(d);
       g.satir = Math.min(g.satir, r.satir);
     });
     const list = [...makineGruplari.values()].sort((a, b) => adKar(a.name, b.name) || a.satir - b.satir);
@@ -2641,7 +2567,7 @@ function renderShared() {
     // Kontrol, birleştirilmiş satırlar üzerinde değil gerçek kayıt satırları üzerinde yapılmalı.
     if (!hamListe.length || !hamListe.some(r => COLS.some(k => r[k] != null && String(r[k]).trim() !== ""))) return;
     const wrap = el("div", "scroll"), tbl = el("table"), head = el("thead"), hr = el("tr");
-    ["MAKİNE","A","B","TOPLAM","DURUM"].forEach(h => hr.append(el("th", "", h)));
+    ["MAKİNE","A","B","TOPLAM"].forEach(h => hr.append(el("th", "", h)));
     head.append(hr); tbl.append(head);
     const body = el("tbody"); let total = 0;
     list.forEach(r => {
@@ -2649,12 +2575,10 @@ function renderShared() {
       const nm = r.name, key = nm.toLocaleLowerCase("tr");
       const cur = agg.get(key) || { nm, s: 0, a: 0, b: 0, ab: false }; cur.s += s; if(r.ab){cur.ab=true;cur.a+=r.a;cur.b+=r.b;} agg.set(key, cur);
       tr.append(el("td", "sn", nm === "(adsız)" ? "" : nm));
-      tr.append(el("td", "t", r.ab ? fmt(r.a) : "—")); tr.append(el("td", "t", r.ab ? fmt(r.b) : "—")); tr.append(el("td", "t", fmt(s)));
-      const durumYazi = [...r.durumlar].map(d => d === "A" ? "A tarafı" : d === "B" ? "B tarafı" : d === "FULL" ? "Makine fullendi" : "").filter(Boolean).join(" / ") || "—";
-      tr.append(el("td", "", durumYazi)); body.append(tr);
+      tr.append(el("td", "t", r.ab ? fmt(r.a) : "—")); tr.append(el("td", "t", r.ab ? fmt(r.b) : "—")); tr.append(el("td", "t", fmt(s))); body.append(tr);
     });
     const ft = el("tr", "tot");
-    ft.append(el("td", "", "TOPLAM"), el("td", "", ""), el("td", "", ""), el("td", "", fmt(total)), el("td", "", "")); body.append(ft);
+    ft.append(el("td", "", "TOPLAM"), el("td", "", ""), el("td", "", ""), el("td", "", fmt(total))); body.append(ft);
     tbl.append(body); wrap.append(tbl);
     const rb = el("button", "alt sm", "Resim olarak kaydet"); rb.type = "button";
     const krBtn = el("button", "alt sm", "📊 Rekor / Özet"); krBtn.type = "button";
@@ -4986,7 +4910,6 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden) { zi
   if (SUPABASE_URL.includes("PROJE-KODUNUZ") || SUPABASE_KEY.includes("ANAHTARINIZ")) { msg("Önce dosyanın başındaki SUPABASE_URL ve SUPABASE_KEY değerlerini girin."); return; }
   sb = (typeof supabase !== "undefined") ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : cevrimdisiSb();
   onlineCanliKur();
-  makineDurumCanliKur();
   ziyaretKaydet();
   gorCanliKur();
   logCanliKur();
