@@ -1351,6 +1351,22 @@ html.hz-kilit .sohbet-panel {
   <div class="mut" id="olcumDurum"></div>
   </div>
   <div class="adm-pane hide" data-pane="gorunum">
+  <strong>A / B sayı giriş ve görünürlük yetkileri</strong>
+  <p class="mut">A ve B girişlerini ayrı ayrı açıp kapatın. Paylaşılan tabloda ve giriş kayıtlarında A/B sütunlarını bağımsız gizleyebilirsiniz. Ayarlar tüm kullanıcılara uygulanır.</p>
+  <div class="row">
+    <label class="chk"><input id="abAGiris" type="checkbox" checked> A tarafına sayı girişi açık</label>
+    <label class="chk"><input id="abBGiris" type="checkbox" checked> B tarafına sayı girişi açık</label>
+  </div>
+  <div class="row">
+    <label class="chk"><input id="abATablo" type="checkbox" checked> Paylaşılan tabloda A sütunu görünsün</label>
+    <label class="chk"><input id="abBTablo" type="checkbox" checked> Paylaşılan tabloda B sütunu görünsün</label>
+  </div>
+  <div class="row">
+    <label class="chk"><input id="abALog" type="checkbox" checked> Log kayıtlarında A tarafı görünsün</label>
+    <label class="chk"><input id="abBLog" type="checkbox" checked> Log kayıtlarında B tarafı görünsün</label>
+    <button id="abYetkiKaydet" type="button">A/B yetkilerini kaydet</button>
+  </div>
+  <hr>
   <strong>Tabloyu dondurma</strong>
   <p class="mut">Açıkken, kullanıcı “Resim olarak kaydet”e basınca o vardiyanın tablosu donar.</p>
   <div class="row">
@@ -1912,6 +1928,7 @@ function satirEkle(r) {
   };
   const abModu = row => !!row && row.n2 != null;
   const abAc = row => {
+    if (gorAyar.abAGiris === false && gorAyar.abBGiris === false) { msg("A ve B sayı girişleri yönetici tarafından kapatılmış."); return; }
     document.querySelectorAll(".ab-modal-overlay").forEach(x => x.remove());
     ab.classList.add("acik");
     abOverlay = el("div", "ab-modal-overlay");
@@ -1930,6 +1947,8 @@ function satirEkle(r) {
     // Varsayılan işlem eklemedir. Hatalı kayıt, aynı sayı giriş penceresindeki düzeltme modundan değiştirilebilir.
     abDuzeltmeModu = false;
     iA.value=""; iB.value="";
+    labA.classList.toggle("hide", gorAyar.abAGiris === false); labB.classList.toggle("hide", gorAyar.abBGiris === false);
+    iA.disabled = gorAyar.abAGiris === false; iB.disabled = gorAyar.abBGiris === false;
     btnAB.textContent = "Girilen sayıları toplama ekle";
     btnABDuzelt.textContent = "Yanlış sayıyı düzelt";
     abInfo.textContent = "Mevcut toplam: A " + fmt(num(row && row.n1)) + " · B " + fmt(num(row && row.n2)) + ". Yeni girişler mevcut toplama eklenir.";
@@ -1955,7 +1974,7 @@ function satirEkle(r) {
   };
   const abKaydet = () => {
     const row=myRow(); if(!row) return;
-    const a=iA.value.trim(), b=iB.value.trim();
+    const a=gorAyar.abAGiris === false ? "" : iA.value.trim(), b=gorAyar.abBGiris === false ? "" : iB.value.trim();
     if(a==="" && b==="") { msg(abDuzeltmeModu ? "Düzeltilecek A veya B değerini girin." : "Eklenecek A veya B sayısını girin."); return; }
     const av=a===""?0:parseFloat(a.replace(",",".")), bv=b===""?0:parseFloat(b.replace(",","."));
     if(!Number.isFinite(av)||!Number.isFinite(bv)||av<0||bv<0){ msg("A ve B için sıfır veya daha büyük geçerli sayılar girin."); return; }
@@ -2567,7 +2586,8 @@ function renderShared() {
     // Kontrol, birleştirilmiş satırlar üzerinde değil gerçek kayıt satırları üzerinde yapılmalı.
     if (!hamListe.length || !hamListe.some(r => COLS.some(k => r[k] != null && String(r[k]).trim() !== ""))) return;
     const wrap = el("div", "scroll"), tbl = el("table"), head = el("thead"), hr = el("tr");
-    ["MAKİNE","A","B","TOPLAM"].forEach(h => hr.append(el("th", "", h)));
+    const aTablo = gorAyar.abATablo !== false, bTablo = gorAyar.abBTablo !== false;
+    ["MAKİNE"].concat(aTablo ? ["A"] : [], bTablo ? ["B"] : [], ["TOPLAM"]).forEach(h => hr.append(el("th", "", h)));
     head.append(hr); tbl.append(head);
     const body = el("tbody"); let total = 0;
     list.forEach(r => {
@@ -2575,10 +2595,12 @@ function renderShared() {
       const nm = r.name, key = nm.toLocaleLowerCase("tr");
       const cur = agg.get(key) || { nm, s: 0, a: 0, b: 0, ab: false }; cur.s += s; if(r.ab){cur.ab=true;cur.a+=r.a;cur.b+=r.b;} agg.set(key, cur);
       tr.append(el("td", "sn", nm === "(adsız)" ? "" : nm));
-      tr.append(el("td", "t", r.ab ? fmt(r.a) : "—")); tr.append(el("td", "t", r.ab ? fmt(r.b) : "—")); tr.append(el("td", "t", fmt(s))); body.append(tr);
+      if (aTablo) tr.append(el("td", "t", r.ab ? fmt(r.a) : "—"));
+      if (bTablo) tr.append(el("td", "t", r.ab ? fmt(r.b) : "—"));
+      tr.append(el("td", "t", fmt(s))); body.append(tr);
     });
     const ft = el("tr", "tot");
-    ft.append(el("td", "", "TOPLAM"), el("td", "", ""), el("td", "", ""), el("td", "", fmt(total))); body.append(ft);
+    ft.append(el("td", "", "TOPLAM")); if(aTablo) ft.append(el("td", "", "")); if(bTablo) ft.append(el("td", "", "")); ft.append(el("td", "", fmt(total))); body.append(ft);
     tbl.append(body); wrap.append(tbl);
     const rb = el("button", "alt sm", "Resim olarak kaydet"); rb.type = "button";
     const krBtn = el("button", "alt sm", "📊 Rekor / Özet"); krBtn.type = "button";
@@ -3399,10 +3421,10 @@ const GOR = [
   ["vardiyaTakvimi", "Vardiya Takvimi düğmesi (üstteki 📅 düğme)", ["vtBtn"]]
 ];
 // misafir: giriş yapmadan (kayıt yoksa gizli) · uye: giriş yapınca (kayıt yoksa görünür)
-let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {}, sira: [], hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true, erkenDk: 0, kapanDk: 0, otoGecis: true, olcumDk: 5, dinlenDk: 30, navDizilim: "satir" };
+let gorAyar = { misafir: {}, uye: {}, kapali: {}, neon: {}, sira: [], hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true, erkenDk: 0, kapanDk: 0, otoGecis: true, olcumDk: 5, dinlenDk: 30, navDizilim: "satir", abAGiris: true, abBGiris: true, abATablo: true, abBTablo: true, abALog: true, abBLog: true };
 const olcumGecerli = (x, d) => (Number.isInteger(x) && x >= 1 && x <= 120) ? x : d;
 const vDkGecerli = (x, d) => (Number.isInteger(x) && x >= 0 && x <= 120) ? x : d;
-const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {}, neon: (d.neon && typeof d.neon === "object") ? d.neon : {}, sira: Array.isArray(d.sira) ? d.sira : [], hedefGizli: (d.hedefGizli && typeof d.hedefGizli === "object") ? d.hedefGizli : {}, son30Renk: /^#[0-9a-fA-F]{6}$/.test(d.son30Renk || "") ? d.son30Renk : "", tabloRenk: /^#[0-9a-fA-F]{6}$/.test(d.tabloRenk || "") ? d.tabloRenk : "", tabloIzin: d.tabloIzin === true, tabloDondur: d.tabloDondur !== false, erkenDk: vDkGecerli(d.erkenDk, 0), kapanDk: vDkGecerli(d.kapanDk, 0), otoGecis: d.otoGecis !== false, olcumDk: olcumGecerli(d.olcumDk, 5), dinlenDk: olcumGecerli(d.dinlenDk, 30), navDizilim: d.navDizilim === "alt" ? "alt" : "satir" } : { misafir: {}, uye: d || {}, kapali: {}, hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true, erkenDk: 0, kapanDk: 0, otoGecis: true, olcumDk: 5, dinlenDk: 30, navDizilim: "satir" };
+const gorNorm = d => (d && (d.misafir || d.uye)) ? { misafir: d.misafir || {}, uye: d.uye || {}, kapali: (d.kapali && typeof d.kapali === "object") ? d.kapali : {}, neon: (d.neon && typeof d.neon === "object") ? d.neon : {}, sira: Array.isArray(d.sira) ? d.sira : [], hedefGizli: (d.hedefGizli && typeof d.hedefGizli === "object") ? d.hedefGizli : {}, son30Renk: /^#[0-9a-fA-F]{6}$/.test(d.son30Renk || "") ? d.son30Renk : "", tabloRenk: /^#[0-9a-fA-F]{6}$/.test(d.tabloRenk || "") ? d.tabloRenk : "", tabloIzin: d.tabloIzin === true, tabloDondur: d.tabloDondur !== false, erkenDk: vDkGecerli(d.erkenDk, 0), kapanDk: vDkGecerli(d.kapanDk, 0), otoGecis: d.otoGecis !== false, olcumDk: olcumGecerli(d.olcumDk, 5), dinlenDk: olcumGecerli(d.dinlenDk, 30), navDizilim: d.navDizilim === "alt" ? "alt" : "satir", abAGiris: d.abAGiris !== false, abBGiris: d.abBGiris !== false, abATablo: d.abATablo !== false, abBTablo: d.abBTablo !== false, abALog: d.abALog !== false, abBLog: d.abBLog !== false } : { misafir: {}, uye: d || {}, kapali: {}, hedefGizli: {}, son30Renk: "", tabloRenk: "", tabloIzin: false, tabloDondur: true, erkenDk: 0, kapanDk: 0, otoGecis: true, olcumDk: 5, dinlenDk: 30, navDizilim: "satir", abAGiris: true, abBGiris: true, abATablo: true, abBTablo: true, abALog: true, abBLog: true };
 // ---- Tablo rengi: yönetici herkes için renk belirler; izin verirse kullanıcı kendi cihazında kendi rengini seçer ----
 const TR_KEY = "dugum-tablo-renk-v1";
 const trGecerli = c => /^#[0-9a-fA-F]{6}$/.test(c || "");
@@ -3638,7 +3660,7 @@ function gorCiz() {
     body.append(tr);
   });
   tbl.append(body); box.append(tbl);
-  pCiz(); neonFormDoldur(); siraTaslak = siraBirles(gorAyar.sira); siraCiz();
+  pCiz(); neonFormDoldur(); abYetkiFormDoldur(); siraTaslak = siraBirles(gorAyar.sira); siraCiz();
 }
 var gorKanal = null;
 function gorCanliKur() {
@@ -3661,9 +3683,27 @@ async function gorYukle() {
   gorUygula();
   if (isAdmin() && !$("gList").children.length) gorCiz();   // yönetici düzenlerken yeniden çizilmez
 }
+function abYetkiFormDoldur() {
+  const a = gorAyar || {};
+  [["abAGiris","abAGiris"],["abBGiris","abBGiris"],["abATablo","abATablo"],["abBTablo","abBTablo"],["abALog","abALog"],["abBLog","abBLog"]].forEach(([id,k]) => { const x=$(id); if(x && document.activeElement!==x) x.checked = a[k] !== false; });
+}
+async function abYetkiUygula() {
+  const a = Object.assign({}, gorAyar, {
+    abAGiris: $("abAGiris").checked, abBGiris: $("abBGiris").checked,
+    abATablo: $("abATablo").checked, abBTablo: $("abBTablo").checked,
+    abALog: $("abALog").checked, abBLog: $("abBLog").checked
+  });
+  const { error } = await sb.rpc("admin_gorunurluk_kaydet", { ayar: a });
+  if (error) { msg("A/B ayarları kaydedilemedi: " + error.message); return; }
+  gorAyar = gorNorm(a); lsSet(GOR_KEY, a); gorUygula(); abYetkiFormDoldur();
+  try { if (gorKanal) gorKanal.send({type:"broadcast",event:"guncelle",payload:{t:Date.now()}}); } catch(e) {}
+  msg("A/B giriş ve görünürlük yetkileri tüm kullanıcılara kaydedildi.");
+}
+$("abYetkiKaydet").onclick = () => { if(!isAdmin()){msg("Bu ayar için yönetici olmalısınız.");return;} abYetkiUygula(); };
+
 $("gKaydet").onclick = async () => {
   if (!isAdmin()) { msg("Bu ayar için yönetici olmalısınız."); return; }
-  const ayar = { misafir: {}, uye: {}, kapali: {}, neon: neonOku(), sira: siraTaslak.slice(), hedefGizli: gorAyar.hedefGizli || {}, son30Renk: gorAyar.son30Renk || "", tabloRenk: gorAyar.tabloRenk || "", tabloIzin: !!gorAyar.tabloIzin, tabloDondur: gorAyar.tabloDondur !== false, erkenDk: gorAyar.erkenDk, kapanDk: gorAyar.kapanDk, otoGecis: gorAyar.otoGecis !== false, olcumDk: gorAyar.olcumDk, dinlenDk: gorAyar.dinlenDk, navDizilim: gorAyar.navDizilim === "alt" ? "alt" : "satir" };
+  const ayar = { misafir: {}, uye: {}, kapali: {}, neon: neonOku(), sira: siraTaslak.slice(), hedefGizli: gorAyar.hedefGizli || {}, son30Renk: gorAyar.son30Renk || "", tabloRenk: gorAyar.tabloRenk || "", tabloIzin: !!gorAyar.tabloIzin, tabloDondur: gorAyar.tabloDondur !== false, erkenDk: gorAyar.erkenDk, kapanDk: gorAyar.kapanDk, otoGecis: gorAyar.otoGecis !== false, olcumDk: gorAyar.olcumDk, dinlenDk: gorAyar.dinlenDk, navDizilim: gorAyar.navDizilim === "alt" ? "alt" : "satir", abAGiris: gorAyar.abAGiris !== false, abBGiris: gorAyar.abBGiris !== false, abATablo: gorAyar.abATablo !== false, abBTablo: gorAyar.abBTablo !== false, abALog: gorAyar.abALog !== false, abBLog: gorAyar.abBLog !== false };
   document.querySelectorAll("#gList input").forEach(i => { ayar[i.dataset.g][i.dataset.k] = i.checked; });
   document.querySelectorAll("#pList input").forEach(i => { ayar.kapali[i.dataset.k] = i.checked; });
   msg("Görünürlük kaydediliyor…");
@@ -4205,7 +4245,12 @@ function logCizAsil() {
   });
   sel.value = kul.has(cur) ? cur : "";
 
-  let list = logGorunen();
+  let list = logGorunen().filter(l => {
+    const side = String(l.sutun || "").toLowerCase();
+    if (side === "n1" || side === "a") return gorAyar.abALog !== false;
+    if (side === "n2" || side === "b") return gorAyar.abBLog !== false;
+    return true;
+  });
   if ($("logSira").value === "kb") list = list.slice().sort((a, b) => adKar(a.sutun === "makine" ? a.yeni : a.makine, b.sutun === "makine" ? b.yeni : b.makine) || new Date(a.zaman) - new Date(b.zaman));
   $("logSayi").textContent = "(" + list.length + " kayıt)";
   $("logSil").classList.toggle("hide", !isAdmin() || !list.length);
@@ -4238,6 +4283,11 @@ function logCizAsil() {
     const tdMk = el("td", "lg-mk");
     tdMk.append(el("div", "", ad ? (l.eski || "(adsız)") + " → " + (l.yeni || "(adsız)") : (l.makine || "(adsız)")));
     if (ad) tdMk.append(el("div", "lg-alt", "makine adı değişti"));
+    else {
+      const sk = String(l.sutun || "").toLowerCase();
+      const taraf = ({n1:"A tarafı", n2:"B tarafı", a:"A tarafı", b:"B tarafı", n3:"Genel sayı", n4:"Ek sayı", n5:"Ek sayı", n6:"Ek sayı"})[sk];
+      if (taraf) tdMk.append(el("div", "lg-alt", taraf));
+    }
     const tdE = el("td", "lg-e"), cls = d == null ? "" : (l.yeni == null && l.eski != null) ? "lg-sil" : d > 0 ? "lg-art" : d < 0 ? "lg-eks" : "";
     tdE.append(el("span", cls, eklenenYaz(l)));
     const tdS = el("td", "lg-s"), mk = sure(l.fark_makine_sn), gn = sure(l.fark_genel_sn);
@@ -4245,14 +4295,14 @@ function logCizAsil() {
     if (!ad && tekrar.has(l.id)) tdS.append(el("div", "lg-ayni", "↺ Aynı makineye daha önce girdin"));   // SÜRE sütununda: aynı kullanıcı bu makineye daha önce girmiş, arada başka makineye geçip geri dönmüş
     if (gn !== "—" && gn !== mk) tdS.append(el("div", "lg-alt", "genel: " + gn));
     const tdD = el("td", "lg-d");
-    if (!ad && d != null && d > 0 && l.yeni != null) {
+    if (!ad && d != null && l.yeni != null) {
       // O girişin yapıldığı ana göre hesap: vardiya başından o ana kadar girilen toplam, geçen süre ve saatlik hız
       const zt = new Date(l.zaman).getTime(), vb = vbBul(zt), cum = cumAt.get(l.id) || 0, gSn = Math.max(0, (zt - vb) / 1000);
       const hiz = gSn > 0 ? cum / (gSn / 3600) : 0, tah = Math.round(hiz * 8);
       const bitti = vardiyaBittiMi(vb);
       const sup = cum > SUPHE_LIMIT || (gSn >= 3600 && tah > SUPHE_LIMIT);   // ilk 1 saatte hız değerlendirilmez (erken sayı girişi yanıltmasın)
       tdD.append(el("span", "lg-dr " + (sup ? "sup" : "nor"), sup ? "Şüpheli" : "Normal"));
-      tdD.append(el("div", "lg-alt", "bu ana kadar: " + fmt(Math.round(cum * 100) / 100) + (bitti ? "" : " · vardiya sürüyor")));
+      tdD.append(el("div", "lg-alt", "vardiya toplamı (A+B): " + fmt(Math.round(cum * 100) / 100) + (bitti ? "" : " · vardiya sürüyor")));
       tdD.append(el("div", "lg-alt", saatOf(vb).slice(0, 5) + "'dan beri: " + sure(Math.round(gSn)) + " · " + (gSn >= 3600 ? fmt(Math.round(hiz * 10) / 10) + "/sa" : "hız için ≥1 sa gerekli")));
       if (gSn >= 3600) tdD.append(el("div", "lg-alt", "bu hızla 8 sa: ≈ " + fmt(tah) + (tah > SUPHE_LIMIT ? " ⚠ limit " + fmt(SUPHE_LIMIT) : "")));
     } else tdD.append(el("span", "lg-alt", "—"));
